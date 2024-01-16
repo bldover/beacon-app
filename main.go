@@ -1,10 +1,12 @@
 package main
 
 import (
+	"concert-manager/cli"
 	"concert-manager/db"
 	"concert-manager/repo"
 	"concert-manager/server"
 	"concert-manager/svc"
+	"context"
 	"log"
 )
 
@@ -24,7 +26,30 @@ func main() {
 	interactor.EventRepo = eventRepo
 
 	loader := &svc.Loader{EventCreator: interactor}
-	server.StartServer(loader)
+	go server.StartServer(loader)
+
+	events, err := interactor.ListEvents(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to read events on init: %v", err)
+	}
+
+	dummyScreen := cli.MainMenu{}
+	mainMenuScreen := cli.MainMenu{}
+	histScreen := cli.History{}
+	histDeleter := cli.HistoryDelete{}
+
+	mainMenuScreen.Children = []cli.Screen{&histScreen}
+
+	histScreen.Events = events
+	histScreen.ParentScreen = mainMenuScreen
+	histScreen.AddHistScreen = dummyScreen
+	histScreen.DeleteHistScreen = &histDeleter
+
+	histDeleter.Events = events
+	histDeleter.ParentScreen = &histScreen
+	histDeleter.DeleteSvc = eventRepo
+
+	cli.RunCLI(mainMenuScreen)
 
 	// ADD integration test
 	// ctx := context.Background()
