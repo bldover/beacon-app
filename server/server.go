@@ -1,10 +1,10 @@
 package server
 
 import (
+	"concert-manager/out"
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 )
 
@@ -14,8 +14,8 @@ const maxFileSizeBytes = 100000
 func StartServer(l Loader) {
 	handler := &uploadHandler{l}
 	http.Handle("/upload", handler)
-	fmt.Println("Starting server on port ", port)
-	log.Fatal(http.ListenAndServe(port, nil))
+	out.Infoln("Starting server on port ", port)
+	out.Fatal(http.ListenAndServe(port, nil))
 }
 
 type Loader interface {
@@ -34,19 +34,21 @@ func (handler *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		errMsg := fmt.Sprintf("Error while parsing request file %v", err)
-		fmt.Println(errMsg)
+		out.Errorln(errMsg)
 		http.Error(w, errMsg, http.StatusBadRequest)
 	}
+
+	out.Infoln("Received upload request.")
 
     rows, err := handler.loader.Upload(r.Context(), file)
 
 	if err != nil {
 		errMsg := fmt.Sprintf("Error occurred during upload processing: %v", err)
-		fmt.Println(errMsg)
+		out.Errorln(errMsg)
 		http.Error(w, errMsg, http.StatusBadRequest)
 		return
 	}
 	successMsg := fmt.Sprintf("Successfully uploaded %d rows", rows)
-	fmt.Println(successMsg)
+	out.Infoln("Finished processing upload request")
 	fmt.Fprintln(w, successMsg)
 }

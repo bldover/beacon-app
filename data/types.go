@@ -1,10 +1,5 @@
 package data
 
-import (
-	"strconv"
-	"strings"
-)
-
 type (
 	Venue struct {
 		Name    string
@@ -20,6 +15,7 @@ type (
 		Openers []Artist
 		Venue   Venue
 		Date    string
+		Purchased bool
 	}
 )
 
@@ -42,7 +38,7 @@ func (e *Event) Populated() bool {
 		invalidArtist = invalidArtist || opener.Invalid()
 		populated = populated || opener.Populated()
 	}
-	return populated && !invalidArtist && e.Venue.Populated() && validDate(e.Date)
+	return populated && !invalidArtist && e.Venue.Populated() && ValidDate(e.Date)
 }
 
 func allNotEmpty(fields ...string) bool {
@@ -50,26 +46,6 @@ func allNotEmpty(fields ...string) bool {
 		if len(f) == 0 {
 			return false
 		}
-	}
-	return true
-}
-
-// expects format "#/#/# but doesn't check for non-standard date values (like day 32)
-// since time.Date handles these with overflow. Consumers of the Event type should regulate
-// their own date values if possible overflow is undesired
-func validDate(date string) bool {
-	parts := strings.Split(date, "/")
-	if len(parts) != 3 {
-		return false
-	}
-	if _, err := strconv.Atoi(parts[0]); err != nil {
-		return false
-	}
-	if _, err := strconv.Atoi(parts[1]); err != nil {
-		return false
-	}
-	if _, err := strconv.Atoi(parts[2]); err != nil {
-		return false
 	}
 	return true
 }

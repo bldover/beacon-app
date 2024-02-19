@@ -4,16 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"concert-manager/data"
+	"concert-manager/out"
 	"context"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"unicode"
 )
 
-const minColumns = 6
+const minColumns = 7
 
 type EventCreator interface {
 	AddEventRecursive(context.Context, Event) error
@@ -24,6 +24,7 @@ type Loader struct {
 }
 
 func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
+	out.Debugln("Starting processing event file upload")
 	scanner := bufio.NewScanner(file)
 	first := true
 	events := []data.Event{}
@@ -33,26 +34,31 @@ func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 			continue
 		}
 		line := scanner.Text()
+		out.Debugf("Parsed event line: %s", line)
 		event, err := toEvent(convertSpecialChars(line))
 		if err != nil {
+			out.Errorf("Error while parsing event: %v", err)
 			return 0, fmt.Errorf("unable to convert line to event: %s, %v", line, err)
 		}
+		out.Debugf("Converted input to event %v", event)
 		events = append(events, event)
 	}
 
 	hasErr := false
 	successCount := 0
 	for i, event := range events {
-		fmt.Printf("parsed event %+v to upload", event)
+		out.Debugf("Starting upload for event %v", event)
 		if err := l.EventCreator.AddEventRecursive(ctx, event); err != nil {
-			log.Printf("Failed to add event at row %d, %+v, %v", i+2, event, err)
+			out.Errorf("Failed to add event at row %d, %+v, %v", i+2, event, err)
 			hasErr = true
 		} else {
 			successCount++
-			fmt.Println("Event successfully uploaded")
+			out.Debugf("Event successfully uploaded %v", event)
 		}
 	}
 
+	out.Infof("Successfully uploaded %d event rows", successCount)
+	out.Errorf("Failed to upload %d event rows", len(events) - successCount)
 	if hasErr {
 		return successCount, errors.New("failed to add at least one row. check logs for more details")
 	}
@@ -81,8 +87,10 @@ func toEvent(row string) (Event, error) {
 	if !venue.Populated() {
 		return Event{}, errors.New("invalid venue")
 	}
+	purchased := strings.TrimSpace(parts[6]) == "TRUE"
+
 	openers := []data.Artist{}
-	i, j := 6, 7
+	i, j := 7, 8
 	for i < len(parts) && j < len(parts) {
 		opener := Artist{
 			Name: strings.TrimSpace(parts[i]),
@@ -103,6 +111,7 @@ func toEvent(row string) (Event, error) {
 		Openers: openers,
 		Venue: venue,
 		Date: date,
+		Purchased: purchased,
 	}
 
 	return event, nil

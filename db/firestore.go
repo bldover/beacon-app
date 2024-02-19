@@ -1,6 +1,7 @@
 package db
 
 import (
+	"concert-manager/out"
 	"context"
 	"os"
 
@@ -13,6 +14,7 @@ type Firestore struct {
 
 func Setup() (*Firestore, error) {
 	projectID := os.Getenv("PROJ_ID")
+	out.Debugf("Connecting to Firestore in project %s", projectID)
 
 	ctx := context.Background()
 	client, err := firestore.NewClient(ctx, projectID)

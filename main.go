@@ -2,7 +2,12 @@ package main
 
 import (
 	"concert-manager/cli"
+	"concert-manager/cli/artist"
+	"concert-manager/cli/event"
+	"concert-manager/cli/venue"
+	"concert-manager/data"
 	"concert-manager/db"
+	"concert-manager/out"
 	"concert-manager/repo"
 	"concert-manager/server"
 	"concert-manager/svc"
@@ -11,10 +16,16 @@ import (
 )
 
 func main() {
+	if err := out.Initialize(); err != nil {
+		log.Fatalf("Failed to set up logger: %v", err)
+	}
+	out.Infoln("Successfully initialized logger")
+
 	firestore, err := db.Setup()
 	if err != nil {
-		log.Fatalf("Failed to set up database: %v", err)
+	 	out.Fatalf("Failed to set up database: %v", err)
 	}
+	out.Infoln("Successfully initialized database")
 
 	venueRepo := repo.NewVenueRepo(firestore)
 	artistRepo := repo.NewArtistRepo(firestore)
@@ -28,89 +39,93 @@ func main() {
 	loader := &svc.Loader{EventCreator: interactor}
 	go server.StartServer(loader)
 
+	out.Infoln("Starting event initializition...")
 	events, err := interactor.ListEvents(context.Background())
 	if err != nil {
-		log.Fatalf("Failed to read events on init: %v", err)
+		out.Fatalf("Failed to initialize events: %v", err)
+	}
+	out.Infoln("Successfully initialized events")
+	pastEvents := []data.Event{}
+	futureEvents := []data.Event{}
+	for _, e := range *events {
+		if data.ValidFutureDate(e.Date) {
+			futureEvents = append(futureEvents, e)
+		} else {
+			pastEvents = append(pastEvents, e)
+		}
 	}
 
-	dummyScreen := cli.MainMenu{}
-	mainMenuScreen := cli.MainMenu{}
-	histScreen := cli.History{}
-	histDeleter := cli.HistoryDelete{}
+	out.Infoln("Starting artist initialization...")
+	artists, err := interactor.ListArtists(context.Background())
+	if err != nil {
+		out.Fatalf("Failed to initialize artists: %v", err)
+	}
+	out.Infoln("Successfully initialized artists")
 
-	mainMenuScreen.Children = []cli.Screen{&histScreen}
+	out.Infoln("Starting venue initialization...")
+	venues, err := interactor.ListVenues(context.Background())
+	if err != nil {
+		out.Fatalf("Failed to initialize venues: %v", err)
+	}
+	out.Infoln("Successfully initialized venues")
 
-	histScreen.Events = events
-	histScreen.ParentScreen = mainMenuScreen
-	histScreen.AddHistScreen = dummyScreen
-	histScreen.DeleteHistScreen = &histDeleter
+	mainMenuScreen := cli.NewMainMenu()
 
-	histDeleter.Events = events
-	histDeleter.ParentScreen = &histScreen
-	histDeleter.DeleteSvc = eventRepo
+	historyViewScreen := event.NewViewerScreen("Concert History")
+	historyDeleteScreen := event.NewDeleteScreen()
+	historyAddScreen := event.NewAddScreen(false)
+	artistEditScreen := artist.NewEditScreen()
+	venueEditScreen := venue.NewEditScreen()
+	openerRemoveScreen := event.NewOpenerRemovalScreen()
 
+	historyViewScreen.Events = &pastEvents
+	historyViewScreen.MainMenu = mainMenuScreen
+	historyViewScreen.AddEventScreen = historyAddScreen
+	historyViewScreen.DeleteEventScreen = historyDeleteScreen
+
+	historyAddScreen.Events = &pastEvents
+	historyAddScreen.EventAdder = interactor
+	historyAddScreen.ArtistEditor = artistEditScreen
+	historyAddScreen.VenueEditor = venueEditScreen
+	historyAddScreen.OpenerRemover = openerRemoveScreen
+	historyAddScreen.Viewer = historyViewScreen
+
+	historyDeleteScreen.Events = &pastEvents
+	historyDeleteScreen.Viewer = historyViewScreen
+	historyDeleteScreen.Deleter = interactor
+
+	futureViewScreen := event.NewViewerScreen("Future Concerts")
+	futureDeleteScreen := event.NewDeleteScreen()
+	futureAddScreen := event.NewAddScreen(true)
+
+	futureViewScreen.Events = &futureEvents
+	futureViewScreen.MainMenu = mainMenuScreen
+	futureViewScreen.AddEventScreen = futureAddScreen
+	futureViewScreen.DeleteEventScreen = futureDeleteScreen
+
+	futureAddScreen.Events = &futureEvents
+	futureAddScreen.EventAdder = interactor
+	futureAddScreen.ArtistEditor = artistEditScreen
+	futureAddScreen.VenueEditor = venueEditScreen
+	futureAddScreen.OpenerRemover = openerRemoveScreen
+	futureAddScreen.Viewer = futureViewScreen
+
+	futureDeleteScreen.Events = &futureEvents
+	futureDeleteScreen.Viewer = futureViewScreen
+	futureDeleteScreen.Deleter = interactor
+
+	artistEditScreen.Artists = artists
+	artistEditScreen.ArtistAdder = interactor
+	artistEditScreen.AddEventScreen = historyAddScreen
+
+	venueEditScreen.Venues = venues
+	venueEditScreen.VenueAdder = interactor
+	venueEditScreen.AddEventScreen = historyAddScreen
+
+	openerRemoveScreen.AddEventScreen = historyAddScreen
+
+	mainMenuScreen.Children[1] = historyViewScreen
+	mainMenuScreen.Children[2] = futureViewScreen
+	out.Infoln("Successfully initialized CLI, starting display...")
 	cli.RunCLI(mainMenuScreen)
-
-	// ADD integration test
-	// ctx := context.Background()
-	// venue := data.Venue{Name: "name", City: "city", State: "state"}
-	// artist := data.Artist{Name: "name", Genre: "genre"}
-	// artist2 := data.Artist{Name: "name2", Genre: "genre2"}
-	// event := data.Event{MainAct: artist, Openers: []data.Artist{artist}, Venue: venue, Date: "1/1/2000"}
-	// event2 := data.Event{Openers: []data.Artist{artist}, Venue: venue, Date: "1/1/2001"}
-	// event3 := data.Event{MainAct: artist, Venue: venue, Date: "1/2/2002"}
-	// if err := interactor.AddVenue(ctx, venue); err != nil {
-	// 	log.Printf("failed to add venue %v", err)
-	// }
-	// if err := interactor.AddArtist(ctx, artist); err != nil {
-	// 	log.Printf("failed to add artist %v", err)
-	// }
-	// if err := interactor.AddArtist(ctx, artist2); err != nil {
-	// 	log.Printf("failed to add artist2 %v", err)
-	// }
-	// if err := interactor.AddEvent(ctx, event); err != nil {
-	// 	log.Printf("failed to add event %v", err)
-	// }
-	// if err := interactor.AddEvent(ctx, event2); err != nil {
-	// 	log.Printf("failed to add event2 %v", err)
-	// }
-	// if err := interactor.AddEvent(ctx, event3); err != nil {
-	// 	log.Printf("failed to add event3 %v", err)
-	// }
-
-	// venues, err := interactor.ListVenues(ctx)
-	// if err != nil {
-	// 	log.Printf("failed to read venues %v", err)
-	// }
-	// log.Printf("Found venues %+v", venues)
-	// artists, err := interactor.ListArtists(ctx)
-	// if err != nil {
-	// 	log.Printf("failed to read artists %v", err)
-	// }
-	// log.Printf("Found artists %+v", artists)
-	// events, err := interactor.ListEvents(ctx)
-	// if err != nil {
-	// 	log.Printf("failed to read events %v", err)
-	// }
-	// log.Printf("Found events %+v", events)
-
-	// // DELETE integration test
-	// if err := interactor.DeleteEvent(ctx, event); err != nil {
-	// 	log.Printf("failed to delete event %v", err)
-	// }
-	// if err := interactor.DeleteEvent(ctx, event2); err != nil {
-	// 	log.Printf("failed to delete event %v", err)
-	// }
-	// if err := interactor.DeleteEvent(ctx, event3); err != nil {
-	// 	log.Printf("failed to delete event %v", err)
-	// }
-	// if err := interactor.DeleteVenue(ctx, venue); err != nil {
-	// 	log.Printf("failed to delete venue %v", err)
-	// }
-	// if err := interactor.DeleteArtist(ctx, artist); err != nil {
-	// 	log.Printf("failed to delete artist 2 %v", err)
-	// }
-	// if err := interactor.DeleteArtist(ctx, artist2); err != nil {
-	// 	log.Printf("failed to delete artist 3 %v", err)
-	// }
 }

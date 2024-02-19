@@ -2,21 +2,18 @@ package repo
 
 import (
 	"context"
-	"fmt"
-	"log"
-	"strconv"
-	"strings"
 	"time"
 
 	"concert-manager/data"
 	"concert-manager/db"
+	"concert-manager/out"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 )
 
-const eventCollection string = "concertsHist"
-var eventFields = []string{"MainActRef", "OpenerRefs", "VenueRef", "Date"}
+const eventCollection string = "concerts"
+var eventFields = []string{"MainActRef", "OpenerRefs", "VenueRef", "Date", "Purchased"}
 
 type EventRepo struct {
 	db         *db.Firestore
@@ -33,11 +30,13 @@ type EventEntity struct {
 	OpenerRefs []*firestore.DocumentRef
 	VenueRef   *firestore.DocumentRef
 	Date       time.Time
+	Purchased  bool
 }
 
 type Event = data.Event
 
 func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
+	out.Debugf("Attemping to add event %v", event)
 	var (
 		mainActDoc *firestore.DocumentSnapshot
 		err error
@@ -45,9 +44,11 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 	if event.MainAct.Populated() {
 		mainActDoc, err = repo.artistRepo.findDocRef(ctx, event.MainAct.Name)
 		if err != nil {
-			log.Printf("Failed to find existing artist %+v while creating event", event.MainAct)
+			out.Errorf("Failed to find existing artist %v while creating event %v", event.MainAct.Name, event)
 			return "", err
 		}
+		out.Debugf("Found existing artist %v with document ID %v while adding event",
+			event.MainAct.Name, mainActDoc.Ref.ID)
 	}
 	var mainActRef *firestore.DocumentRef
 	if mainActDoc != nil {
@@ -58,93 +59,119 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 	for _, opener := range event.Openers {
 		openerDoc, err := repo.artistRepo.findDocRef(ctx, opener.Name)
 		if err != nil {
-			log.Printf("Failed to find existing opening artist %+v while creating event", opener)
+			out.Errorf("Failed to find existing opening artist %v while creating event %v", opener.Name, event)
 			return "", err
 		}
+		out.Debugf("Found existing artist %v with document ID %v while adding event",
+			opener.Name, openerDoc.Ref.ID)
 		openerRefs = append(openerRefs, openerDoc.Ref)
 	}
 
 	venueDoc, err := repo.venueRepo.findDocRef(ctx, event.Venue.Name, event.Venue.City, event.Venue.State)
 	if err != nil {
-		log.Printf("Failed to find existing venue %+v while creating event", event.Venue)
+		out.Errorf("Failed to find existing venue %+v while creating event", event.Venue)
 		return "", err
 	}
+	out.Debugf("Found existing venue %v with document ID %v while adding event", event.Venue, venueDoc.Ref.ID)
 
 	existingEvent, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
 	if err == nil {
-		log.Printf("Skipped adding event because it already existed as %+v, %v", event, existingEvent.Ref.ID)
+		out.Infof("Skipped adding event because it already existed as %+v, %v", event, existingEvent.Ref.ID)
 		return existingEvent.Ref.ID, nil
 	}
 	if err != iterator.Done {
+		out.Errorf("Error occurred while checking if artist %v already exists, %v", event, err)
 		return "", err
 	}
 
-	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, toTimestamp(event.Date)}
+	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, data.Timestamp(event.Date), event.Purchased}
 	events := repo.db.Client.Collection(eventCollection)
 	docRef, _, err := events.Add(ctx, eventEntity)
 	if err != nil {
-		log.Printf("Failed to add event %+v, %v", event, err)
+		out.Errorf("Failed to add event %+v, %v", event, err)
 		return "", err
 	}
-	log.Printf("Created new event %+v", docRef.ID)
+	out.Infof("Created new event %+v", docRef.ID)
 	return docRef.ID, nil
 }
 
 func (repo *EventRepo) Delete(ctx context.Context, event Event) error {
+	out.Debugf("Attemting to delete event %v", event)
 	venueDoc, err := repo.venueRepo.findDocRef(ctx, event.Venue.Name, event.Venue.City, event.Venue.State)
 	if err != nil {
-		log.Printf("Failed to convert venue to ref while removing event %+v", event)
+		out.Errorf("Failed to convert venue to ref while removing event %+v", event)
 		return err
 	}
+	out.Debugf("Found existing venue %v with document ID %v while deleting event", event.Venue, venueDoc.Ref.ID)
 
 	eventDoc, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
 	if err != nil {
-		log.Printf("Failed to find existing event while removing %+v", event)
+		out.Errorf("Failed to find existing event while removing %+v", event)
 		return err
 	}
+	out.Debugf("Found existing event document ID %v while deleting event %v", eventDoc.Ref.ID, event)
 	eventDoc.Ref.Delete(ctx)
-	log.Printf("Successfully deleted event %+v", event)
+	out.Infof("Successfully deleted event %+v", event)
 	return nil
 }
 
 func (repo *EventRepo) Exists(ctx context.Context, event Event) (bool, error) {
+	out.Debugf("Checking for existence of event %v", event)
 	venueDoc, err := repo.venueRepo.findDocRef(ctx, event.Venue.Name, event.Venue.City, event.Venue.State)
 	if err == iterator.Done {
-		log.Printf("Failed to find existing venue while checking for event existence %+v", event)
+		out.Debugf("No existing venue found while checking for event existence %+v", event)
 		return false, nil
 	}
 	if err != nil {
+		out.Errorf("Error while checking existence of event venue %v, %v", event.Venue, err)
 		return false, err
 	}
+	out.Debugf("Found existing venue %v with document ID %v while checking event existence", event.Venue, venueDoc.Ref.ID)
 
-	_, err = repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
+	doc, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
 	if err == iterator.Done {
+		out.Debugf("No existing event found for %v", event)
 		return false, nil
 	}
 	if err != nil {
+		out.Errorf("Error while checking existence of event %v, %v", event, err)
 		return false, err
 	}
+	out.Debugf("Found event %v with document ID %v", event, doc.Ref.ID)
 	return true, nil
 }
 
 func (repo *EventRepo) FindAll(ctx context.Context) (*[]Event, error) {
+	out.Debugln("Finding all events")
 	eventDocs, err := repo.db.Client.Collection(eventCollection).
 		Select(eventFields...).
 		Documents(ctx).
 		GetAll()
 	if err != nil {
+		out.Errorf("Error while finding all events, %v", err)
 		return nil, err
 	}
+	out.Debugf("Found %d events", len(eventDocs))
 
+	out.Debugln("Finding all artists while finding all events")
 	artists, err := repo.artistRepo.findAllDocs(ctx)
 	if err != nil {
+		out.Errorf("Error retrieving artists while finding all events", err)
 		return nil, err
 	}
+	out.Debugf("Found %d artists while retrieving all events", len(*artists))
+
+	out.Debugln("Finding all venues while finding all events")
 	venues, err := repo.venueRepo.findAllDocs(ctx)
 	if err != nil {
+		out.Errorf("Error retrieving venues while finding all events", err)
 		return nil, err
 	}
+	out.Debugf("Found %d venues while retrieving all events", len(*venues))
 
+	// TODO: This logic could use better error handling for when the firestore event is invalid
+	// Currently, the whole app panics if the event data is invalid or the artist or venue is missing
+	// It would be better to log an error and ignore invalid events
 	events := []Event{}
 	for _, e := range eventDocs {
 		eventData := e.Data()
@@ -166,19 +193,21 @@ func (repo *EventRepo) FindAll(ctx context.Context) (*[]Event, error) {
 			MainAct: mainAct,
 			Openers: openers,
 			Venue: venue,
-			Date: toDate(eventData["Date"].(time.Time)),
+			Date: data.Date(eventData["Date"].(time.Time)),
+			Purchased: eventData["Purchased"].(bool),
 		}
 
 		events = append(events, event)
 	}
 
+	out.Debugf("Returning %d constructed events", len(events))
 	return &events, nil
 }
 
 func (repo *EventRepo) findEventDocRef(ctx context.Context, date string, venueRef *firestore.DocumentRef) (*firestore.DocumentSnapshot, error) {
 	event, err := repo.db.Client.Collection(eventCollection).
 		Select().
-		Where("Date", "==", toTimestamp(date)).
+		Where("Date", "==", data.Timestamp(date)).
 		Where("VenueRef", "==", venueRef).
 		Documents(ctx).
 		Next()
@@ -186,19 +215,4 @@ func (repo *EventRepo) findEventDocRef(ctx context.Context, date string, venueRe
 		return nil, err
 	}
 	return event, nil
-}
-
-// format is "mm/dd/yyyy", with leading zeros optional
-// expected that the date string has been previously validated to not error when converted to ints
-func toTimestamp(date string) time.Time {
-	parts := strings.Split(date, "/")
-    month, _ := strconv.Atoi(parts[0])
-	day, _ := strconv.Atoi(parts[1])
-	year, _ := strconv.Atoi(parts[2])
-	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-}
-
-func toDate(ts time.Time) string {
-	day, month, year := ts.Day(), ts.Month(), ts.Year()
-	return fmt.Sprintf("%d/%d/%d", month, day, year)
 }
