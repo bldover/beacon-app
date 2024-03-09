@@ -1,10 +1,9 @@
-package event
+package screens
 
 import (
-	"concert-manager/cli"
-	"concert-manager/cli/format"
 	"concert-manager/data"
-	"concert-manager/out"
+	"concert-manager/ui/terminal/input"
+	"concert-manager/ui/terminal/output"
 	"fmt"
 	"math"
 	"slices"
@@ -13,49 +12,49 @@ import (
 
 const pageSize = 10
 
-type Viewer struct {
-	Events   *[]data.Event
-	AddEventScreen cli.Screen
-	DeleteEventScreen EventDeleteScreen
-	MainMenu cli.Screen
-	page     int
-	actions []string
-	title string
-}
-
-type EventDeleteScreen interface {
-	cli.Screen
+type eventDeleteScreen interface {
+	Screen
 	AddDeleteContext(int, int)
 }
 
+type EventViewer struct {
+	Events            *[]data.Event
+	AddEventScreen    Screen
+	DeleteEventScreen eventDeleteScreen
+	MainMenu          Screen
+	page              int
+	actions           []string
+	title             string
+}
+
 const (
-	nextPage = iota + 1
-	prevPage
-	gotoPage
-	toggleSort
+	nextEventPage = iota + 1
+	prevEventPage
+	gotoEventPage
+	toggleEventSort
 	addEvent
 	deleteEvent
-	mainMenu
+	eventViewToMainMenu
 )
 
-func NewViewerScreen(title string) *Viewer {
-    view := Viewer{}
+func NewEventViewScreen(title string) *EventViewer {
+	view := EventViewer{}
 	view.title = title
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort", "Add Event", "Delete Event", "Main Menu"}
 	return &view
 }
 
-func (v Viewer) numPages() int {
-    return int(math.Ceil(float64(len(*v.Events)) / float64(pageSize)))
+func (v EventViewer) numPages() int {
+	return int(math.Ceil(float64(len(*v.Events)) / float64(pageSize)))
 }
 
-func (v Viewer) Title() string {
+func (v EventViewer) Title() string {
 	return v.title
 }
 
-func (v Viewer) DisplayData() {
+func (v EventViewer) DisplayData() {
 	if len(*v.Events) == 0 {
-		out.Displayln("No concerts found")
+		output.Displayln("No concerts found")
 	}
 
 	var eventData strings.Builder
@@ -68,30 +67,30 @@ func (v Viewer) DisplayData() {
 	}
 
 	for i := startEvent; i < endEvent; i++ {
-		eventData.WriteString(format.FormatEvent((*v.Events)[i]))
+		eventData.WriteString(formatEvent((*v.Events)[i]))
 	}
-	out.Displayln(eventData.String())
+	output.Displayln(eventData.String())
 }
 
-func (v Viewer) Actions() []string {
+func (v EventViewer) Actions() []string {
 	return v.actions
 }
 
-func (v *Viewer) NextScreen(i int) cli.Screen {
+func (v *EventViewer) NextScreen(i int) Screen {
 	switch i {
-    case nextPage:
+	case nextEventPage:
 		if (v.page + 1) < v.numPages() {
 			v.page++
 		}
 		return v
-	case prevPage:
+	case prevEventPage:
 		if v.page > 0 {
 			v.page--
 		}
-	case gotoPage:
-		v.page = cli.PromptAndGetInputNumeric("page number", 1, v.numPages() + 1) - 1
-	case toggleSort:
-		sortByDate := eventSort()
+	case gotoEventPage:
+		v.page = input.PromptAndGetInputNumeric("page number", 1, v.numPages()+1) - 1
+	case toggleEventSort:
+		sortByDate := sortEvents()
 		if slices.IsSortedFunc(*v.Events, sortByDate) {
 			slices.Reverse(*v.Events)
 		} else {
@@ -101,16 +100,16 @@ func (v *Viewer) NextScreen(i int) cli.Screen {
 	case addEvent:
 		return v.AddEventScreen
 	case deleteEvent:
-		v.DeleteEventScreen.AddDeleteContext(pageSize * v.page, pageSize)
+		v.DeleteEventScreen.AddDeleteContext(pageSize*v.page, pageSize)
 		return v.DeleteEventScreen
-	case mainMenu:
+	case eventViewToMainMenu:
 		v.page = 0
 		return v.MainMenu
 	}
 	return v
 }
 
-func eventSort() func(a, b data.Event) int {
+func sortEvents() func(a, b data.Event) int {
 	return func(a, b data.Event) int {
 		if data.Timestamp(a.Date).Before(data.Timestamp(b.Date)) {
 			return -1

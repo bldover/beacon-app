@@ -1,50 +1,47 @@
 package main
 
 import (
-	"concert-manager/cli"
-	"concert-manager/cli/artist"
-	"concert-manager/cli/event"
-	"concert-manager/cli/venue"
 	"concert-manager/data"
 	"concert-manager/db"
-	"concert-manager/out"
-	"concert-manager/repo"
+	"concert-manager/db/firestore"
+	"concert-manager/loader"
+	"concert-manager/log"
 	"concert-manager/server"
-	"concert-manager/svc"
+	"concert-manager/ui/terminal"
+	"concert-manager/ui/terminal/screens"
 	"context"
-	"log"
 )
 
 func main() {
-	if err := out.Initialize(); err != nil {
-		log.Fatalf("Failed to set up logger: %v", err)
+	if err := log.Initialize(); err != nil {
+		log.Fatal("Failed to set up logger:", err)
 	}
-	out.Infoln("Successfully initialized logger")
+	log.Info("Successfully initialized logger")
 
-	firestore, err := db.Setup()
+	dbConnection, err := firestore.Setup()
 	if err != nil {
-	 	out.Fatalf("Failed to set up database: %v", err)
+		log.Fatal("Failed to set up database:", err)
 	}
-	out.Infoln("Successfully initialized database")
+	log.Info("Successfully initialized database")
 
-	venueRepo := repo.NewVenueRepo(firestore)
-	artistRepo := repo.NewArtistRepo(firestore)
-	eventRepo := repo.NewEventRepo(firestore, venueRepo, artistRepo)
+	venueRepo := firestore.NewVenueRepo(dbConnection)
+	artistRepo := firestore.NewArtistRepo(dbConnection)
+	eventRepo := firestore.NewEventRepo(dbConnection, venueRepo, artistRepo)
 
-	interactor := &svc.EventInteractor{}
+	interactor := &db.DatabaseRepository{}
 	interactor.VenueRepo = venueRepo
 	interactor.ArtistRepo = artistRepo
 	interactor.EventRepo = eventRepo
 
-	loader := &svc.Loader{EventCreator: interactor}
+	loader := &loader.Loader{EventCreator: interactor}
 	go server.StartServer(loader)
 
-	out.Infoln("Starting event initializition...")
+	log.Info("Starting event initialization...")
 	events, err := interactor.ListEvents(context.Background())
 	if err != nil {
-		out.Fatalf("Failed to initialize events: %v", err)
+		log.Fatal("Failed to initialize events:", err)
 	}
-	out.Infoln("Successfully initialized events")
+	log.Info("Successfully initialized events")
 	pastEvents := []data.Event{}
 	futureEvents := []data.Event{}
 	for _, e := range *events {
@@ -55,77 +52,86 @@ func main() {
 		}
 	}
 
-	out.Infoln("Starting artist initialization...")
+	log.Info("Starting artist initialization...")
 	artists, err := interactor.ListArtists(context.Background())
 	if err != nil {
-		out.Fatalf("Failed to initialize artists: %v", err)
+		log.Fatal("Failed to initialize artists:", err)
 	}
-	out.Infoln("Successfully initialized artists")
+	log.Info("Successfully initialized artists")
 
-	out.Infoln("Starting venue initialization...")
+	log.Info("Starting venue initialization...")
 	venues, err := interactor.ListVenues(context.Background())
 	if err != nil {
-		out.Fatalf("Failed to initialize venues: %v", err)
+		log.Fatal("Failed to initialize venues:", err)
 	}
-	out.Infoln("Successfully initialized venues")
+	log.Info("Successfully initialized venues")
 
-	mainMenuScreen := cli.NewMainMenu()
+	log.Info("Starting terminal UI initialization...")
+	mainMenu := setupTerminalUI(interactor, &pastEvents, &futureEvents, artists, venues)
+	log.Info("Successfully initialized terminal UI, starting display...")
+	terminal.RunUI(mainMenu)
+}
 
-	historyViewScreen := event.NewViewerScreen("Concert History")
-	historyDeleteScreen := event.NewDeleteScreen()
-	historyAddScreen := event.NewAddScreen(false)
-	artistEditScreen := artist.NewEditScreen()
-	venueEditScreen := venue.NewEditScreen()
-	openerRemoveScreen := event.NewOpenerRemovalScreen()
+func setupTerminalUI(dbRepo *db.DatabaseRepository, pastEvents *[]data.Event, futureEvents *[]data.Event,
+	artists *[]data.Artist, venues *[]data.Venue) *screens.MainMenu {
 
-	historyViewScreen.Events = &pastEvents
+	mainMenuScreen := screens.NewMainMenu()
+
+	historyViewScreen := screens.NewEventViewScreen("Concert History")
+	historyDeleteScreen := screens.NewEventDeleteScreen()
+	historyAddScreen := screens.NewEventAddScreen(false)
+	artistEditScreen := screens.NewArtistEditScreen()
+	venueEditScreen := screens.NewVenueEditScreen()
+	openerRemoveScreen := screens.NewOpenerRemoveScreen()
+
+	historyViewScreen.Events = pastEvents
 	historyViewScreen.MainMenu = mainMenuScreen
 	historyViewScreen.AddEventScreen = historyAddScreen
 	historyViewScreen.DeleteEventScreen = historyDeleteScreen
 
-	historyAddScreen.Events = &pastEvents
-	historyAddScreen.EventAdder = interactor
+	historyAddScreen.Events = pastEvents
+	historyAddScreen.Database = dbRepo
 	historyAddScreen.ArtistEditor = artistEditScreen
 	historyAddScreen.VenueEditor = venueEditScreen
 	historyAddScreen.OpenerRemover = openerRemoveScreen
 	historyAddScreen.Viewer = historyViewScreen
 
-	historyDeleteScreen.Events = &pastEvents
+	historyDeleteScreen.Events = pastEvents
 	historyDeleteScreen.Viewer = historyViewScreen
-	historyDeleteScreen.Deleter = interactor
+	historyDeleteScreen.Database = dbRepo
 
-	futureViewScreen := event.NewViewerScreen("Future Concerts")
-	futureDeleteScreen := event.NewDeleteScreen()
-	futureAddScreen := event.NewAddScreen(true)
+	futureViewScreen := screens.NewEventViewScreen("Future Concerts")
+	futureDeleteScreen := screens.NewEventDeleteScreen()
+	futureAddScreen := screens.NewEventAddScreen(true)
 
-	futureViewScreen.Events = &futureEvents
+	futureViewScreen.Events = futureEvents
 	futureViewScreen.MainMenu = mainMenuScreen
 	futureViewScreen.AddEventScreen = futureAddScreen
 	futureViewScreen.DeleteEventScreen = futureDeleteScreen
 
-	futureAddScreen.Events = &futureEvents
-	futureAddScreen.EventAdder = interactor
+	futureAddScreen.Events = futureEvents
+	futureAddScreen.Database = dbRepo
 	futureAddScreen.ArtistEditor = artistEditScreen
 	futureAddScreen.VenueEditor = venueEditScreen
 	futureAddScreen.OpenerRemover = openerRemoveScreen
 	futureAddScreen.Viewer = futureViewScreen
 
-	futureDeleteScreen.Events = &futureEvents
+	futureDeleteScreen.Events = futureEvents
 	futureDeleteScreen.Viewer = futureViewScreen
-	futureDeleteScreen.Deleter = interactor
+	futureDeleteScreen.Database = dbRepo
 
 	artistEditScreen.Artists = artists
-	artistEditScreen.ArtistAdder = interactor
+	artistEditScreen.ArtistAdder = dbRepo
 	artistEditScreen.AddEventScreen = historyAddScreen
 
 	venueEditScreen.Venues = venues
-	venueEditScreen.VenueAdder = interactor
+	venueEditScreen.VenueAdder = dbRepo
 	venueEditScreen.AddEventScreen = historyAddScreen
 
 	openerRemoveScreen.AddEventScreen = historyAddScreen
 
 	mainMenuScreen.Children[1] = historyViewScreen
 	mainMenuScreen.Children[2] = futureViewScreen
-	out.Infoln("Successfully initialized CLI, starting display...")
-	cli.RunCLI(mainMenuScreen)
+
+	return mainMenuScreen
 }

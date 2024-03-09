@@ -1,9 +1,8 @@
-package repo
+package firestore
 
 import (
 	"concert-manager/data"
-	"concert-manager/db"
-	"concert-manager/out"
+	"concert-manager/log"
 	"context"
 
 	"cloud.google.com/go/firestore"
@@ -14,10 +13,10 @@ const artistCollection string = "artists"
 var artistFields = []string{"Name", "Genre"}
 
 type ArtistRepo struct {
-	db *db.Firestore
+	db *Firestore
 }
 
-func NewArtistRepo(fs *db.Firestore) *ArtistRepo {
+func NewArtistRepo(fs *Firestore) *ArtistRepo {
 	return &ArtistRepo{fs}
 }
 
@@ -29,14 +28,14 @@ type ArtistEntity struct {
 type Artist = data.Artist
 
 func (repo *ArtistRepo) Add(ctx context.Context, artist Artist) (string, error) {
-	out.Debugf("Attempting to add artist %v", artist)
+	log.Debug("Attempting to add artist", artist)
 	existingArtist, err := repo.findDocRef(ctx, artist.Name)
 	if err == nil {
-		out.Infof("Skipping adding artist because it already exists %+v, %v", artist, existingArtist.Ref.ID)
+		log.Infof("Skipping adding artist because it already exists %+v, %v", artist, existingArtist.Ref.ID)
 		return existingArtist.Ref.ID, nil
 	}
 	if err != iterator.Done {
-		out.Errorf("Error occurred while checking if artist %v already exists, %v", artist, err)
+		log.Errorf("Error occurred while checking if artist %v already exists, %v", artist, err)
 		return "", err
 	}
 
@@ -44,48 +43,48 @@ func (repo *ArtistRepo) Add(ctx context.Context, artist Artist) (string, error) 
 	artists := repo.db.Client.Collection(artistCollection)
 	docRef, _, err := artists.Add(ctx, artistEntity)
 	if err != nil {
-		out.Errorf("Failed to add new artist %+v, %v", artist, err)
+		log.Errorf("Failed to add new artist %+v, %v", artist, err)
 		return "", err
 	}
-	out.Infof("Created new artist %+v", docRef.ID)
+	log.Infof("Created new artist %+v", docRef.ID)
 	return docRef.ID, nil
 }
 
 func (repo *ArtistRepo) Delete(ctx context.Context, artist Artist) error {
-	out.Debugf("Attempting to delete artist %v", artist)
+	log.Debug("Attempting to delete artist", artist)
 	artistDoc, err := repo.findDocRef(ctx, artist.Name)
 	if err != nil {
-		out.Errorf("Failed to find existing artist while deleting %+v, %v", artist, err)
+		log.Errorf("Failed to find existing artist while deleting %+v, %v", artist, err)
 		return err
 	}
 	artistDoc.Ref.Delete(ctx)
-	out.Infof("Successfully deleted artist %+v", artist)
+	log.Infof("Successfully deleted artist %+v", artist)
 	return nil
 }
 
 func (repo *ArtistRepo) Exists(ctx context.Context, artist Artist) (bool, error) {
-	out.Debugf("Checking for existence of artist %v", artist)
+	log.Debug("Checking for existence of artist", artist)
 	doc, err := repo.findDocRef(ctx, artist.Name)
 	if err == iterator.Done {
-		out.Debugf("No existing artist found for %v", artist)
+		log.Debug("No existing artist found for", artist)
 		return false, nil
 	}
 	if err != nil {
-		out.Errorf("Error while checking existence of artist %v, %v", artist, err)
+		log.Errorf("Error while checking existence of artist %v, %v", artist, err)
 		return false, err
 	}
-	out.Debugf("Found artist %v with document ID %v", artist, doc.Ref.ID)
+	log.Debugf("Found artist %v with document ID %v", artist, doc.Ref.ID)
 	return true, nil
 }
 
 func (repo *ArtistRepo) FindAll(ctx context.Context) (*[]Artist, error) {
-	out.Debugln("Finding all artists")
+	log.Debug("Finding all artists")
 	artistDocs, err := repo.db.Client.Collection(artistCollection).
 		Select(artistFields...).
 		Documents(ctx).
 		GetAll()
 	if err != nil {
-		out.Errorf("Error while finding all artists, %v", err)
+		log.Error("Error while finding all artists,", err)
 		return nil, err
 	}
 
@@ -93,7 +92,7 @@ func (repo *ArtistRepo) FindAll(ctx context.Context) (*[]Artist, error) {
 	for _, a := range artistDocs {
 		artists = append(artists, toArtist(a))
 	}
-	out.Debugf("Found %d artists", len(artists))
+	log.Debugf("Found %d artists", len(artists))
 	return &artists, nil
 }
 

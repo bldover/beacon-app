@@ -1,19 +1,24 @@
-package artist
+package screens
 
 import (
-	"concert-manager/cli"
 	"concert-manager/data"
-	"concert-manager/out"
+	"concert-manager/log"
+	"concert-manager/ui/terminal/input"
+	"concert-manager/ui/terminal/output"
 	"context"
 	"strings"
 )
+
+type artistAdder interface {
+    AddArtist(context.Context, data.Artist) error
+}
 
 type Editor struct {
     artist *data.Artist
 	tempArtist data.Artist
 	Artists *[]data.Artist
-	ArtistAdder ArtistAdder
-	AddEventScreen cli.Screen
+	ArtistAdder artistAdder
+	AddEventScreen Screen
 	actions []string
 }
 
@@ -25,20 +30,21 @@ const (
 	cancel
 )
 
-type ArtistAdder interface {
-    AddArtist(context.Context, data.Artist) error
-}
-
-func NewEditScreen() *Editor {
+func NewArtistEditScreen() *Editor {
 	e := Editor{}
 	e.actions = []string{"Search Artists", "Set Name", "Set Genre", "Save Artist", "Cancel"}
     return &e
 }
 
 func (e *Editor) AddArtistContext(artist *data.Artist) {
+	log.Debugf("in Artist editor - add artist context: %p", artist)
+	log.Debugf("in Artist editor - add artist context: %+v", artist)
     e.artist = artist
 	e.tempArtist.Name = strings.Clone(artist.Name)
 	e.tempArtist.Genre = strings.Clone(artist.Genre)
+	log.Debugf("st Artist editor - add artist context: %p", e.artist)
+	log.Debugf("st Artist editor - add artist context: %+v", e.artist)
+	log.Debug("tp Artist editor - add artist context:", e.tempArtist)
 }
 
 func (e Editor) Title() string {
@@ -46,24 +52,24 @@ func (e Editor) Title() string {
 }
 
 func (e Editor) DisplayData() {
-    out.Displayf("%+v\n", e.tempArtist)
+    output.Displayf("%+v\n", e.tempArtist)
 }
 
 func (e Editor) Actions() []string {
     return e.actions
 }
 
-func (e *Editor) NextScreen(i int) cli.Screen {
+func (e *Editor) NextScreen(i int) Screen {
 	switch i {
     case search:
 		e.handleSearch()
 	case setName:
-		e.tempArtist.Name = cli.PromptAndGetInput("artist name", cli.NoValidation)
+		e.tempArtist.Name = input.PromptAndGetInput("artist name", input.NoValidation)
 	case setGenre:
-		e.tempArtist.Genre = cli.PromptAndGetInput("artist genre", cli.NoValidation)
+		e.tempArtist.Genre = input.PromptAndGetInput("artist genre", input.NoValidation)
 	case save:
 		if err := e.ArtistAdder.AddArtist(context.Background(), e.tempArtist); err != nil {
-			out.Displayf("Failed to save artist: %v\n", err)
+			output.Displayf("Failed to save artist: %v\n", err)
 		} else {
 			*e.artist = e.tempArtist
 			return e.AddEventScreen
@@ -75,6 +81,6 @@ func (e *Editor) NextScreen(i int) cli.Screen {
 }
 
 func (e *Editor) handleSearch() {
-	out.Displayln("Not yet implemented!")
+	output.Displayln("Not yet implemented!")
 	//TODO: add search functionality
 }

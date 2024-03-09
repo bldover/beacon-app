@@ -1,4 +1,4 @@
-package format
+package screens
 
 import (
 	"concert-manager/data"
@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-func FormatEvent(e data.Event) string {
+func formatEvent(e data.Event) string {
 	fmtParts := []any{}
 
-	date := FormatDate(e.Date)
+	date := formatDate(e.Date)
 	fmtParts = append(fmtParts, date)
 
 	location := fmt.Sprintf("%s, %s, %s", e.Venue.Name, e.Venue.City, e.Venue.State)
@@ -47,7 +47,7 @@ func FormatEvent(e data.Event) string {
 }
 
 // adds leading zeros if needed
-func FormatDate(date string) string {
+func formatDate(date string) string {
 	parts := strings.Split(date, "/")
 	month := parts[0]
 	day := parts[1]
@@ -61,7 +61,7 @@ func FormatDate(date string) string {
 	return fmt.Sprintf("%s/%s/%s", month, day, year)
 }
 
-func FormatEventShort(e data.Event, maxNameLen int) string {
+func formatEventShort(e data.Event, maxNameLen int) string {
 	var artist string
 	if e.MainAct.Populated() {
 		artist = e.MainAct.Name
@@ -69,7 +69,7 @@ func FormatEventShort(e data.Event, maxNameLen int) string {
 		artist = e.Openers[0].Name
 	}
 
-	date := FormatDate(e.Date)
+	date := formatDate(e.Date)
 	var spacing strings.Builder
 	for i := len(artist); i < maxNameLen; i++ {
 		spacing.WriteString(" ")
@@ -77,7 +77,7 @@ func FormatEventShort(e data.Event, maxNameLen int) string {
 	return fmt.Sprintf("%s %s%v @ %s", artist, spacing.String(), date, e.Venue.Name)
 }
 
-func FormatEventExpanded(e data.Event, future bool) string {
+func formatEventExpanded(e data.Event, future bool) string {
 	mainActFmt := "Main Act: %+v"
 	mainActNaFmt := "Main Act: N/A"
 	openerFmt := "Openers: %s"

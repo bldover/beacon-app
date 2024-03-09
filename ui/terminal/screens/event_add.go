@@ -1,59 +1,59 @@
-package event
+package screens
 
 import (
-	"concert-manager/cli"
-	"concert-manager/cli/format"
 	"concert-manager/data"
-	"concert-manager/out"
+	"concert-manager/log"
+	"concert-manager/ui/terminal/input"
+	"concert-manager/ui/terminal/output"
 	"context"
 	"slices"
 )
 
+type eventDbAdder interface {
+    AddEvent(context.Context, data.Event) error
+}
+
+type artistEditScreen interface {
+	Screen
+	AddArtistContext(*data.Artist)
+}
+
+type venueEditScreen interface {
+    Screen
+	AddVenueContext(*data.Venue)
+}
+
+type openerRemoveScreen interface {
+    Screen
+	AddOpenerContext(*[]data.Artist)
+}
+
 type Adder struct {
 	Events *[]data.Event
 	NewEvent data.Event
-	EventAdder EventAdder
-	ArtistEditor ArtistEditScreen
-	VenueEditor VenueEditScreen
-	OpenerRemover OpenerRemoveScreen
-	Viewer cli.Screen
+	Database eventDbAdder
+	ArtistEditor artistEditScreen
+	VenueEditor venueEditScreen
+	OpenerRemover openerRemoveScreen
+	Viewer Screen
 	actions []string
 	futureEvents bool
 }
 
-type EventAdder interface {
-    AddEvent(context.Context, data.Event) error
-}
-
-type ArtistEditScreen interface {
-	cli.Screen
-	AddArtistContext(*data.Artist)
-}
-
-type VenueEditScreen interface {
-    cli.Screen
-	AddVenueContext(*data.Venue)
-}
-
-type OpenerRemoveScreen interface {
-    cli.Screen
-	AddOpenerContext(*[]data.Artist)
-}
-
 const (
-	mainAct = iota + 1
+	editMainAct = iota + 1
 	addOpener
 	removeOpener
-	venue
-	date
+	editVenue
+	editDate
 	togglePurchased
-	save
-	cancel
+	saveEvent
+	cancelAddEvent
 )
 
-const maxOpeners = 10
+const maxOpeners = 20
 
-func NewAddScreen(futureEvents bool) *Adder {
+func NewEventAddScreen(futureEvents bool) *Adder {
     a := Adder{}
 	a.futureEvents = futureEvents
 	if futureEvents {
@@ -76,29 +76,33 @@ func (a *Adder) DisplayData() {
 			break
 		}
 	}
-    out.Displayln(format.FormatEventExpanded(a.NewEvent, a.futureEvents))
+    output.Displayln(formatEventExpanded(a.NewEvent, a.futureEvents))
 }
 
 func (a Adder) Actions() []string {
 	return a.actions
 }
 
-func (a *Adder) NextScreen(i int) cli.Screen {
+func (a *Adder) NextScreen(i int) Screen {
 	if !a.futureEvents && i >= togglePurchased {
 		i += 1
 	}
 
 	switch i {
-    case mainAct:
+    case editMainAct:
 		a.ArtistEditor.AddArtistContext(&a.NewEvent.MainAct)
 		return a.ArtistEditor
 
 	case addOpener:
 		if len(a.NewEvent.Openers) >= maxOpeners {
-			out.Displayln("Max number of openers is already reached!")
+			output.Displayln("Max number of openers is already reached!")
 			return a
 		}
 		a.NewEvent.Openers = append(a.NewEvent.Openers, data.Artist{})
+		log.Debugf("add event - op: %p", &a.NewEvent.Openers)
+		log.Debugf("add event - op: %+v", a.NewEvent.Openers)
+		log.Debugf("add event - op: %p", &a.NewEvent.Openers[0])
+		log.Debugf("add event - op: %+v", a.NewEvent.Openers[0])
 		a.ArtistEditor.AddArtistContext(&a.NewEvent.Openers[len(a.NewEvent.Openers) - 1])
 		return a.ArtistEditor
 
@@ -106,32 +110,32 @@ func (a *Adder) NextScreen(i int) cli.Screen {
 		a.OpenerRemover.AddOpenerContext(&a.NewEvent.Openers)
 		return a.OpenerRemover
 
-	case venue:
+	case editVenue:
 		a.VenueEditor.AddVenueContext(&a.NewEvent.Venue)
 		return a.VenueEditor
 
-	case date:
+	case editDate:
 		if a.futureEvents {
-			a.NewEvent.Date = cli.PromptAndGetInput("event date (mm/dd/yyyy)", data.ValidFutureDate)
+			a.NewEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", data.ValidFutureDate)
 		} else {
-			a.NewEvent.Date = cli.PromptAndGetInput("event date (mm/dd/yyyy)", data.ValidPastDate)
+			a.NewEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", data.ValidPastDate)
 		}
 
 	case togglePurchased:
 		a.NewEvent.Purchased = !a.NewEvent.Purchased
 
-	case save:
+	case saveEvent:
 		if !a.futureEvents {
 			a.NewEvent.Purchased = true
 		}
-		if err := a.EventAdder.AddEvent(context.Background(), a.NewEvent); err != nil {
-			out.Displayf("Failed to save event: %v\n", err)
+		if err := a.Database.AddEvent(context.Background(), a.NewEvent); err != nil {
+			output.Displayf("Failed to save event: %v\n", err)
 			return a
 		}
 		*a.Events = append(*a.Events, a.NewEvent)
 		return a.Viewer
 
-	case cancel:
+	case cancelAddEvent:
 		a.NewEvent = data.Event{}
 		return a.Viewer
 	}

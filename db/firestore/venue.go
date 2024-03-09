@@ -1,9 +1,8 @@
-package repo
+package firestore
 
 import (
 	"concert-manager/data"
-	"concert-manager/db"
-	"concert-manager/out"
+	"concert-manager/log"
 	"context"
 
 	"cloud.google.com/go/firestore"
@@ -14,10 +13,10 @@ const venueCollection = "venues"
 var venueFields = []string{"Name", "City", "State"}
 
 type VenueRepo struct {
-	db *db.Firestore
+	db *Firestore
 }
 
-func NewVenueRepo(fs *db.Firestore) *VenueRepo {
+func NewVenueRepo(fs *Firestore) *VenueRepo {
 	return &VenueRepo{fs}
 }
 
@@ -30,14 +29,14 @@ type VenueEntity struct {
 type Venue = data.Venue
 
 func (repo *VenueRepo) Add(ctx context.Context, venue Venue) (string, error) {
-	out.Debugf("Attemping to add venue %v", venue)
+	log.Debug("Attemping to add venue", venue)
 	existingVenue, err := repo.findDocRef(ctx, venue.Name, venue.City, venue.State)
 	if err == nil {
-		out.Infof("Skipping adding venue because it already exists %+v, %v", venue, existingVenue.Ref.ID)
+		log.Infof("Skipping adding venue because it already exists %+v, %v", venue, existingVenue.Ref.ID)
 		return existingVenue.Ref.ID, nil
 	}
 	if err != iterator.Done {
-		out.Errorf("Error occurred while checking if venue %v already exists, %v", venue, err)
+		log.Errorf("Error occurred while checking if venue %v already exists, %v", venue, err)
 		return "", err
 	}
 
@@ -45,48 +44,48 @@ func (repo *VenueRepo) Add(ctx context.Context, venue Venue) (string, error) {
 	venues := repo.db.Client.Collection(venueCollection)
 	docRef, _, err := venues.Add(ctx, venueEntity)
 	if err != nil {
-		out.Errorf("Failed to add new venue %+v, %v", venue, err)
+		log.Errorf("Failed to add new venue %+v, %v", venue, err)
 		return "", err
 	}
-	out.Infof("Created new venue %+v", docRef.ID)
+	log.Infof("Created new venue %+v", docRef.ID)
 	return docRef.ID, nil
 }
 
 func (repo *VenueRepo) Delete(ctx context.Context, venue Venue) error {
-	out.Debugf("Attemping to delete venue %v", venue)
+	log.Debug("Attemping to delete venue", venue)
 	venueDoc, err := repo.findDocRef(ctx, venue.Name, venue.City, venue.State)
 	if err != nil {
-		out.Errorf("Failed to find existing venue while deleting %+v, %v", venue, err)
+		log.Errorf("Failed to find existing venue while deleting %+v, %v", venue, err)
 		return err
 	}
 	venueDoc.Ref.Delete(ctx)
-	out.Infof("Successfully deleted venue %+v", venue)
+	log.Infof("Successfully deleted venue %+v", venue)
 	return nil
 }
 
 func (repo *VenueRepo) Exists(ctx context.Context, venue Venue) (bool, error) {
-	out.Debugf("Checking for existence of venue %v", venue)
+	log.Debug("Checking for existence of venue", venue)
 	doc, err := repo.findDocRef(ctx, venue.Name, venue.City, venue.State)
 	if err == iterator.Done {
-		out.Debugf("No existing venue found for %v", venue)
+		log.Debug("No existing venue found for", venue)
 		return false, nil
 	}
 	if err != nil {
-		out.Errorf("Error while checkinf existence of venue %v, %v", venue, err)
+		log.Errorf("Error while checkinf existence of venue %v, %v", venue, err)
 		return false, err
 	}
-	out.Debugf("Found venue %v with document ID %v", venue, doc.Ref.ID)
+	log.Debugf("Found venue %v with document ID %v", venue, doc.Ref.ID)
 	return true, nil
 }
 
 func (repo *VenueRepo) FindAll(ctx context.Context) (*[]Venue, error) {
-	out.Debugln("Finding all venues")
+	log.Debug("Finding all venues")
 	venueDocs, err := repo.db.Client.Collection(venueCollection).
 		Select(venueFields...).
 		Documents(ctx).
 	 	GetAll()
 	if err != nil {
-		out.Errorf("Error while finding all venues, %v", err)
+		log.Error("Error while finding all venues,", err)
 		return nil, err
 	}
 
@@ -94,7 +93,7 @@ func (repo *VenueRepo) FindAll(ctx context.Context) (*[]Venue, error) {
 	for _, v := range venueDocs {
 		venues = append(venues, toVenue(v))
 	}
-	out.Debugf("Found %d artists", len(venues))
+	log.Debugf("Found %d artists", len(venues))
 	return &venues, nil
 }
 

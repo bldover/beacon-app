@@ -1,39 +1,38 @@
-package event
+package screens
 
 import (
-	"concert-manager/cli"
 	"concert-manager/data"
-	"concert-manager/out"
+	"concert-manager/ui/terminal/output"
 	"fmt"
 	"slices"
 )
 
-type OpenerRemove struct {
-	AddEventScreen cli.Screen
+type OpenerRemover struct {
+	AddEventScreen Screen
 	openers   *[]data.Artist
 }
 
-func NewOpenerRemovalScreen() *OpenerRemove {
-	or := OpenerRemove{}
+func NewOpenerRemoveScreen() *OpenerRemover {
+	or := OpenerRemover{}
 	or.openers = &[]data.Artist{}
     return &or
 }
 
-func (or *OpenerRemove) AddOpenerContext(openers *[]data.Artist) {
+func (or *OpenerRemover) AddOpenerContext(openers *[]data.Artist) {
 	or.openers = openers
 }
 
-func (or OpenerRemove) Title() string {
+func (or OpenerRemover) Title() string {
     return "Remove Opener"
 }
 
-func (or OpenerRemove) DisplayData() {
+func (or OpenerRemover) DisplayData() {
 	if len(*or.openers) == 0 {
-		out.Displayln("No openers to remove!")
+		output.Displayln("No openers to remove!")
 	}
 }
 
-func (or OpenerRemove) Actions() []string {
+func (or OpenerRemover) Actions() []string {
 	actions := []string{}
 
 	for _, opener := range *or.openers {
@@ -44,7 +43,7 @@ func (or OpenerRemove) Actions() []string {
     return actions
 }
 
-func (or *OpenerRemove) NextScreen(i int) cli.Screen {
+func (or *OpenerRemover) NextScreen(i int) Screen {
 	if i == len(*or.openers) + 1 {
 		return or.AddEventScreen
 	}

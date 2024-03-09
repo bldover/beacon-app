@@ -1,48 +1,46 @@
-package event
+package screens
 
 import (
-	"concert-manager/cli"
-	"concert-manager/cli/format"
 	"concert-manager/data"
-	"concert-manager/out"
+	"concert-manager/ui/terminal/output"
 	"context"
 	"math"
 	"slices"
 )
 
-type EventDeleter interface {
+type eventDbDeleter interface {
     DeleteEvent(context.Context, data.Event) error
 }
 
-type Deleter struct {
+type EventDeleter struct {
 	Events   *[]data.Event
-	Deleter EventDeleter
-	Viewer cli.Screen
+	Database eventDbDeleter
+	Viewer Screen
 	startIdx int
 	displayCount int
 }
 
-func NewDeleteScreen() *Deleter {
-    return &Deleter{}
+func NewEventDeleteScreen() *EventDeleter {
+    return &EventDeleter{}
 }
 
-func (d *Deleter) AddDeleteContext(startIdx int, displayCount int) {
+func (d *EventDeleter) AddDeleteContext(startIdx int, displayCount int) {
     d.startIdx = startIdx
 	remainingEvents := len(*d.Events) - startIdx
 	d.displayCount = int(math.Min(float64(displayCount), float64(remainingEvents)))
 }
 
-func (d Deleter) Title() string {
+func (d EventDeleter) Title() string {
     return "Delete Concert"
 }
 
-func (d Deleter) DisplayData() {
+func (d EventDeleter) DisplayData() {
 	if len(*d.Events) == 0 {
-		out.Displayln("No concerts found")
+		output.Displayln("No concerts found")
 	}
 }
 
-func (d Deleter) Actions() []string {
+func (d EventDeleter) Actions() []string {
 	actions := []string{}
 	pageEvents := []data.Event{}
 	var maxNameLen int
@@ -59,17 +57,17 @@ func (d Deleter) Actions() []string {
 	}
 
 	for _, event := range pageEvents {
-		actions = append(actions, format.FormatEventShort(event, maxNameLen))
+		actions = append(actions, formatEventShort(event, maxNameLen))
 	}
 
 	actions = append(actions, "Cancel")
     return actions
 }
 
-func (d *Deleter) NextScreen(i int) cli.Screen {
+func (d *EventDeleter) NextScreen(i int) Screen {
 	if i != d.displayCount + 1 {
 		eventIdx := d.startIdx + i - 1
-		d.Deleter.DeleteEvent(context.Background(), (*d.Events)[eventIdx])
+		d.Database.DeleteEvent(context.Background(), (*d.Events)[eventIdx])
 		*d.Events = slices.Delete(*d.Events, eventIdx, eventIdx + 1)
 	}
     return d.Viewer

@@ -1,10 +1,10 @@
-package svc
+package loader
 
 import (
 	"bufio"
 	"bytes"
 	"concert-manager/data"
-	"concert-manager/out"
+	"concert-manager/log"
 	"context"
 	"errors"
 	"fmt"
@@ -16,7 +16,7 @@ import (
 const minColumns = 7
 
 type EventCreator interface {
-	AddEventRecursive(context.Context, Event) error
+	AddEventRecursive(context.Context, data.Event) error
 }
 
 type Loader struct {
@@ -24,7 +24,7 @@ type Loader struct {
 }
 
 func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
-	out.Debugln("Starting processing event file upload")
+	log.Debug("Starting processing event file upload")
 	scanner := bufio.NewScanner(file)
 	first := true
 	events := []data.Event{}
@@ -34,38 +34,38 @@ func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 			continue
 		}
 		line := scanner.Text()
-		out.Debugf("Parsed event line: %s", line)
+		log.Debugf("Parsed event line: %s", line)
 		event, err := toEvent(convertSpecialChars(line))
 		if err != nil {
-			out.Errorf("Error while parsing event: %v", err)
+			log.Errorf("Error while parsing event: %v", err)
 			return 0, fmt.Errorf("unable to convert line to event: %s, %v", line, err)
 		}
-		out.Debugf("Converted input to event %v", event)
+		log.Debugf("Converted input to event %v", event)
 		events = append(events, event)
 	}
 
 	hasErr := false
 	successCount := 0
 	for i, event := range events {
-		out.Debugf("Starting upload for event %v", event)
+		log.Debugf("Starting upload for event %v", event)
 		if err := l.EventCreator.AddEventRecursive(ctx, event); err != nil {
-			out.Errorf("Failed to add event at row %d, %+v, %v", i+2, event, err)
+			log.Errorf("Failed to add event at row %d, %+v, %v", i+2, event, err)
 			hasErr = true
 		} else {
 			successCount++
-			out.Debugf("Event successfully uploaded %v", event)
+			log.Debugf("Event successfully uploaded %v", event)
 		}
 	}
 
-	out.Infof("Successfully uploaded %d event rows", successCount)
-	out.Errorf("Failed to upload %d event rows", len(events) - successCount)
+	log.Infof("Successfully uploaded %d event rows", successCount)
+	log.Errorf("Failed to upload %d event rows", len(events) - successCount)
 	if hasErr {
 		return successCount, errors.New("failed to add at least one row. check logs for more details")
 	}
 	return successCount, nil
 }
 
-func toEvent(row string) (Event, error) {
+func toEvent(row string) (data.Event, error) {
 	parts := strings.Split(row, ",")
 	if len(parts) < minColumns {
 		return data.Event{}, errors.New("not enough columns in row")
@@ -76,7 +76,7 @@ func toEvent(row string) (Event, error) {
 		Genre: strings.TrimSpace(parts[1]),
 	}
 	if mainAct.Invalid() {
-		return Event{}, errors.New("invalid main act")
+		return data.Event{}, errors.New("invalid main act")
 	}
 	date := strings.TrimSpace(parts[2])
 	venue := data.Venue{
@@ -85,19 +85,19 @@ func toEvent(row string) (Event, error) {
 		State: strings.TrimSpace(parts[5]),
 	}
 	if !venue.Populated() {
-		return Event{}, errors.New("invalid venue")
+		return data.Event{}, errors.New("invalid venue")
 	}
 	purchased := strings.TrimSpace(parts[6]) == "TRUE"
 
 	openers := []data.Artist{}
 	i, j := 7, 8
 	for i < len(parts) && j < len(parts) {
-		opener := Artist{
+		opener := data.Artist{
 			Name: strings.TrimSpace(parts[i]),
 			Genre: strings.TrimSpace(parts[j]),
 		}
 		if opener.Invalid() {
-			return Event{}, errors.New("invalid opener")
+			return data.Event{}, errors.New("invalid opener")
 		}
 		if !opener.Populated() {
 			break
@@ -106,7 +106,7 @@ func toEvent(row string) (Event, error) {
 		i, j = i + 2, j + 2
 	}
 
-	event := Event{
+	event := data.Event{
 		MainAct: mainAct,
 		Openers: openers,
 		Venue: venue,

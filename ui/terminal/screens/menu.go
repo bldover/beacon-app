@@ -1,7 +1,7 @@
-package cli
+package screens
 
 import (
-	"concert-manager/out"
+	"concert-manager/ui/terminal/output"
 	"os"
 )
 
@@ -30,7 +30,7 @@ func (mm MainMenu) Actions() []string {
 
 func (mm MainMenu) NextScreen(i int) Screen {
 	if i == len(mm.Children) + 1 {
-		out.Infoln("Received exit request, terminating...")
+		output.Displayln("Received exit request, terminating...")
 		os.Exit(0)
 	}
 	return mm.Children[i]
