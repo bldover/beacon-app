@@ -17,6 +17,11 @@ type (
 		Date    string
 		Purchased bool
 	}
+	EventDetails struct {
+		Name string
+		Price string
+		Event Event
+	}
 )
 
 func (v *Venue) Populated() bool {

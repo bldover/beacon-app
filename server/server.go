@@ -1,6 +1,7 @@
 package server
 
 import (
+	"concert-manager/finder/ticketmaster"
 	"concert-manager/log"
 	"context"
 	"fmt"
@@ -14,6 +15,7 @@ const maxFileSizeBytes = 100000
 func StartServer(l Loader) {
 	handler := &uploadHandler{l}
 	http.Handle("/upload", handler)
+	http.Handle("/test", &testHandler{})
 	log.Info("Starting server on port ", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
@@ -51,4 +53,18 @@ func (handler *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	successMsg := fmt.Sprintf("Successfully uploaded %d rows", rows)
 	log.Info("Finished processing upload request")
 	fmt.Fprintln(w, successMsg)
+}
+
+type testHandler struct {}
+
+func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+    events, err := ticketmaster.GetUpcomingEvents("Atlanta", "GA")
+	if err != nil {
+		log.Error(err)
+	}
+	for _, event := range *events {
+		if event != nil {
+			log.Infof("Found event: %+v", *event)
+		}
+	}
 }

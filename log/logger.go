@@ -1,10 +1,8 @@
 package log
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"time"
 )
 
 var (
@@ -15,9 +13,9 @@ var (
 )
 
 const logPath = "/.concert_manager/logs/"
+const fileName = "concert_manager.log"
 
 func Initialize() error {
-	fileName := fmt.Sprintf("log-%d.log", time.Now().UnixMilli())
 	logFile, err := createLogFile(fileName)
 	if err != nil {
 		return err
