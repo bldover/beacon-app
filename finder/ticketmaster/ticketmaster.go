@@ -15,8 +15,9 @@ import (
 
 const (
 	apiKey         = "TICKETMASTER_API_KEY"
-	eventsBaseUrl  = "https://app.ticketmaster.com/discovery/v2/events"
-	urlFmt         = "%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%s"
+	host           = "https://app.ticketmaster.com"
+	eventPath      = "/discovery/v2/events"
+	urlFmt         = "%s%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%s"
 	apiKeyFmt      = "&apikey=%s"
 	dateTimeFmt    = "2006-01-02T15:04:05"
 	dateFmt        = "2006-01-02"
@@ -25,7 +26,7 @@ const (
 	radius         = "50"
 	unit           = "miles"
 	stateCode      = "GA"
-	size           = "20"
+	pageSize       = "20"
 
 	quotaViolationCode = "policies.ratelimit.QuotaViolation"
 	rateViolationCode  = "policies.ratelimit.SpikeArrestViolation"
@@ -109,11 +110,9 @@ func (e RetryableError) Error() string {
 }
 
 type UpcomingEventsRequest struct {
-    city string
+	city  string
 	state string
 }
-
-//func (r *UpcomingEventsRequest)
 
 // This function is the entry point to getting all the event details.
 // It retrieves the data from the first page of event results and then submits a
@@ -126,38 +125,73 @@ func GetUpcomingEvents(city string, state string) (*[]*data.EventDetails, error)
 	}
 	response, err := getResponseDetails(url)
 	if err != nil {
-		// Don't check for retryable error because this is the first request,
-		// so we assume we haven't exceeded the rate limit.
-		// This will be inappropriate and need to be changed if the app ever
-		// reaches a point where this method would be called this simultaneously
-		// by multiple users or some other logic
+		// Assume no rate violation here since it's the first request
+		log.Error("Error retrieving event data from Ticketmaster", err)
 		return nil, err
 	}
 
 	eventCount := response.PageInfo.EventCount
 	eventDetails := make([]*data.EventDetails, eventCount)
-	populateAllEventDetails(response, &eventDetails)
-	// handle error scenario
+	if err := populateAllEventDetails(response, &eventDetails); err != nil {
+		log.Error(err)
+	}
 
-//	doneIndicator := make(chan int)
-	// submit next call if page exists
+	getRemainingPages(response.Links.Next.URL, &eventDetails)
+	if len(eventDetails) != eventCount {
+		errMsg := fmt.Sprintf("Unable to retrieve all expected events. Read %v/%v", len(eventDetails), eventCount)
+		return &eventDetails, errors.New(errMsg)
+	}
 	return &eventDetails, nil
 }
 
-func getEventsByPage(url string, events *[]*data.EventDetails, done chan int) error {
+func getRemainingPages(url string, eventDetails *[]*data.EventDetails) {
+	retryCount := 0
+	maxRetries := 3
+	for url != "" {
+		lastUrl := url
+		var err error
+		url, err = getEvents(url, eventDetails)
+		if err != nil {
+			switch err.(type) {
+			case RetryableError:
+				if retryCount < maxRetries {
+					log.Info("Received Ticketmaster rate violation, retry count:", retryCount)
+					url = lastUrl
+					retryCount++
+					waitTime := time.Duration(500000000) // 0.5s
+					time.Sleep(waitTime)
+				} else {
+					log.Error("Failed to retrieve event page from Ticketmaster after all retry attempts:", err)
+				}
+			case error:
+				log.Error("Failed to retrieve event page from Ticketmaster with non-retryable error:", err)
+			}
+			continue
+		}
+		log.Debug("Successfully retrieved event page from Ticketmaster")
+		retryCount = 0
+	}
+}
+
+func getEvents(urlPath string, events *[]*data.EventDetails) (string, error) {
 	token, err := getAuthToken()
 	if err != nil {
-		return err
+		return "", err
 	}
-	url += fmt.Sprintf("%s&apiKey=%s", url, token)
+	url := host + urlPath
+	log.Debug("Built URL (without auth token): ", url)
+	url += fmt.Sprintf(apiKeyFmt, token)
 
 	response, err := getResponseDetails(url)
+	if err != nil {
+		return "", err
+	}
 	populateAllEventDetails(response, events)
-	// handle error scenario
+	if err := populateAllEventDetails(response, events); err != nil {
+		log.Error(err)
+	}
 
-	// submit next call if page exists
-	done <- 1
-	return nil
+	return response.Links.Next.URL, nil
 }
 
 func getResponseDetails(url string) (*response, error) {
@@ -166,8 +200,6 @@ func getResponseDetails(url string) (*response, error) {
 		return nil, err
 	}
 	defer response.Body.Close()
-
-
 
 	if response.StatusCode != http.StatusOK {
 		errResp, err := toErrorResponse(response.Body)
@@ -204,15 +236,14 @@ func buildUrl(city string, state string) (string, error) {
 	}
 	startDate := time.Now().In(location).Format(dateTimeFmt)
 
-	url := fmt.Sprintf(urlFmt, eventsBaseUrl, classification, city, state, radius, unit, startDate, sort, size)
+	url := fmt.Sprintf(urlFmt, host, eventPath, classification, city, state, radius, unit, startDate, sort, pageSize)
 	log.Debug("Built URL (without auth token): ", url)
 	url += fmt.Sprintf(apiKeyFmt, token)
-	log.Debug("Built full URL: ", url)
 	return url, nil
 }
 
 func getAuthToken() (string, error) {
-    token := os.Getenv(apiKey)
+	token := os.Getenv(apiKey)
 	if token == "" {
 		errMsg := fmt.Sprintf("%s environment variable must be set", apiKey)
 		return "", errors.New(errMsg)
@@ -250,8 +281,9 @@ func populateAllEventDetails(response *response, events *[]*data.EventDetails) e
 		eventCount++
 	}
 
-	if eventCount != len(response.Data.Events) {
-		return errors.New("failed to parse all events")
+	failedCount := len(response.Data.Events) - eventCount
+	if failedCount != 0 {
+		return errors.New(fmt.Sprintf("failed to parse %v events", failedCount))
 	}
 	return nil
 }
