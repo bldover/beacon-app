@@ -4,6 +4,7 @@ import (
 	"concert-manager/data"
 	"concert-manager/db"
 	"concert-manager/db/firestore"
+	"concert-manager/finder"
 	"concert-manager/loader"
 	"concert-manager/log"
 	"concert-manager/server"
@@ -34,7 +35,6 @@ func main() {
 	loader := &loader.Loader{EventCreator: interactor}
 	go server.StartServer(loader)
 
-	log.Info("Starting event initialization...")
 	events, err := interactor.ListEvents(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize events:", err)
@@ -50,19 +50,19 @@ func main() {
 		}
 	}
 
-	log.Info("Starting artist initialization...")
 	artists, err := interactor.ListArtists(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize artists:", err)
 	}
 	log.Info("Successfully initialized artists")
 
-	log.Info("Starting venue initialization...")
 	venues, err := interactor.ListVenues(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize venues:", err)
 	}
 	log.Info("Successfully initialized venues")
+
+	finder := finder.NewEventFinder()
 
 	log.Info("Starting terminal UI initialization...")
 	mainMenu := setupTerminalUI(interactor, &pastEvents, &futureEvents, artists, venues)

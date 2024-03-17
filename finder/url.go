@@ -1,4 +1,4 @@
-package ticketmaster
+package finder
 
 import (
 	"concert-manager/log"
@@ -24,7 +24,7 @@ const (
 	pageSize       = "20"
 )
 
-func buildUrl(city string, state string) (string, error) {
+func buildTicketmasterUrl(city string, state string) (string, error) {
 	token, err := getAuthToken()
 	if err != nil {
 		return "", err

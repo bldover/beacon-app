@@ -2,7 +2,6 @@ package finder
 
 import (
 	"concert-manager/data"
-	"concert-manager/finder/ticketmaster"
 	"concert-manager/log"
 	"errors"
 	"strings"
@@ -13,20 +12,41 @@ type FindEventRequest struct {
 	State string
 }
 
-func FindAllEvents(request FindEventRequest) ([]data.EventDetails, error) {
+type EventRetriever interface {
+    GetUpcomingEvents(FindEventRequest) ([]data.EventDetails, error)
+}
+
+func (r FindEventRequest) GetCity() string {
+    return r.City
+}
+
+func (r FindEventRequest) GetState() string {
+    return r.State
+}
+
+type EventFinder struct {
+    retrievers map[string]EventRetriever
+}
+
+func NewEventFinder() *EventFinder {
+	finder := EventFinder{}
+	finder.retrievers = map[string]EventRetriever{}
+	finder.retrievers["Ticketmaster"] = ticketmasterRetriever{}
+	return &finder
+}
+
+func (finder EventFinder) FindAllEvents(request FindEventRequest) ([]data.EventDetails, error) {
 	anyError := false
 	allEvents := []data.EventDetails{}
 
-	ticketmasterRequest := ticketmaster.UpcomingEventsRequest{
-		City: request.City,
-		State: request.State,
+	for name, retriever := range finder.retrievers {
+		events, err := retriever.GetUpcomingEvents(request)
+		if err != nil {
+			log.Error("Failed to retrieve all events from", name, err)
+			anyError = true
+		}
+		allEvents = append(allEvents, events...)
 	}
-    ticketmasterEvents, err := ticketmaster.GetUpcomingEvents(ticketmasterRequest)
-	if err != nil {
-		log.Error("Failed to retrieve all events from Ticketmaster", err)
-		anyError = true
-	}
-	allEvents = append(allEvents, ticketmasterEvents...)
 
 	postProcess(allEvents)
 

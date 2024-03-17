@@ -1,4 +1,4 @@
-package ticketmaster
+package finder
 
 import (
 	"concert-manager/data"
@@ -23,20 +23,14 @@ func (e RetryableError) Error() string {
 	return e.message
 }
 
-type UpcomingEventsRequest struct {
-	City  string
-	State string
-}
+type ticketmasterRetriever struct {}
 
-// This function is the entry point to getting all the event details.
-// It retrieves the data from the first page of event results and then
-// starts a chain of calls to retrieve the data from the other pages
-func GetUpcomingEvents(request UpcomingEventsRequest) ([]data.EventDetails, error) {
+func (r ticketmasterRetriever) GetUpcomingEvents(request FindEventRequest) ([]data.EventDetails, error) {
 	city := request.City
-	state := request.State
+	state := request.City
 	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s, %s", city, state)
 
-	url, err := buildUrl(city, state)
+	url, err := buildTicketmasterUrl(city, state)
 	if err != nil {
 		return nil, err
 	}

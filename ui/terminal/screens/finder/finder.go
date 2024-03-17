@@ -10,15 +10,9 @@ import (
 	"strings"
 )
 
-type eventDeleteScreen interface {
-	Screen
-	addDeleteContext(int, int)
-}
-
-type EventViewer struct {
+type EventFinder struct {
 	Events            *[]data.Event
 	AddEventScreen    Screen
-	DeleteEventScreen eventDeleteScreen
 	MainMenu          Screen
 	page              int
 	actions           []string
@@ -26,19 +20,18 @@ type EventViewer struct {
 }
 
 const (
-	nextEventPage = iota + 1
-	prevEventPage
-	gotoEventPage
-	toggleEventSort
-	addEvent
-	deleteEvent
-	eventViewToMainMenu
+	nextFinderPage = iota + 1
+	prevFinderPage
+	gotoFinderPage
+	toggleFinderSort
+	storeEvent
+	FinderToMainMenu
 )
 
-func NewEventViewScreen(title string) *EventViewer {
+func NewEventFinderScreen(title string) *EventViewer {
 	view := EventViewer{}
 	view.title = title
-	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort", "Add Event", "Delete Event", "Main Menu"}
+	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort", "Save Event", "Finder Menu"}
 	return &view
 }
 

@@ -1,4 +1,4 @@
-package ticketmaster
+package finder
 
 import (
 	"encoding/json"
@@ -7,21 +7,21 @@ import (
 	"io"
 )
 
-type response struct {
+type tmResponse struct {
 	Links struct {
 		Next struct {
 			URL string `json:"href"`
 		} `json:"next"`
 	} `json:"_links"`
 	Data struct {
-		Events []eventResponse `json:"events"`
+		Events []tmEventResponse `json:"events"`
 	} `json:"_embedded"`
 	PageInfo struct {
 		EventCount int `json:"totalElements"`
 	} `json:"page"`
 }
 
-type eventResponse struct {
+type tmEventResponse struct {
 	EventName string `json:"name"`
 	Dates     struct {
 		Start struct {
@@ -76,8 +76,8 @@ type errorResponse struct {
 	} `json:"fault"`
 }
 
-func toResponse(body io.Reader) (*response, error) {
-	var resp response
+func toResponse(body io.Reader) (*tmResponse, error) {
+	var resp tmResponse
 	if err := json.NewDecoder(body).Decode(&resp); err != nil {
 		errMsg := fmt.Sprintf("failed to parse ticketmaster response: %v", err)
 		return nil, errors.New(errMsg)

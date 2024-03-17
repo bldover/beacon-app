@@ -24,7 +24,7 @@ func NewEventDeleteScreen() *EventDeleter {
     return &EventDeleter{}
 }
 
-func (d *EventDeleter) AddDeleteContext(startIdx int, displayCount int) {
+func (d *EventDeleter) addDeleteContext(startIdx int, displayCount int) {
     d.startIdx = startIdx
 	remainingEvents := len(*d.Events) - startIdx
 	d.displayCount = int(math.Min(float64(displayCount), float64(remainingEvents)))
