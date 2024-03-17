@@ -107,7 +107,7 @@ func getEvents(urlPath string, events *[]data.EventDetails) (string, error) {
 	return response.Links.Next.URL, nil
 }
 
-func getResponseDetails(url string) (*response, error) {
+func getResponseDetails(url string) (*tmResponse, error) {
 	response, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func getResponseDetails(url string) (*response, error) {
 	return respData, nil
 }
 
-func populateAllEventDetails(response *response, events *[]data.EventDetails) error {
+func populateAllEventDetails(response *tmResponse, events *[]data.EventDetails) error {
 	eventCount := 0
 	for _, event := range response.Data.Events {
 		eventDetails, err := parseEventDetails(&event)
@@ -155,7 +155,7 @@ func populateAllEventDetails(response *response, events *[]data.EventDetails) er
 	return nil
 }
 
-func parseEventDetails(event *eventResponse) (*data.EventDetails, error) {
+func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 	eventName := event.EventName
 	artistDetails := event.Details.Artists
 	if eventName == "" && len(artistDetails) == 0 {

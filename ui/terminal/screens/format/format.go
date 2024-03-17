@@ -1,4 +1,4 @@
-package screens
+package format
 
 import (
 	"concert-manager/data"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func formatEvent(e data.Event) string {
+func FormatEvent(e data.Event) string {
 	fmtParts := []any{}
 
 	date := formatDate(e.Date)
@@ -61,7 +61,7 @@ func formatDate(date string) string {
 	return fmt.Sprintf("%s/%s/%s", month, day, year)
 }
 
-func formatEventShort(e data.Event, maxNameLen int) string {
+func FormatEventShort(e data.Event, maxNameLen int) string {
 	var artist string
 	if e.MainAct.Populated() {
 		artist = e.MainAct.Name
@@ -77,7 +77,7 @@ func formatEventShort(e data.Event, maxNameLen int) string {
 	return fmt.Sprintf("%s %s%v @ %s", artist, spacing.String(), date, e.Venue.Name)
 }
 
-func formatEventExpanded(e data.Event, future bool) string {
+func FormatEventExpanded(e data.Event, future bool) string {
 	mainActFmt := "Main Act: %+v"
 	mainActNaFmt := "Main Act: N/A"
 	openerFmt := "Openers: %s"

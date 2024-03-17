@@ -1,41 +1,45 @@
-package screens
+package event
 
 import (
 	"concert-manager/data"
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
+	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/terminal/screens/format"
 	"fmt"
 	"math"
 	"slices"
 	"strings"
 )
 
+const pageSize = 10
+
 type eventDeleteScreen interface {
-	Screen
-	addDeleteContext(int, int)
+	screens.Screen
+	AddDeleteContext(int, int)
 }
 
 type EventViewer struct {
 	Events            *[]data.Event
-	AddEventScreen    Screen
+	AddEventScreen    screens.Screen
 	DeleteEventScreen eventDeleteScreen
-	MainMenu          Screen
+	MainMenu          screens.Screen
 	page              int
 	actions           []string
 	title             string
 }
 
 const (
-	nextEventPage = iota + 1
-	prevEventPage
-	gotoEventPage
-	toggleEventSort
+	nextPage = iota + 1
+	prevPage
+	gotoPage
+	toggleSort
 	addEvent
 	deleteEvent
-	eventViewToMainMenu
+	mainMenu
 )
 
-func NewEventViewScreen(title string) *EventViewer {
+func NewViewScreen(title string) *EventViewer {
 	view := EventViewer{}
 	view.title = title
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort", "Add Event", "Delete Event", "Main Menu"}
@@ -65,7 +69,7 @@ func (v EventViewer) DisplayData() {
 	}
 
 	for i := startEvent; i < endEvent; i++ {
-		eventData.WriteString(formatEvent((*v.Events)[i]))
+		eventData.WriteString(format.FormatEvent((*v.Events)[i]))
 	}
 	output.Displayln(eventData.String())
 }
@@ -74,20 +78,20 @@ func (v EventViewer) Actions() []string {
 	return v.actions
 }
 
-func (v *EventViewer) NextScreen(i int) Screen {
+func (v *EventViewer) NextScreen(i int) screens.Screen {
 	switch i {
-	case nextEventPage:
+	case nextPage:
 		if (v.page + 1) < v.numPages() {
 			v.page++
 		}
 		return v
-	case prevEventPage:
+	case prevPage:
 		if v.page > 0 {
 			v.page--
 		}
-	case gotoEventPage:
+	case gotoPage:
 		v.page = input.PromptAndGetInputNumeric("page number", 1, v.numPages()+1) - 1
-	case toggleEventSort:
+	case toggleSort:
 		sortByDate := sortEvents()
 		if slices.IsSortedFunc(*v.Events, sortByDate) {
 			slices.Reverse(*v.Events)
@@ -100,7 +104,7 @@ func (v *EventViewer) NextScreen(i int) Screen {
 	case deleteEvent:
 		v.DeleteEventScreen.AddDeleteContext(pageSize*v.page, pageSize)
 		return v.DeleteEventScreen
-	case eventViewToMainMenu:
+	case mainMenu:
 		v.page = 0
 		return v.MainMenu
 	}

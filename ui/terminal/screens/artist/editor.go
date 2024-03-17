@@ -1,25 +1,26 @@
-package screens
+package artist
 
 import (
 	"concert-manager/data"
 	"concert-manager/log"
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
+	"concert-manager/ui/terminal/screens"
 	"context"
 	"strings"
 )
 
 type artistAdder interface {
-    AddArtist(context.Context, data.Artist) error
+	AddArtist(context.Context, data.Artist) error
 }
 
 type Editor struct {
-    artist *data.Artist
-	tempArtist data.Artist
-	Artists *[]data.Artist
-	ArtistAdder artistAdder
-	AddEventScreen Screen
-	actions []string
+	artist         *data.Artist
+	tempArtist     data.Artist
+	Artists        *[]data.Artist
+	ArtistAdder    artistAdder
+	AddEventScreen screens.Screen
+	actions        []string
 }
 
 const (
@@ -30,16 +31,16 @@ const (
 	cancel
 )
 
-func NewArtistEditScreen() *Editor {
+func NewEditScreen() *Editor {
 	e := Editor{}
 	e.actions = []string{"Search Artists", "Set Name", "Set Genre", "Save Artist", "Cancel"}
-    return &e
+	return &e
 }
 
 func (e *Editor) AddArtistContext(artist *data.Artist) {
 	log.Debugf("in Artist editor - add artist context: %p", artist)
 	log.Debugf("in Artist editor - add artist context: %+v", artist)
-    e.artist = artist
+	e.artist = artist
 	e.tempArtist.Name = strings.Clone(artist.Name)
 	e.tempArtist.Genre = strings.Clone(artist.Genre)
 	log.Debugf("st Artist editor - add artist context: %p", e.artist)
@@ -48,20 +49,20 @@ func (e *Editor) AddArtistContext(artist *data.Artist) {
 }
 
 func (e Editor) Title() string {
-    return "Edit Artist"
+	return "Edit Artist"
 }
 
 func (e Editor) DisplayData() {
-    output.Displayf("%+v\n", e.tempArtist)
+	output.Displayf("%+v\n", e.tempArtist)
 }
 
 func (e Editor) Actions() []string {
-    return e.actions
+	return e.actions
 }
 
-func (e *Editor) NextScreen(i int) Screen {
+func (e *Editor) NextScreen(i int) screens.Screen {
 	switch i {
-    case search:
+	case search:
 		e.handleSearch()
 	case setName:
 		e.tempArtist.Name = input.PromptAndGetInput("artist name", input.NoValidation)

@@ -1,9 +1,10 @@
-package screens
+package venue
 
 import (
 	"concert-manager/data"
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
+	"concert-manager/ui/terminal/screens"
 	"context"
 )
 
@@ -16,20 +17,20 @@ type VenueEditor struct {
 	tempVenue data.Venue
 	Venues *[]data.Venue
 	VenueAdder venueAdder
-	AddEventScreen Screen
+	AddEventScreen screens.Screen
 	actions []string
 }
 
 const (
-	venueSearch = iota + 1
-	setVenueName
-	setVenueCity
-	setVenueState
-	saveVenue
-	cancelVenueEdit
+	search = iota + 1
+	setName
+	setCity
+	setState
+	save
+	cancelEdit
 )
 
-func NewVenueEditScreen() *VenueEditor {
+func NewEditScreen() *VenueEditor {
 	e := VenueEditor{}
 	e.actions = []string{"Search Venues", "Set Name", "Set City", "Set State", "Save Venue", "Cancel"}
     return &e
@@ -54,24 +55,24 @@ func (e VenueEditor) Actions() []string {
     return e.actions
 }
 
-func (e *VenueEditor) NextScreen(i int) Screen {
+func (e *VenueEditor) NextScreen(i int) screens.Screen {
 	switch i {
-    case venueSearch:
+    case search:
 		e.handleVenueSearch()
 	case setName:
 		e.tempVenue.Name = input.PromptAndGetInput("venue name", input.NoValidation)
-	case setVenueCity:
+	case setCity:
 		e.tempVenue.City = input.PromptAndGetInput("venue city", input.NoValidation)
-	case setVenueState:
+	case setState:
 		e.tempVenue.State = input.PromptAndGetInput("venue state", input.NoValidation)
-	case saveVenue:
+	case save:
 		if err := e.VenueAdder.AddVenue(context.Background(), e.tempVenue); err != nil {
 			output.Displayf("Failed to save venue: %v\n", err)
 		} else {
 			*e.venue = e.tempVenue
 			return e.AddEventScreen
 		}
-	case cancelVenueEdit:
+	case cancelEdit:
 		return e.AddEventScreen
 	}
 	return e

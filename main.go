@@ -10,6 +10,9 @@ import (
 	"concert-manager/server"
 	"concert-manager/ui/terminal"
 	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/terminal/screens/artist"
+	"concert-manager/ui/terminal/screens/event"
+	"concert-manager/ui/terminal/screens/venue"
 	"context"
 )
 
@@ -65,22 +68,23 @@ func main() {
 	finder := finder.NewEventFinder()
 
 	log.Info("Starting terminal UI initialization...")
-	mainMenu := setupTerminalUI(interactor, &pastEvents, &futureEvents, artists, venues)
+	mainMenu := setupTerminalUI(interactor, &pastEvents, &futureEvents, artists, venues, finder)
 	log.Info("Successfully initialized terminal UI, starting display...")
 	terminal.RunUI(mainMenu)
 }
 
 func setupTerminalUI(dbRepo *db.DatabaseRepository, pastEvents *[]data.Event, futureEvents *[]data.Event,
-	artists *[]data.Artist, venues *[]data.Venue) *screens.MainMenu {
+	artists *[]data.Artist, venues *[]data.Venue, finder *finder.EventFinder) *screens.MainMenu {
+
 
 	mainMenuScreen := screens.NewMainMenu()
 
-	historyViewScreen := screens.NewEventViewScreen("Concert History")
-	historyDeleteScreen := screens.NewEventDeleteScreen()
-	historyAddScreen := screens.NewEventAddScreen(false)
-	artistEditScreen := screens.NewArtistEditScreen()
-	venueEditScreen := screens.NewVenueEditScreen()
-	openerRemoveScreen := screens.NewOpenerRemoveScreen()
+	historyViewScreen := event.NewViewScreen("Concert History")
+	historyDeleteScreen := event.NewDeleteScreen()
+	historyAddScreen := event.NewAddScreen(false)
+	artistEditScreen := artist.NewEditScreen()
+	venueEditScreen := venue.NewEditScreen()
+	openerRemoveScreen := artist.NewOpenerRemoveScreen()
 
 	historyViewScreen.Events = pastEvents
 	historyViewScreen.MainMenu = mainMenuScreen
@@ -98,9 +102,9 @@ func setupTerminalUI(dbRepo *db.DatabaseRepository, pastEvents *[]data.Event, fu
 	historyDeleteScreen.Viewer = historyViewScreen
 	historyDeleteScreen.Database = dbRepo
 
-	futureViewScreen := screens.NewEventViewScreen("Future Concerts")
-	futureDeleteScreen := screens.NewEventDeleteScreen()
-	futureAddScreen := screens.NewEventAddScreen(true)
+	futureViewScreen := event.NewViewScreen("Future Concerts")
+	futureDeleteScreen := event.NewDeleteScreen()
+	futureAddScreen := event.NewAddScreen(true)
 
 	futureViewScreen.Events = futureEvents
 	futureViewScreen.MainMenu = mainMenuScreen

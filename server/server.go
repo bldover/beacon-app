@@ -58,6 +58,7 @@ type testHandler struct {}
 
 func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	req := finder.FindEventRequest{City: "Atlanta", State: "GA"}
+	finder := finder.NewEventFinder()
     events, err := finder.FindAllEvents(req)
 	if err != nil {
 		log.Error(err)

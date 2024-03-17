@@ -1,21 +1,22 @@
-package screens
+package artist
 
 import (
 	"concert-manager/data"
 	"concert-manager/ui/terminal/output"
+	"concert-manager/ui/terminal/screens"
 	"fmt"
 	"slices"
 )
 
 type OpenerRemover struct {
-	AddEventScreen Screen
-	openers   *[]data.Artist
+	AddEventScreen screens.Screen
+	openers        *[]data.Artist
 }
 
 func NewOpenerRemoveScreen() *OpenerRemover {
 	or := OpenerRemover{}
 	or.openers = &[]data.Artist{}
-    return &or
+	return &or
 }
 
 func (or *OpenerRemover) AddOpenerContext(openers *[]data.Artist) {
@@ -23,7 +24,7 @@ func (or *OpenerRemover) AddOpenerContext(openers *[]data.Artist) {
 }
 
 func (or OpenerRemover) Title() string {
-    return "Remove Opener"
+	return "Remove Opener"
 }
 
 func (or OpenerRemover) DisplayData() {
@@ -40,13 +41,13 @@ func (or OpenerRemover) Actions() []string {
 	}
 
 	actions = append(actions, "Back")
-    return actions
+	return actions
 }
 
-func (or *OpenerRemover) NextScreen(i int) Screen {
-	if i == len(*or.openers) + 1 {
+func (or *OpenerRemover) NextScreen(i int) screens.Screen {
+	if i == len(*or.openers)+1 {
 		return or.AddEventScreen
 	}
-	*or.openers = slices.Delete(*or.openers, i - 1, i)
+	*or.openers = slices.Delete(*or.openers, i-1, i)
 	return or
 }

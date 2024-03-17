@@ -1,43 +1,45 @@
-package screens
+package event
 
 import (
 	"concert-manager/data"
 	"concert-manager/log"
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
+	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/terminal/screens/format"
 	"context"
 	"slices"
 )
 
 type eventDbAdder interface {
-    AddEvent(context.Context, data.Event) error
+	AddEvent(context.Context, data.Event) error
 }
 
 type artistEditScreen interface {
-	Screen
+	screens.Screen
 	AddArtistContext(*data.Artist)
 }
 
 type venueEditScreen interface {
-    Screen
+	screens.Screen
 	AddVenueContext(*data.Venue)
 }
 
 type openerRemoveScreen interface {
-    Screen
+	screens.Screen
 	AddOpenerContext(*[]data.Artist)
 }
 
 type Adder struct {
-	Events *[]data.Event
-	NewEvent data.Event
-	Database eventDbAdder
-	ArtistEditor artistEditScreen
-	VenueEditor venueEditScreen
+	Events        *[]data.Event
+	NewEvent      data.Event
+	Database      eventDbAdder
+	ArtistEditor  artistEditScreen
+	VenueEditor   venueEditScreen
 	OpenerRemover openerRemoveScreen
-	Viewer Screen
-	actions []string
-	futureEvents bool
+	Viewer        screens.Screen
+	actions       []string
+	futureEvents  bool
 }
 
 const (
@@ -53,8 +55,8 @@ const (
 
 const maxOpeners = 20
 
-func NewEventAddScreen(futureEvents bool) *Adder {
-    a := Adder{}
+func NewAddScreen(futureEvents bool) *Adder {
+	a := Adder{}
 	a.futureEvents = futureEvents
 	if futureEvents {
 		a.actions = []string{"Edit Main Act", "Add Opener", "Remove Opener", "Edit Venue", "Edit Date", "Toggle Purchased", "Save Event", "Cancel"}
@@ -65,31 +67,31 @@ func NewEventAddScreen(futureEvents bool) *Adder {
 }
 
 func (a Adder) Title() string {
-    return "Add Concert"
+	return "Add Concert"
 }
 
 func (a *Adder) DisplayData() {
 	for i, op := range a.NewEvent.Openers {
 		if !op.Populated() {
 			// at most one could have been added since the last check
-			a.NewEvent.Openers = slices.Delete(a.NewEvent.Openers, i, i + 1)
+			a.NewEvent.Openers = slices.Delete(a.NewEvent.Openers, i, i+1)
 			break
 		}
 	}
-    output.Displayln(formatEventExpanded(a.NewEvent, a.futureEvents))
+	output.Displayln(format.FormatEventExpanded(a.NewEvent, a.futureEvents))
 }
 
 func (a Adder) Actions() []string {
 	return a.actions
 }
 
-func (a *Adder) NextScreen(i int) Screen {
+func (a *Adder) NextScreen(i int) screens.Screen {
 	if !a.futureEvents && i >= togglePurchased {
 		i += 1
 	}
 
 	switch i {
-    case editMainAct:
+	case editMainAct:
 		a.ArtistEditor.AddArtistContext(&a.NewEvent.MainAct)
 		return a.ArtistEditor
 
@@ -103,7 +105,7 @@ func (a *Adder) NextScreen(i int) Screen {
 		log.Debugf("add event - op: %+v", a.NewEvent.Openers)
 		log.Debugf("add event - op: %p", &a.NewEvent.Openers[0])
 		log.Debugf("add event - op: %+v", a.NewEvent.Openers[0])
-		a.ArtistEditor.AddArtistContext(&a.NewEvent.Openers[len(a.NewEvent.Openers) - 1])
+		a.ArtistEditor.AddArtistContext(&a.NewEvent.Openers[len(a.NewEvent.Openers)-1])
 		return a.ArtistEditor
 
 	case removeOpener:
