@@ -1,7 +1,7 @@
 package server
 
 import (
-	"concert-manager/finder/ticketmaster"
+	"concert-manager/finder"
 	"concert-manager/log"
 	"context"
 	"fmt"
@@ -13,10 +13,9 @@ const port = ":3001"
 const maxFileSizeBytes = 100000
 
 func StartServer(l Loader) {
-	handler := &uploadHandler{l}
-	http.Handle("/upload", handler)
+	http.Handle("/upload", &uploadHandler{l})
 	http.Handle("/test", &testHandler{})
-	log.Info("Starting server on port ", port)
+	log.Info("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
 
@@ -40,7 +39,7 @@ func (handler *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, errMsg, http.StatusBadRequest)
 	}
 
-	log.Info("Received upload request.")
+	log.Info("Received upload request")
 
     rows, err := handler.loader.Upload(r.Context(), file)
 
@@ -58,13 +57,12 @@ func (handler *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 type testHandler struct {}
 
 func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    events, err := ticketmaster.GetUpcomingEvents("Atlanta", "GA")
+	req := finder.FindEventRequest{City: "Atlanta", State: "GA"}
+    events, err := finder.FindAllEvents(req)
 	if err != nil {
 		log.Error(err)
 	}
-	for _, event := range *events {
-		if event != nil {
-			log.Infof("Found event: %+v", *event)
-		}
+	for _, event := range events {
+		log.Infof("Found event: %+v", event)
 	}
 }

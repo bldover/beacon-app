@@ -9,12 +9,16 @@ import (
 	"cloud.google.com/go/firestore"
 )
 
+const (
+	projectIdEnv = "PROJ_ID"
+)
+
 type Firestore struct {
 	Client *firestore.Client
 }
 
 func Setup() (*Firestore, error) {
-	projectID := os.Getenv("PROJ_ID")
+	projectID := os.Getenv(projectIdEnv)
 	if projectID == "" {
 		return nil, errors.New("PROJ_ID environment variable must be set")
 	}
@@ -27,5 +31,6 @@ func Setup() (*Firestore, error) {
 	}
 
 	fs := Firestore{client}
+	log.Info("Successfully initialized database")
 	return &fs, nil
 }

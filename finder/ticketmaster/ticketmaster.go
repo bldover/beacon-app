@@ -3,103 +3,17 @@ package ticketmaster
 import (
 	"concert-manager/data"
 	"concert-manager/log"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 )
 
 const (
-	apiKey         = "TICKETMASTER_API_KEY"
-	host           = "https://app.ticketmaster.com"
-	eventPath      = "/discovery/v2/events"
-	urlFmt         = "%s%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%s"
-	apiKeyFmt      = "&apikey=%s"
-	dateTimeFmt    = "2006-01-02T15:04:05"
-	dateFmt        = "2006-01-02"
-	classification = "music"
-	sort           = "date,asc"
-	radius         = "50"
-	unit           = "miles"
-	stateCode      = "GA"
-	pageSize       = "20"
-
 	quotaViolationCode = "policies.ratelimit.QuotaViolation"
 	rateViolationCode  = "policies.ratelimit.SpikeArrestViolation"
 )
-
-type response struct {
-	Links struct {
-		Next struct {
-			URL string `json:"href"`
-		} `json:"next"`
-	} `json:"_links"`
-	Data struct {
-		Events []eventResponse `json:"events"`
-	} `json:"_embedded"`
-	PageInfo struct {
-		EventCount int `json:"totalElements"`
-	} `json:"page"`
-}
-
-type eventResponse struct {
-	EventName string `json:"name"`
-	Dates     struct {
-		Start struct {
-			Date string `json:"localDate"`
-		} `json:"start"`
-	} `json:"dates"`
-	Prices []struct {
-		MinPrice float64 `json:"min"`
-	} `json:"priceRanges"`
-	Ticketing struct {
-		InclusivePricing struct {
-			Enabled bool `json:"enabled"`
-		} `json:"allInclusivePricing"`
-	} `json:"ticketing"`
-	Details struct {
-		Venues []struct {
-			Name string `json:"name"`
-			City struct {
-				Name string `json:"Name"`
-			} `json:"city"`
-			State struct {
-				Name string `json:"name"`
-			} `json:"state"`
-		} `json:"venues"`
-		Artists []struct {
-			Name  string `json:"name"`
-			Links struct {
-				Wiki []struct {
-					URL string `json:"url"`
-				} `json:"wiki"`
-				Spotify []struct {
-					URL string `json:"url"`
-				} `json:"spotify"`
-			} `json:"externalLinks"`
-			Classification []struct {
-				Genre struct {
-					Name string `json:"name"`
-				} `json:"genre"`
-				Subgenre struct {
-					Name string `json:"name"`
-				} `json:"subGenre"`
-			} `json:"classifications"`
-		} `json:"attractions"`
-	} `json:"_embedded"`
-}
-
-type errorResponse struct {
-	Fault struct {
-		Details struct {
-			Code string `json:"errorcode"`
-		} `json:"detail"`
-	} `json:"fault"`
-}
 
 type RetryableError struct {
 	message string
@@ -110,15 +24,18 @@ func (e RetryableError) Error() string {
 }
 
 type UpcomingEventsRequest struct {
-	city  string
-	state string
+	City  string
+	State string
 }
 
 // This function is the entry point to getting all the event details.
-// It retrieves the data from the first page of event results and then submits a
-// bunch of parallel calls to getEventsByPage to retrieve all the other page data
-func GetUpcomingEvents(city string, state string) (*[]*data.EventDetails, error) {
+// It retrieves the data from the first page of event results and then
+// starts a chain of calls to retrieve the data from the other pages
+func GetUpcomingEvents(request UpcomingEventsRequest) ([]data.EventDetails, error) {
+	city := request.City
+	state := request.State
 	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s, %s", city, state)
+
 	url, err := buildUrl(city, state)
 	if err != nil {
 		return nil, err
@@ -131,7 +48,7 @@ func GetUpcomingEvents(city string, state string) (*[]*data.EventDetails, error)
 	}
 
 	eventCount := response.PageInfo.EventCount
-	eventDetails := make([]*data.EventDetails, eventCount)
+	eventDetails := make([]data.EventDetails, 0, eventCount)
 	if err := populateAllEventDetails(response, &eventDetails); err != nil {
 		log.Error(err)
 	}
@@ -139,15 +56,18 @@ func GetUpcomingEvents(city string, state string) (*[]*data.EventDetails, error)
 	getRemainingPages(response.Links.Next.URL, &eventDetails)
 	if len(eventDetails) != eventCount {
 		errMsg := fmt.Sprintf("Unable to retrieve all expected events. Read %v/%v", len(eventDetails), eventCount)
-		return &eventDetails, errors.New(errMsg)
+		return eventDetails, errors.New(errMsg)
 	}
-	return &eventDetails, nil
+	return eventDetails, nil
 }
 
-func getRemainingPages(url string, eventDetails *[]*data.EventDetails) {
+func getRemainingPages(url string, eventDetails *[]data.EventDetails) {
 	retryCount := 0
 	maxRetries := 3
 	for url != "" {
+		// try to not exceed the rate limit
+		waitTime := time.Duration(200000000) // 0.2s
+		time.Sleep(waitTime)
 		lastUrl := url
 		var err error
 		url, err = getEvents(url, eventDetails)
@@ -173,7 +93,7 @@ func getRemainingPages(url string, eventDetails *[]*data.EventDetails) {
 	}
 }
 
-func getEvents(urlPath string, events *[]*data.EventDetails) (string, error) {
+func getEvents(urlPath string, events *[]data.EventDetails) (string, error) {
 	token, err := getAuthToken()
 	if err != nil {
 		return "", err
@@ -186,7 +106,6 @@ func getEvents(urlPath string, events *[]*data.EventDetails) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	populateAllEventDetails(response, events)
 	if err := populateAllEventDetails(response, events); err != nil {
 		log.Error(err)
 	}
@@ -223,53 +142,7 @@ func getResponseDetails(url string) (*response, error) {
 	return respData, nil
 }
 
-func buildUrl(city string, state string) (string, error) {
-	token, err := getAuthToken()
-	if err != nil {
-		return "", err
-	}
-
-	location, err := time.LoadLocation("America/New_York")
-	if err != nil {
-		errMsg := fmt.Sprintf("failed to find time zone with err: %v", err)
-		return "", errors.New(errMsg)
-	}
-	startDate := time.Now().In(location).Format(dateTimeFmt)
-
-	url := fmt.Sprintf(urlFmt, host, eventPath, classification, city, state, radius, unit, startDate, sort, pageSize)
-	log.Debug("Built URL (without auth token): ", url)
-	url += fmt.Sprintf(apiKeyFmt, token)
-	return url, nil
-}
-
-func getAuthToken() (string, error) {
-	token := os.Getenv(apiKey)
-	if token == "" {
-		errMsg := fmt.Sprintf("%s environment variable must be set", apiKey)
-		return "", errors.New(errMsg)
-	}
-	return token, nil
-}
-
-func toResponse(body io.Reader) (*response, error) {
-	var resp response
-	if err := json.NewDecoder(body).Decode(&resp); err != nil {
-		errMsg := fmt.Sprintf("failed to parse ticketmaster response: %v", err)
-		return nil, errors.New(errMsg)
-	}
-	return &resp, nil
-}
-
-func toErrorResponse(body io.Reader) (*errorResponse, error) {
-	var resp errorResponse
-	if err := json.NewDecoder(body).Decode(&resp); err != nil {
-		errMsg := fmt.Sprintf("failed to parse ticketmaster error response: %v", err)
-		return nil, errors.New(errMsg)
-	}
-	return &resp, nil
-}
-
-func populateAllEventDetails(response *response, events *[]*data.EventDetails) error {
+func populateAllEventDetails(response *response, events *[]data.EventDetails) error {
 	eventCount := 0
 	for _, event := range response.Data.Events {
 		eventDetails, err := parseEventDetails(&event)
@@ -277,73 +150,65 @@ func populateAllEventDetails(response *response, events *[]*data.EventDetails) e
 			log.Errorf("Failed to parse event %+v, with error %v", event, err)
 			continue
 		}
-		*events = append(*events, eventDetails)
+		*events = append(*events, *eventDetails)
 		eventCount++
 	}
 
 	failedCount := len(response.Data.Events) - eventCount
 	if failedCount != 0 {
-		return errors.New(fmt.Sprintf("failed to parse %v events", failedCount))
+		return fmt.Errorf("failed to parse %v events", failedCount)
 	}
 	return nil
 }
 
 func parseEventDetails(event *eventResponse) (*data.EventDetails, error) {
-	name := event.EventName
-	if name == "" {
-		return nil, errors.New("no event name")
+	eventName := event.EventName
+	artistDetails := event.Details.Artists
+	if eventName == "" && len(artistDetails) == 0 {
+		return nil, errors.New("no event name or artists")
+	}
+
+	mainAct := data.Artist{}
+	if len(artistDetails) != 0 {
+		mainActDetails := artistDetails[0]
+		mainAct.Name = mainActDetails.Name
+		if len(mainActDetails.Classification) != 0 {
+			mainAct.Genre = mainActDetails.Classification[0].Subgenre.Name
+		}
+	}
+
+	openers := []data.Artist{}
+	if len(artistDetails) > 1 {
+		for _, openerDetails := range artistDetails[1:] {
+			if openerDetails.Name == "" {
+				return nil, errors.New("no opener artist name")
+			}
+			opener := data.Artist{
+				Name: openerDetails.Name,
+			}
+			if len(openerDetails.Classification) != 0 {
+				opener.Genre = openerDetails.Classification[0].Subgenre.Name
+			}
+			openers = append(openers, opener)
+		}
 	}
 
 	price := ""
 	if len(event.Prices) == 0 {
 		price = "unknown"
 	} else {
-		price = strconv.FormatFloat(event.Prices[0].MinPrice, 'f', 2, 64)
+ 		price = strconv.FormatFloat(event.Prices[0].MinPrice, 'f', 2, 64)
 	}
 	if !event.Ticketing.InclusivePricing.Enabled {
 		price += " + fees"
 	}
 
-	if len(event.Details.Venues) == 0 {
-		return nil, errors.New("no venue")
-	}
-	venueDetails := event.Details.Venues[0]
-	venue := data.Venue{
-		Name:  venueDetails.Name,
-		City:  venueDetails.City.Name,
-		State: venueDetails.State.Name,
-	}
-	if !venue.Populated() {
-		return nil, errors.New("missing some venue data")
-	}
-
-	if len(event.Details.Artists) == 0 {
-		return nil, errors.New("no artists")
-	}
-	artistDetails := event.Details.Artists
-	mainActDetails := artistDetails[0]
-	if mainActDetails.Name == "" {
-		return nil, errors.New("no main act artist name")
-	}
-	mainAct := data.Artist{
-		Name: mainActDetails.Name,
-	}
-	if len(mainActDetails.Classification) != 0 {
-		mainAct.Genre = mainActDetails.Classification[0].Subgenre.Name
-	}
-
-	openers := []data.Artist{}
-	for _, openerDetails := range artistDetails[1:] {
-		if openerDetails.Name == "" {
-			return nil, errors.New("no opener artist name")
-		}
-		opener := data.Artist{
-			Name: openerDetails.Name,
-		}
-		if len(openerDetails.Classification) != 0 {
-			opener.Genre = openerDetails.Classification[0].Subgenre.Name
-		}
-		openers = append(openers, opener)
+	venue := data.Venue{}
+	if len(event.Details.Venues) != 0 {
+		venueDetails := event.Details.Venues[0]
+		venue.Name = venueDetails.Name
+		venue.City = venueDetails.City.Name
+		venue.State = venueDetails.State.Name
 	}
 
 	dateRaw := event.Dates.Start.Date
@@ -354,7 +219,7 @@ func parseEventDetails(event *eventResponse) (*data.EventDetails, error) {
 	}
 
 	eventDetails := data.EventDetails{
-		Name:  name,
+		Name:  eventName,
 		Price: price,
 		Event: data.Event{
 			MainAct: mainAct,

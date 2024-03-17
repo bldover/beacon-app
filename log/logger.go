@@ -10,10 +10,23 @@ var (
 	infoLog *log.Logger
 	errorLog *log.Logger
 	displayLog *log.Logger
+	logLevels = [...]string{"DEBUG", "INFO", "ERROR"}
 )
 
-const logPath = "/.concert_manager/logs/"
-const fileName = "concert_manager.log"
+const (
+	logPath = "/.concert_manager/logs/"
+	fileName = "concert_manager.log"
+	logLevelEnv = "LOG_LEVEL"
+)
+
+type loggerLevel int
+
+const (
+	debugLevel loggerLevel = iota
+	infoLevel
+	errorLevel
+	defaultLevel
+)
 
 func Initialize() error {
 	logFile, err := createLogFile(fileName)
@@ -21,11 +34,39 @@ func Initialize() error {
 		return err
 	}
 
-	debugLog = log.New(logFile, "debug   - ", log.LstdFlags)
-	infoLog = log.New(logFile, "info    - ", log.LstdFlags)
-	errorLog = log.New(logFile, "error  -  ", log.LstdFlags)
 	displayLog = log.New(logFile, "display - ", log.LstdFlags)
+
+	logLevel := getLogLevel()
+	unsetLogLevel := logLevel == defaultLevel
+	if unsetLogLevel {
+		logLevel = infoLevel
+	}
+
+	if logLevel <= debugLevel {
+		debugLog = log.New(logFile, "debug   - ", log.LstdFlags)
+	}
+	if logLevel <= infoLevel {
+		infoLog = log.New(logFile, "info    - ", log.LstdFlags)
+	}
+	if logLevel <= errorLevel {
+		errorLog = log.New(logFile, "error  -  ", log.LstdFlags)
+	}
+
+	if unsetLogLevel {
+		Info("Unexpected or missing value for LOG_LEVEL environment variable, defaulting to INFO level")
+	}
+	Info("Successfully initialized logger with level", logLevels[logLevel])
 	return nil
+}
+
+func getLogLevel() loggerLevel {
+	in := os.Getenv(logLevelEnv)
+	for level, levelName := range logLevels {
+		if levelName == in {
+			return loggerLevel(level)
+		}
+	}
+	return defaultLevel
 }
 
 func createLogFile(fileName string) (*os.File, error) {
@@ -46,7 +87,7 @@ func createLogFile(fileName string) (*os.File, error) {
 }
 
 func Fatal(v ...any) {
-	errorLog.Fatal(v...)
+	errorLog.Fatalln(v...)
 }
 
 func Fatalf(format string, v ...any) {
@@ -54,7 +95,7 @@ func Fatalf(format string, v ...any) {
 }
 
 func Panic(v ...any) {
-	errorLog.Panic(v...)
+	errorLog.Panicln(v...)
 }
 
 func Panicf(format string, v ...any) {
@@ -62,23 +103,31 @@ func Panicf(format string, v ...any) {
 }
 
 func Info(v ...any) {
-	infoLog.Print(v...)
+	if nil != infoLog {
+		infoLog.Println(v...)
+	}
 }
 
 func Infof(format string, v ...any) {
-	infoLog.Printf(format, v...)
+	if nil != infoLog {
+		infoLog.Printf(format, v...)
+	}
 }
 
 func Debug(v ...any) {
-	debugLog.Print(v...)
+	if nil != debugLog {
+		debugLog.Println(v...)
+	}
 }
 
 func Debugf(format string, v ...any) {
-	debugLog.Printf(format, v...)
+	if nil != debugLog {
+		debugLog.Printf(format, v...)
+	}
 }
 
 func Error(v ...any) {
-	errorLog.Print(v...)
+	errorLog.Println(v...)
 }
 
 func Errorf(format string, v ...any) {

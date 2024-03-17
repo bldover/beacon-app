@@ -16,13 +16,11 @@ func main() {
 	if err := log.Initialize(); err != nil {
 		log.Fatal("Failed to set up logger:", err)
 	}
-	log.Info("Successfully initialized logger")
 
 	dbConnection, err := firestore.Setup()
 	if err != nil {
 		log.Fatal("Failed to set up database:", err)
 	}
-	log.Info("Successfully initialized database")
 
 	venueRepo := firestore.NewVenueRepo(dbConnection)
 	artistRepo := firestore.NewArtistRepo(dbConnection)
