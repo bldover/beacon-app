@@ -16,14 +16,6 @@ type EventRetriever interface {
     GetUpcomingEvents(FindEventRequest) ([]data.EventDetails, error)
 }
 
-func (r FindEventRequest) GetCity() string {
-    return r.City
-}
-
-func (r FindEventRequest) GetState() string {
-    return r.State
-}
-
 type EventFinder struct {
     retrievers map[string]EventRetriever
 }
@@ -47,6 +39,7 @@ func (finder EventFinder) FindAllEvents(request FindEventRequest) ([]data.EventD
 		}
 		allEvents = append(allEvents, events...)
 	}
+	log.Debug("Total retrieved event count:", len(allEvents))
 
 	postProcess(allEvents)
 
@@ -58,11 +51,15 @@ func (finder EventFinder) FindAllEvents(request FindEventRequest) ([]data.EventD
 
 // venues sometimes have weird names from non-partnered ticketing sites
 func postProcess(events []data.EventDetails) {
-    for i, event := range events {
-		if strings.Contains(event.Event.Venue.Name, "The Eastern") {
-			events[i].Event.Venue.Name = "The Eastern"
-		} else if strings.Contains(event.Event.Venue.Name, "Cadence Bank") {
-			events[i].Event.Venue.Name = "Cadence Bank Ampitheatre"
+    for i := range events {
+		event := events[i].Event
+		venue := event.Venue.Name
+		if strings.Contains(venue, "The Eastern") {
+			event.Venue.Name = "The Eastern"
+		} else if strings.Contains(venue, "Cadence Bank") {
+			event.Venue.Name = "Cadence Bank Ampitheatre"
+		} else if strings.Contains(venue, "Altar") {
+			event.Venue.Name = "The Masquerade - Altar"
 		}
 	}
 }

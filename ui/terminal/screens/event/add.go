@@ -12,7 +12,7 @@ import (
 )
 
 type eventDbAdder interface {
-	AddEvent(context.Context, data.Event) error
+	AddEventRecursive(context.Context, data.Event) error
 }
 
 type artistEditScreen interface {
@@ -64,6 +64,10 @@ func NewAddScreen(futureEvents bool) *Adder {
 		a.actions = []string{"Edit Main Act", "Add Opener", "Remove Opener", "Edit Venue", "Edit Date", "Save Event", "Cancel"}
 	}
 	return &a
+}
+
+func (a *Adder) AddContext(details data.EventDetails) {
+	a.NewEvent = details.Event
 }
 
 func (a Adder) Title() string {
@@ -118,9 +122,9 @@ func (a *Adder) NextScreen(i int) screens.Screen {
 
 	case editDate:
 		if a.futureEvents {
-			a.NewEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", data.ValidFutureDate)
+			a.NewEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", input.FutureDateValidation)
 		} else {
-			a.NewEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", data.ValidPastDate)
+			a.NewEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", input.PastDateValidation)
 		}
 
 	case togglePurchased:
@@ -130,7 +134,7 @@ func (a *Adder) NextScreen(i int) screens.Screen {
 		if !a.futureEvents {
 			a.NewEvent.Purchased = true
 		}
-		if err := a.Database.AddEvent(context.Background(), a.NewEvent); err != nil {
+		if err := a.Database.AddEventRecursive(context.Background(), a.NewEvent); err != nil {
 			output.Displayf("Failed to save event: %v\n", err)
 			return a
 		}

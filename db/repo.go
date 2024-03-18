@@ -130,7 +130,7 @@ func (interactor *DatabaseRepository) AddEventRecursive(ctx Context, event Event
 	log.Debug("Request to recursively add event", event)
 	if !event.Populated() {
 		log.Debug("Skipping adding event because required fields are missing", event)
-		return errors.New("failed to create event due to empty fields")
+		return errors.New("all fields are required")
 	}
 
 	if err := interactor.AddVenue(ctx, event.Venue); err != nil {

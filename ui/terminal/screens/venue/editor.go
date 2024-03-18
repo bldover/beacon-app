@@ -5,18 +5,12 @@ import (
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
 	"concert-manager/ui/terminal/screens"
-	"context"
 )
-
-type venueAdder interface {
-    AddVenue(context.Context, data.Venue) error
-}
 
 type VenueEditor struct {
     venue *data.Venue
 	tempVenue data.Venue
 	Venues *[]data.Venue
-	VenueAdder venueAdder
 	AddEventScreen screens.Screen
 	actions []string
 }
@@ -66,11 +60,11 @@ func (e *VenueEditor) NextScreen(i int) screens.Screen {
 	case setState:
 		e.tempVenue.State = input.PromptAndGetInput("venue state", input.NoValidation)
 	case save:
-		if err := e.VenueAdder.AddVenue(context.Background(), e.tempVenue); err != nil {
-			output.Displayf("Failed to save venue: %v\n", err)
-		} else {
+		if e.venue.Populated() {
 			*e.venue = e.tempVenue
 			return e.AddEventScreen
+		} else {
+			output.Displayln("Failed to save venue: all fields are required")
 		}
 	case cancelEdit:
 		return e.AddEventScreen

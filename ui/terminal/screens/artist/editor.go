@@ -6,19 +6,13 @@ import (
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
 	"concert-manager/ui/terminal/screens"
-	"context"
 	"strings"
 )
-
-type artistAdder interface {
-	AddArtist(context.Context, data.Artist) error
-}
 
 type Editor struct {
 	artist         *data.Artist
 	tempArtist     data.Artist
 	Artists        *[]data.Artist
-	ArtistAdder    artistAdder
 	AddEventScreen screens.Screen
 	actions        []string
 }
@@ -69,11 +63,11 @@ func (e *Editor) NextScreen(i int) screens.Screen {
 	case setGenre:
 		e.tempArtist.Genre = input.PromptAndGetInput("artist genre", input.NoValidation)
 	case save:
-		if err := e.ArtistAdder.AddArtist(context.Background(), e.tempArtist); err != nil {
-			output.Displayf("Failed to save artist: %v\n", err)
-		} else {
+		if e.artist.Populated() {
 			*e.artist = e.tempArtist
 			return e.AddEventScreen
+		} else {
+			output.Displayf("Failed to save artist: all fields are required")
 		}
 	case cancel:
 		return e.AddEventScreen

@@ -27,20 +27,6 @@ func ValidDate(date string) bool {
 	return true
 }
 
-func ValidPastDate(date string) bool {
-	if !ValidDate(date) {
-		return false
-	}
-	return time.Now().Equal(Timestamp(date)) || time.Now().After(Timestamp(date))
-}
-
-func ValidFutureDate(date string) bool {
-	if !ValidDate(date) {
-		return false
-	}
-	return time.Now().Before(Timestamp(date))
-}
-
 // format is "mm/dd/yyyy", with leading zeros optional
 // expected that the date string has been previously validated to not error when converted to ints
 func Timestamp(date string) time.Time {
@@ -54,4 +40,36 @@ func Timestamp(date string) time.Time {
 func Date(ts time.Time) string {
 	day, month, year := ts.Day(), ts.Month(), ts.Year()
 	return fmt.Sprintf("%d/%d/%d", month, day, year)
+}
+
+func EventSorter() func(a, b Event) int {
+	return func(a, b Event) int {
+		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
+			return -1
+		} else if Timestamp(a.Date).After(Timestamp(b.Date)) {
+			return 1
+		} else {
+			return 0
+		}
+	}
+}
+
+func EventDetailsSorter() func(a, b EventDetails) int {
+	return func(a, b EventDetails) int {
+		return EventSorter()(a.Event, b.Event)
+	}
+}
+
+func ValidPastDate(date string) bool {
+	if !ValidDate(date) {
+		return false
+	}
+	return time.Now().Equal(Timestamp(date)) || time.Now().After(Timestamp(date))
+}
+
+func ValidFutureDate(date string) bool {
+	if !ValidDate(date) {
+		return false
+	}
+	return time.Now().Before(Timestamp(date))
 }

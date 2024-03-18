@@ -3,9 +3,95 @@ package format
 import (
 	"concert-manager/data"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 )
+
+func FormatEventDetails(d data.EventDetails) string {
+	fmtParts := []any{}
+	event := d.Event
+
+	date := formatDate(event.Date)
+	fmtParts = append(fmtParts, date)
+
+	fmtParts = append(fmtParts, event.Venue.Name)
+
+	artists := []string{}
+	genres := []string{}
+	if event.MainAct.Name != "" {
+		artists = append(artists, event.MainAct.Name)
+		mainActGenre := event.MainAct.Genre
+		if mainActGenre == "" {
+			mainActGenre = d.EventGenre
+		}
+		if mainActGenre != "" {
+			genres = append(genres, mainActGenre)
+		}
+		for _, artist := range event.Openers {
+			if artist.Name != "" {
+				if !slices.Contains(artists, artist.Name) {
+					artists = append(artists, artist.Name)
+				}
+				openerGenre := artist.Genre
+				if openerGenre == "" {
+					openerGenre = d.EventGenre
+				}
+				if !slices.Contains(genres, openerGenre) && openerGenre != "" {
+					genres = append(genres, openerGenre)
+				}
+			}
+		}
+		artistStr := strings.Join(artists, ", ")
+		fmtParts = append(fmtParts, "Artists", artistStr)
+	} else {
+		eventName := d.Name
+		genres = append(genres, d.EventGenre)
+		fmtParts = append(fmtParts, "Event", eventName)
+	}
+	genreStr := strings.Join(genres, ", ")
+	if genreStr == "" {
+		genreStr = "Unknown"
+	}
+	fmtParts = append(fmtParts, genreStr)
+
+	price := d.Price
+	fmtParts = append(fmtParts, price)
+
+	format := "%v @ %s\n\t%s: %s\n\tGenres: %s\n\tPrice: %v\n"
+	return fmt.Sprintf(format, fmtParts...)
+}
+
+func FormatEventDetailsShort(details []data.EventDetails) []string {
+	eventNames := []string{}
+	maxNameLen := 0
+	for _, detail := range details {
+		var eventName string
+		if detail.Event.MainAct.Name != "" {
+			eventName = detail.Event.MainAct.Name
+		} else {
+			eventName = detail.Name
+		}
+		eventNames = append(eventNames, eventName)
+		maxNameLen = int(math.Max(float64(maxNameLen), float64(len(eventName))))
+	}
+
+	formattedEvents := []string{}
+	for i, detail := range details {
+		eventName := eventNames[i]
+		date := detail.Event.Date
+		venue := detail.Event.Venue.Name
+
+		var spacing strings.Builder
+		for i := len(eventName); i < maxNameLen; i++ {
+			spacing.WriteString(" ")
+		}
+
+		formattedEvent := fmt.Sprintf("%s %s%v @ %s", eventName, spacing.String(), date, venue)
+		formattedEvents = append(formattedEvents, formattedEvent)
+	}
+	return formattedEvents
+}
 
 func FormatEvent(e data.Event) string {
 	fmtParts := []any{}
@@ -37,8 +123,7 @@ func FormatEvent(e data.Event) string {
 	fmtParts = append(fmtParts, artistStr, genreStr)
 
 	format := "%v @ %s\n\tArtists: %s\n\tGenres: %s\n"
-	futureDate := data.ValidFutureDate(e.Date)
-	if futureDate {
+	if data.ValidFutureDate(e.Date) {
 		format += "\tPurchased: %v\n"
 		fmtParts = append(fmtParts, e.Purchased)
 	}
@@ -61,20 +146,35 @@ func formatDate(date string) string {
 	return fmt.Sprintf("%s/%s/%s", month, day, year)
 }
 
-func FormatEventShort(e data.Event, maxNameLen int) string {
-	var artist string
-	if e.MainAct.Populated() {
-		artist = e.MainAct.Name
-	} else {
-		artist = e.Openers[0].Name
+func FormatEventsShort(events []data.Event) []string {
+	artistNames := []string{}
+	maxNameLen := 0
+	for _, event := range events {
+		var artist string
+		if event.MainAct.Populated() {
+			artist = event.MainAct.Name
+		} else {
+			artist = event.Openers[0].Name
+		}
+		artistNames = append(artistNames, artist)
+		maxNameLen = int(math.Max(float64(maxNameLen), float64(len(artist))))
 	}
 
-	date := formatDate(e.Date)
-	var spacing strings.Builder
-	for i := len(artist); i < maxNameLen; i++ {
-		spacing.WriteString(" ")
+	formattedEvents := []string{}
+	for i, event := range events {
+		artist := artistNames[i]
+		date := event.Date
+		venue := event.Venue.Name
+
+		var spacing strings.Builder
+		for i := len(artist); i < maxNameLen; i++ {
+			spacing.WriteString(" ")
+		}
+
+		formattedEvent := fmt.Sprintf("%s %s%v @ %s", artist, spacing.String(), date, venue)
+		formattedEvents = append(formattedEvents, formattedEvent)
 	}
-	return fmt.Sprintf("%s %s%v @ %s", artist, spacing.String(), date, e.Venue.Name)
+	return formattedEvents
 }
 
 func FormatEventExpanded(e data.Event, future bool) string {
@@ -82,7 +182,7 @@ func FormatEventExpanded(e data.Event, future bool) string {
 	mainActNaFmt := "Main Act: N/A"
 	openerFmt := "Openers: %s"
 	openerNaFmt := "Openers: N/A"
-	venueFmt := "Venue: %s"
+	venueFmt := "Venue: %+v"
 	venueNaFmt := "Venue: N/A"
 	dateFmt := "Date: %s"
 	dateNaFmt := "Date: N/A"
@@ -94,10 +194,15 @@ func FormatEventExpanded(e data.Event, future bool) string {
 	}
 
 	openers := openerNaFmt
-	if len(e.Openers) > 0 {
+	if len(e.Openers) == 1 {
+		opener := fmt.Sprintf("%+v", e.Openers[0])
+		openers = fmt.Sprintf(openerFmt, opener)
+	} else if len(e.Openers) > 1 {
 		allOpeners := strings.Builder{}
-		for _, op := range e.Openers {
-			allOpeners.WriteString(fmt.Sprintf("\n\t%+v", op))
+		allOpeners.WriteString(fmt.Sprintf("%+v", e.Openers[0]))
+		for _, op := range e.Openers[1:] {
+			allOpeners.WriteString("\n         ")
+			allOpeners.WriteString(fmt.Sprintf("%+v", op))
 		}
 		openers = fmt.Sprintf(openerFmt, allOpeners.String())
 	}

@@ -35,11 +35,9 @@ func (or OpenerRemover) DisplayData() {
 
 func (or OpenerRemover) Actions() []string {
 	actions := []string{}
-
 	for _, opener := range *or.openers {
 		actions = append(actions, fmt.Sprintf("%v", opener))
 	}
-
 	actions = append(actions, "Back")
 	return actions
 }

@@ -7,11 +7,7 @@ import (
 	"strconv"
 )
 
-func NoValidation(_ string) bool {
-    return true
-}
-
-func PromptAndGetInput(prompt string, isValid func(string) bool) string {
+func PromptAndGetInput(prompt string, isValid func(string) error) string {
 	output.Displayf("Enter %s:\n", prompt)
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -23,8 +19,8 @@ func PromptAndGetInput(prompt string, isValid func(string) bool) string {
 		}
 
 		val := in[:len(in) - 1]
-		if isValid != nil && !isValid(val) {
-			output.Displayln("Invalid input, try again:")
+		if err := isValid(val); err != nil {
+			output.Displayf("Invalid input: %v, try again:", err)
 			continue
 		}
 

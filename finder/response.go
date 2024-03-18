@@ -27,6 +27,9 @@ type tmEventResponse struct {
 		Start struct {
 			Date string `json:"localDate"`
 		} `json:"start"`
+		Status struct {
+			Code string `json:"code"`
+		} `json:"status"`
 	} `json:"dates"`
 	Prices []struct {
 		MinPrice float64 `json:"min"`
@@ -36,6 +39,7 @@ type tmEventResponse struct {
 			Enabled bool `json:"enabled"`
 		} `json:"allInclusivePricing"`
 	} `json:"ticketing"`
+	Classification []tmGenreResponse `json:"classification"`
 	Details struct {
 		Venues []struct {
 			Name string `json:"name"`
@@ -56,16 +60,18 @@ type tmEventResponse struct {
 					URL string `json:"url"`
 				} `json:"spotify"`
 			} `json:"externalLinks"`
-			Classification []struct {
-				Genre struct {
-					Name string `json:"name"`
-				} `json:"genre"`
-				Subgenre struct {
-					Name string `json:"name"`
-				} `json:"subGenre"`
-			} `json:"classifications"`
+			Classification []tmGenreResponse `json:"classifications"`
 		} `json:"attractions"`
 	} `json:"_embedded"`
+}
+
+type tmGenreResponse struct {
+	Genre struct {
+		Name string `json:"name"`
+	} `json:"genre"`
+	Subgenre struct {
+		Name string `json:"name"`
+	} `json:"subGenre"`
 }
 
 type errorResponse struct {

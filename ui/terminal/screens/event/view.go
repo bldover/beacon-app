@@ -19,7 +19,7 @@ type eventDeleteScreen interface {
 	AddDeleteContext(int, int)
 }
 
-type EventViewer struct {
+type Viewer struct {
 	Events            *[]data.Event
 	AddEventScreen    screens.Screen
 	DeleteEventScreen eventDeleteScreen
@@ -39,22 +39,22 @@ const (
 	mainMenu
 )
 
-func NewViewScreen(title string) *EventViewer {
-	view := EventViewer{}
+func NewViewScreen(title string) *Viewer {
+	view := Viewer{}
 	view.title = title
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort", "Add Event", "Delete Event", "Main Menu"}
 	return &view
 }
 
-func (v EventViewer) numPages() int {
+func (v Viewer) numPages() int {
 	return int(math.Ceil(float64(len(*v.Events)) / float64(pageSize)))
 }
 
-func (v EventViewer) Title() string {
+func (v Viewer) Title() string {
 	return v.title
 }
 
-func (v EventViewer) DisplayData() {
+func (v Viewer) DisplayData() {
 	if len(*v.Events) == 0 {
 		output.Displayln("No concerts found")
 	}
@@ -74,11 +74,11 @@ func (v EventViewer) DisplayData() {
 	output.Displayln(eventData.String())
 }
 
-func (v EventViewer) Actions() []string {
+func (v Viewer) Actions() []string {
 	return v.actions
 }
 
-func (v *EventViewer) NextScreen(i int) screens.Screen {
+func (v *Viewer) NextScreen(i int) screens.Screen {
 	switch i {
 	case nextPage:
 		if (v.page + 1) < v.numPages() {
@@ -92,7 +92,7 @@ func (v *EventViewer) NextScreen(i int) screens.Screen {
 	case gotoPage:
 		v.page = input.PromptAndGetInputNumeric("page number", 1, v.numPages()+1) - 1
 	case toggleSort:
-		sortByDate := sortEvents()
+		sortByDate := data.EventSorter()
 		if slices.IsSortedFunc(*v.Events, sortByDate) {
 			slices.Reverse(*v.Events)
 		} else {
@@ -109,16 +109,4 @@ func (v *EventViewer) NextScreen(i int) screens.Screen {
 		return v.MainMenu
 	}
 	return v
-}
-
-func sortEvents() func(a, b data.Event) int {
-	return func(a, b data.Event) int {
-		if data.Timestamp(a.Date).Before(data.Timestamp(b.Date)) {
-			return -1
-		} else if data.Timestamp(a.Date).After(data.Timestamp(b.Date)) {
-			return 1
-		} else {
-			return 0
-		}
-	}
 }

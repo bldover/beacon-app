@@ -12,7 +12,7 @@ const (
 	apiKey         = "TICKETMASTER_API_KEY"
 	host           = "https://app.ticketmaster.com"
 	eventPath      = "/discovery/v2/events"
-	urlFmt         = "%s%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%s"
+	urlFmt         = "%s%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%v"
 	apiKeyFmt      = "&apikey=%s"
 	dateTimeFmt    = "2006-01-02T15:04:05"
 	dateFmt        = "2006-01-02"
@@ -21,10 +21,13 @@ const (
 	radius         = "50"
 	unit           = "miles"
 	stateCode      = "GA"
-	pageSize       = "20"
+	pageSize       = 20
 )
 
-func buildTicketmasterUrl(city string, state string) (string, error) {
+type Url string
+type UrlPath string
+
+func buildTicketmasterUrl(city string, state string) (Url, error) {
 	token, err := getAuthToken()
 	if err != nil {
 		return "", err
@@ -40,7 +43,19 @@ func buildTicketmasterUrl(city string, state string) (string, error) {
 	url := fmt.Sprintf(urlFmt, host, eventPath, classification, city, state, radius, unit, startDate, sort, pageSize)
 	log.Debug("Built URL (without auth token): ", url)
 	url += fmt.Sprintf(apiKeyFmt, token)
-	return url, nil
+	return Url(url), nil
+}
+
+func buildTicketmasterUrlWithPath(path UrlPath) (Url, error) {
+	token, err := getAuthToken()
+	if err != nil {
+		return "", err
+	}
+
+    url := string(host + path)
+	log.Debug("Built URL (without auth token): ", url)
+	url += fmt.Sprintf(apiKeyFmt, token)
+	return Url(url), nil
 }
 
 func getAuthToken() (string, error) {

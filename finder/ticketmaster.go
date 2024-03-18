@@ -23,11 +23,25 @@ func (e RetryableError) Error() string {
 	return e.message
 }
 
+type EventCancelledError struct {
+	message string
+}
+
+func (e EventCancelledError) Error() string {
+	return e.message
+}
+
+type EventCount struct {
+    successCount int
+	cancelledCount int
+	failedCount int
+}
+
 type ticketmasterRetriever struct {}
 
 func (r ticketmasterRetriever) GetUpcomingEvents(request FindEventRequest) ([]data.EventDetails, error) {
 	city := request.City
-	state := request.City
+	state := request.State
 	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s, %s", city, state)
 
 	url, err := buildTicketmasterUrl(city, state)
@@ -41,74 +55,100 @@ func (r ticketmasterRetriever) GetUpcomingEvents(request FindEventRequest) ([]da
 		return nil, err
 	}
 
-	eventCount := response.PageInfo.EventCount
-	eventDetails := make([]data.EventDetails, 0, eventCount)
-	if err := populateAllEventDetails(response, &eventDetails); err != nil {
+	expectedEventCount := response.PageInfo.EventCount
+	eventDetails := make([]data.EventDetails, 0, expectedEventCount)
+
+	eventCount, err := populateAllEventDetails(response, &eventDetails)
+	if err != nil {
 		log.Error(err)
 	}
 
-	getRemainingPages(response.Links.Next.URL, &eventDetails)
-	if len(eventDetails) != eventCount {
-		errMsg := fmt.Sprintf("Unable to retrieve all expected events. Read %v/%v", len(eventDetails), eventCount)
+	nextUrlPath := UrlPath(response.Links.Next.URL)
+	remainingEventCount := getRemainingPages(nextUrlPath, &eventDetails)
+
+	eventCount.successCount += remainingEventCount.successCount
+	eventCount.failedCount += remainingEventCount.failedCount
+	eventCount.cancelledCount += remainingEventCount.cancelledCount
+
+	expectedNotCancelledCount := expectedEventCount - eventCount.cancelledCount
+	if len(eventDetails) != expectedNotCancelledCount {
+		errFmt := "Unable to retrieve all expected events. Read %v/%v"
+		errMsg := fmt.Sprintf(errFmt, len(eventDetails), expectedNotCancelledCount)
 		return eventDetails, errors.New(errMsg)
 	}
+
+	log.Infof("Ticketmaster read counts: %+v", eventCount)
 	return eventDetails, nil
 }
 
-func getRemainingPages(url string, eventDetails *[]data.EventDetails) {
+func getRemainingPages(urlPath UrlPath, eventDetails *[]data.EventDetails) EventCount {
 	retryCount := 0
 	maxRetries := 3
-	for url != "" {
+	eventCount := EventCount{}
+	for urlPath != "" {
 		// try to not exceed the rate limit
 		waitTime := time.Duration(200000000) // 0.2s
 		time.Sleep(waitTime)
-		lastUrl := url
+		lastUrlPath := urlPath
 		var err error
-		url, err = getEvents(url, eventDetails)
+		var pageEventCount EventCount
+		urlPath, pageEventCount, err = getEvents(urlPath, eventDetails)
 		if err != nil {
 			switch err.(type) {
 			case RetryableError:
 				if retryCount < maxRetries {
 					log.Info("Received Ticketmaster rate violation, retry count:", retryCount)
-					url = lastUrl
+					urlPath = lastUrlPath
 					retryCount++
 					waitTime := time.Duration(500000000) // 0.5s
 					time.Sleep(waitTime)
+					continue
 				} else {
 					log.Error("Failed to retrieve event page from Ticketmaster after all retry attempts:", err)
+					eventCount.failedCount += pageEventCount.failedCount
+					break
 				}
 			case error:
 				log.Error("Failed to retrieve event page from Ticketmaster with non-retryable error:", err)
+				eventCount.failedCount += pageEventCount.failedCount
+				break
 			}
-			continue
 		}
 		log.Debug("Successfully retrieved event page from Ticketmaster")
+		eventCount.successCount += pageEventCount.successCount
+		eventCount.cancelledCount += pageEventCount.cancelledCount
+		eventCount.failedCount += pageEventCount.failedCount
 		retryCount = 0
 	}
+	return eventCount
 }
 
-func getEvents(urlPath string, events *[]data.EventDetails) (string, error) {
-	token, err := getAuthToken()
+func getEvents(urlPath UrlPath, events *[]data.EventDetails) (UrlPath, EventCount, error) {
+	eventCount := EventCount{}
+	url, err := buildTicketmasterUrlWithPath(urlPath)
 	if err != nil {
-		return "", err
+		eventCount.failedCount += pageSize
+		return "", eventCount, err
 	}
-	url := host + urlPath
-	log.Debug("Built URL (without auth token): ", url)
-	url += fmt.Sprintf(apiKeyFmt, token)
 
 	response, err := getResponseDetails(url)
 	if err != nil {
-		return "", err
+		eventCount.failedCount += pageSize
+		return "", eventCount, err
 	}
-	if err := populateAllEventDetails(response, events); err != nil {
+	pageEventCount, err := populateAllEventDetails(response, events);
+	if err != nil {
 		log.Error(err)
 	}
 
-	return response.Links.Next.URL, nil
+	eventCount.successCount += pageEventCount.successCount
+	eventCount.cancelledCount += pageEventCount.cancelledCount
+	eventCount.failedCount += pageEventCount.failedCount
+	return UrlPath(response.Links.Next.URL), eventCount, nil
 }
 
-func getResponseDetails(url string) (*tmResponse, error) {
-	response, err := http.Get(url)
+func getResponseDetails(url Url) (*tmResponse, error) {
+	response, err := http.Get(string(url))
 	if err != nil {
 		return nil, err
 	}
@@ -136,23 +176,30 @@ func getResponseDetails(url string) (*tmResponse, error) {
 	return respData, nil
 }
 
-func populateAllEventDetails(response *tmResponse, events *[]data.EventDetails) error {
-	eventCount := 0
+func populateAllEventDetails(response *tmResponse, events *[]data.EventDetails) (EventCount, error) {
+	eventCount := EventCount{}
 	for _, event := range response.Data.Events {
 		eventDetails, err := parseEventDetails(&event)
 		if err != nil {
-			log.Errorf("Failed to parse event %+v, with error %v", event, err)
-			continue
+			switch err.(type) {
+			case EventCancelledError:
+				log.Debugf("Skipped event %+v due to being cancelled", eventDetails)
+				eventCount.cancelledCount++
+				continue
+			case error:
+				log.Errorf("Failed to parse event %+v, with error %v", event, err)
+				eventCount.failedCount++
+				continue
+			}
 		}
 		*events = append(*events, *eventDetails)
-		eventCount++
+		eventCount.successCount++
 	}
 
-	failedCount := len(response.Data.Events) - eventCount
-	if failedCount != 0 {
-		return fmt.Errorf("failed to parse %v events", failedCount)
+	if eventCount.failedCount != 0 {
+		return eventCount, fmt.Errorf("failed to parse %v events", eventCount.failedCount)
 	}
-	return nil
+	return eventCount, nil
 }
 
 func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
@@ -167,7 +214,7 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 		mainActDetails := artistDetails[0]
 		mainAct.Name = mainActDetails.Name
 		if len(mainActDetails.Classification) != 0 {
-			mainAct.Genre = mainActDetails.Classification[0].Subgenre.Name
+			mainAct.Genre = getGenre(mainActDetails.Classification[0])
 		}
 	}
 
@@ -181,20 +228,25 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 				Name: openerDetails.Name,
 			}
 			if len(openerDetails.Classification) != 0 {
-				opener.Genre = openerDetails.Classification[0].Subgenre.Name
+				opener.Genre = getGenre(openerDetails.Classification[0])
 			}
 			openers = append(openers, opener)
 		}
 	}
 
+	eventGenre := ""
+	if len(event.Classification) != 0 {
+		eventGenre = getGenre(event.Classification[0])
+	}
+
 	price := ""
 	if len(event.Prices) == 0 {
-		price = "unknown"
+		price = "Unknown"
 	} else {
  		price = strconv.FormatFloat(event.Prices[0].MinPrice, 'f', 2, 64)
-	}
-	if !event.Ticketing.InclusivePricing.Enabled {
-		price += " + fees"
+		if !event.Ticketing.InclusivePricing.Enabled {
+			price += " + fees"
+		}
 	}
 
 	venue := data.Venue{}
@@ -215,6 +267,7 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 	eventDetails := data.EventDetails{
 		Name:  eventName,
 		Price: price,
+		EventGenre: eventGenre,
 		Event: data.Event{
 			MainAct: mainAct,
 			Openers: openers,
@@ -222,5 +275,22 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 			Date:    data.Date(date),
 		},
 	}
+
+	if event.Dates.Status.Code == "cancelled" {
+		return &eventDetails, EventCancelledError{"Event has been cancelled"}
+	}
 	return &eventDetails, nil
+}
+
+func getGenre(genres tmGenreResponse) string {
+	subGenre := genres.Subgenre.Name
+	genre := genres.Genre.Name
+	switch {
+	case subGenre != "" && subGenre != "Undefined" && subGenre != "Other":
+		return subGenre
+	case genre != "" && genre != "Undefined" && genre != "Other":
+		return genre
+	default:
+		return ""
+	}
 }

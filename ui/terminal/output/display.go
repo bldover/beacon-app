@@ -19,3 +19,8 @@ func Displayln(v ...any) {
 	log.Display(v...)
 	fmt.Println(v...)
 }
+
+func ClearCurrentLine() {
+	log.Display("Cleared last line")
+	fmt.Printf("\r\033[K") // carriage return + kill line, probably platform-dependent
+}

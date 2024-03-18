@@ -2,38 +2,39 @@ package data
 
 type (
 	Venue struct {
-		Name    string
-		City    string
-		State   string
+		Name  string
+		City  string
+		State string
 	}
 	Artist struct {
 		Name  string
 		Genre string
 	}
 	Event struct {
-		MainAct Artist
-		Openers []Artist
-		Venue   Venue
-		Date    string
+		MainAct   Artist
+		Openers   []Artist
+		Venue     Venue
+		Date      string
 		Purchased bool
 	}
 	EventDetails struct {
-		Name string
-		Price string
-		Event Event
+		Name       string
+		EventGenre string
+		Price      string
+		Event      Event
 	}
 )
 
 func (v *Venue) Populated() bool {
-    return allNotEmpty(v.Name, v.City, v.State)
+	return allNotEmpty(v.Name, v.City, v.State)
 }
 
 func (a *Artist) Populated() bool {
-    return allNotEmpty(a.Name, a.Genre)
+	return allNotEmpty(a.Name, a.Genre)
 }
 
 func (a *Artist) Invalid() bool {
-    return allNotEmpty(a.Name) != allNotEmpty(a.Genre)
+	return allNotEmpty(a.Name) != allNotEmpty(a.Genre)
 }
 
 func (e *Event) Populated() bool {
