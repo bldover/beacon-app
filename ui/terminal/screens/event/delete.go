@@ -23,9 +23,9 @@ func NewDeleteScreen(cache eventDeleteCache) *Deleter {
 	return &d
 }
 
-func (d *Deleter) AddContext(returnScreen screens.Screen, props ...any) {
-	d.returnScreen = returnScreen
-	d.events = props[0].([]data.Event)
+func (d *Deleter) AddContext(context screens.ScreenContext) {
+	d.returnScreen = context.ReturnScreen
+	d.events = context.Props[0].([]data.Event)
 }
 
 func (d Deleter) Title() string {
@@ -45,12 +45,12 @@ func (d Deleter) Actions() []string {
 	return actions
 }
 
-func (d *Deleter) NextScreen(i int) screens.Screen {
+func (d *Deleter) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	if i != len(d.events)+1 {
 		if err := d.cache.DeleteEvent(d.events[i-1]); err != nil {
 			output.Displayf("Failed to delete event: %v\n", err)
-			return d
+			return d, nil
 		}
 	}
-	return d.returnScreen
+	return d.returnScreen, nil
 }

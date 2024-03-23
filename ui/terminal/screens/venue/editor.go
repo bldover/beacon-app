@@ -33,8 +33,9 @@ func NewEditScreen() *VenueEditor {
 	return &e
 }
 
-func (e *VenueEditor) AddContext(returnScreen screens.Screen, props ...any) {
-	e.returnScreen = returnScreen
+func (e *VenueEditor) AddContext(context screens.ScreenContext) {
+	e.returnScreen = context.ReturnScreen
+	props := context.Props
 	e.venue = props[0].(*data.Venue)
 	e.tempVenue.Name = e.venue.Name
 	e.tempVenue.City = e.venue.City
@@ -53,7 +54,7 @@ func (e VenueEditor) Actions() []string {
 	return e.actions
 }
 
-func (e *VenueEditor) NextScreen(i int) screens.Screen {
+func (e *VenueEditor) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
 	case search:
 		e.handleVenueSearch()
@@ -66,14 +67,14 @@ func (e *VenueEditor) NextScreen(i int) screens.Screen {
 	case save:
 		if e.tempVenue.Populated() {
 			*e.venue = e.tempVenue
-			return e.returnScreen
+			return e.returnScreen, nil
 		} else {
 			output.Displayln("Failed to save venue: all fields are required")
 		}
 	case cancelEdit:
-		return e.returnScreen
+		return e.returnScreen, nil
 	}
-	return e
+	return e, nil
 }
 
 func (e *VenueEditor) handleVenueSearch() {

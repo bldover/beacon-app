@@ -18,11 +18,17 @@ type refresher interface {
 func RunUI(start screens.Screen) {
 	curr := start
 	last := start
+	var context *screens.ScreenContext
     for {
+		screenChange := curr.Title() != last.Title()
 		output.Displayln("----------------------------------------------------------------------")
 		output.Displayln(strings.ToUpper(curr.Title()))
 
-		if refresher, ok := curr.(refresher); ok && curr.Title() != last.Title() {
+		if contextScreen, ok := curr.(screens.ContextScreen); ok && screenChange && context != nil {
+			contextScreen.AddContext(*context)
+		}
+
+		if refresher, ok := curr.(refresher); ok && screenChange {
 			refresher.Refresh()
 		}
 
@@ -41,6 +47,7 @@ func RunUI(start screens.Screen) {
 		}
 
 		in := input.PromptAndGetInputNumeric("option index", 1, len(actions) + 1)
-		last, curr = curr, curr.NextScreen(in)
+		last = curr
+		curr, context = curr.NextScreen(in)
 	}
 }

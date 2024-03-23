@@ -28,12 +28,11 @@ func (mm MainMenu) Actions() []string {
     return actions
 }
 
-func (mm MainMenu) NextScreen(i int) Screen {
+func (mm MainMenu) NextScreen(i int) (Screen, *ScreenContext) {
 	if i == len(mm.Children) + 1 {
 		output.Displayln("Received exit request, terminating...")
 		os.Exit(0)
 	}
 	next := mm.Children[i]
-	next.AddContext(mm)
-	return next
+	return next, NewScreenContext(mm)
 }

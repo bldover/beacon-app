@@ -26,8 +26,8 @@ func NewMenu(upcomingViewer screens.ContextScreen, recommendedViewer screens.Con
     return &menu
 }
 
-func (m *Menu) AddContext(returnScreen screens.Screen, _ ...any) {
-    m.returnScreen = returnScreen
+func (m *Menu) AddContext(context screens.ScreenContext) {
+    m.returnScreen = context.ReturnScreen
 }
 
 func (m Menu) Title() string {
@@ -38,15 +38,14 @@ func (m Menu) Actions() []string {
     return m.actions
 }
 
-func (m Menu) NextScreen(i int) screens.Screen {
+func (m Menu) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
     case viewAllUpcoming:
-		m.upcomingEventViewer.AddContext(m)
-		return m.upcomingEventViewer
+		return m.upcomingEventViewer, screens.NewScreenContext(m)
 	case viewRecommended:
 		output.Displayln("Not yet implemented!")
 	case mainMenu:
-		return m.returnScreen
+		return m.returnScreen, nil
 	}
-	return m
+	return m, nil
 }

@@ -32,8 +32,9 @@ func NewEditScreen() *Editor {
 	return &e
 }
 
-func (e *Editor) AddContext(returnScreen screens.Screen, props ...any) {
-	e.returnScreen = returnScreen
+func (e *Editor) AddContext(context screens.ScreenContext) {
+	e.returnScreen = context.ReturnScreen
+	props := context.Props
 	e.artist = props[0].(*data.Artist)
 	e.tempArtist.Name = e.artist.Name
 	e.tempArtist.Genre = e.artist.Genre
@@ -51,7 +52,7 @@ func (e Editor) Actions() []string {
 	return e.actions
 }
 
-func (e *Editor) NextScreen(i int) screens.Screen {
+func (e *Editor) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
 	case search:
 		e.handleSearch()
@@ -62,14 +63,14 @@ func (e *Editor) NextScreen(i int) screens.Screen {
 	case save:
 		if e.tempArtist.Populated() {
 			*e.artist = e.tempArtist
-			return e.returnScreen
+			return e.returnScreen, nil
 		} else {
 			output.Displayln("Failed to save artist: all fields are required")
 		}
 	case cancel:
-		return e.returnScreen
+		return e.returnScreen, nil
 	}
-	return e
+	return e, nil
 }
 
 func (e *Editor) handleSearch() {

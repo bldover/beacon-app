@@ -67,8 +67,8 @@ func NewViewScreen(title, city, state string, addSelector screens.ContextScreen,
 	return &view
 }
 
-func (f *Finder) AddContext(returnScreen screens.Screen, _ ...any) {
-    f.returnScreen = returnScreen
+func (f *Finder) AddContext(context screens.ScreenContext) {
+    f.returnScreen = context.ReturnScreen
 }
 
 func (f Finder) Title() string {
@@ -103,13 +103,13 @@ func (f Finder) Actions() []string {
 	return f.actions
 }
 
-func (f *Finder) NextScreen(i int) screens.Screen {
+func (f *Finder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
 	case nextPage:
 		if (f.page + 1) < f.numPages() {
 			f.page++
 		}
-		return f
+		return f, nil
 	case prevPage:
 		if f.page > 0 {
 			f.page--
@@ -127,17 +127,16 @@ func (f *Finder) NextScreen(i int) screens.Screen {
 	case addEvent:
 		startIdx := pageSize * f.page
 		endIdx := startIdx + pageSize
-		f.addEventSelectorScreen.AddContext(f, f.events[startIdx:endIdx])
-		return f.addEventSelectorScreen
+		return f.addEventSelectorScreen, screens.NewScreenContext(f, f.events[startIdx:endIdx])
 	case changeLocation:
 		f.getNewLocation()
 	case refreshEvents:
 		f.reloadEvents()
 	case finderMenu:
 		f.page = 0
-		return f.returnScreen
+		return f.returnScreen, nil
 	}
-	return f
+	return f, nil
 }
 
 func (f *Finder) getNewLocation() {

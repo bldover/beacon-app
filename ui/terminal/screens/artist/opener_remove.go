@@ -19,9 +19,9 @@ func NewOpenerRemoveScreen() *OpenerRemover {
 	return &or
 }
 
-func (or *OpenerRemover) AddContext(returnScreen screens.Screen, props ...any) {
-	or.returnScreen = returnScreen
-	or.openers = props[0].(*[]data.Artist)
+func (or *OpenerRemover) AddContext(context screens.ScreenContext) {
+	or.returnScreen = context.ReturnScreen
+	or.openers = context.Props[0].(*[]data.Artist)
 }
 
 func (or OpenerRemover) Title() string {
@@ -43,10 +43,10 @@ func (or OpenerRemover) Actions() []string {
 	return actions
 }
 
-func (or *OpenerRemover) NextScreen(i int) screens.Screen {
+func (or *OpenerRemover) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	if i == len(*or.openers)+1 {
-		return or.returnScreen
+		return or.returnScreen, nil
 	}
 	*or.openers = slices.Delete(*or.openers, i-1, i)
-	return or
+	return or, nil
 }

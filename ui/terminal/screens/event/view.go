@@ -61,8 +61,8 @@ func NewViewScreen(title string, viewType data.EventType, addScreen, deleteScree
 	return &view
 }
 
-func (v *Viewer) AddContext(returnScreen screens.Screen, props ...any) {
-    v.returnScreen = returnScreen
+func (v *Viewer) AddContext(context screens.ScreenContext) {
+    v.returnScreen = context.ReturnScreen
 }
 
 func (v Viewer) Title() string {
@@ -103,13 +103,13 @@ func (v Viewer) Actions() []string {
 	return v.actions
 }
 
-func (v *Viewer) NextScreen(i int) screens.Screen {
+func (v *Viewer) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
 	case nextPage:
 		if (v.page + 1) < v.numPages() {
 			v.page++
 		}
-		return v
+		return v, nil
 	case prevPage:
 		if v.page > 0 {
 			v.page--
@@ -125,18 +125,17 @@ func (v *Viewer) NextScreen(i int) screens.Screen {
 		v.sort()
 		v.page = 0
 	case addEvent:
-		v.addEventScreen.AddContext(v, v.viewType)
-		return v.addEventScreen
+		return v.addEventScreen, screens.NewScreenContext(v, v.viewType)
 	case deleteEvent:
 		eventIdx := v.page * pageSize
 		pageEvents := int(math.Min(float64(pageSize), float64(len(v.events) - eventIdx)))
-		v.deleteEventScreen.AddContext(v, v.events[eventIdx:eventIdx+pageEvents])
-		return v.deleteEventScreen
+		context := screens.NewScreenContext(v, v.events[eventIdx:eventIdx+pageEvents])
+		return v.deleteEventScreen, context
 	case mainMenu:
 		v.page = 0
-		return v.returnScreen
+		return v.returnScreen, nil
 	}
-	return v
+	return v, nil
 }
 
 func (v Viewer) numPages() int {

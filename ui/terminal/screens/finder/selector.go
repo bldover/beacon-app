@@ -19,9 +19,9 @@ func NewSelectorScreen(eventAddScreen screens.ContextScreen) *Selector {
 	return &selector
 }
 
-func (s *Selector) AddContext(returnScreen screens.Screen, props ...any) {
-	s.returnScreen = returnScreen
-	s.eventDetails = props[0].([]data.EventDetails)
+func (s *Selector) AddContext(context screens.ScreenContext) {
+	s.returnScreen = context.ReturnScreen
+	s.eventDetails = context.Props[0].([]data.EventDetails)
 }
 
 func (s Selector) Title() string {
@@ -42,11 +42,11 @@ func (s Selector) Actions() []string {
 	return actions
 }
 
-func (s *Selector) NextScreen(i int) screens.Screen {
+func (s *Selector) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	if i != len(s.eventDetails)+1 {
 		eventIdx := i - 1
-		s.eventAddScreen.AddContext(s.returnScreen, data.EventType(data.Future), s.eventDetails[eventIdx].Event)
-		return s.eventAddScreen
+		context := screens.NewScreenContext(s.returnScreen, data.EventType(data.Future), s.eventDetails[eventIdx].Event)
+		return s.eventAddScreen, context
 	}
-	return s.returnScreen
+	return s.returnScreen, nil
 }

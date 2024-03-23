@@ -51,8 +51,9 @@ func NewAddScreen(artistEditor, venueEditor, openerRemover screens.ContextScreen
 	return &a
 }
 
-func (a *Adder) AddContext(returnScreen screens.Screen, props ...any) {
-	a.returnScreen = returnScreen
+func (a *Adder) AddContext(context screens.ScreenContext) {
+	a.returnScreen = context.ReturnScreen
+	props := context.Props
 	a.eventType = props[0].(data.EventType)
 	if len(props) > 1 {
 		a.newEvent = props[1].(data.Event)
@@ -80,29 +81,26 @@ func (a Adder) Actions() []string {
 	return a.actions[a.eventType]
 }
 
-func (a *Adder) NextScreen(i int) screens.Screen {
+func (a *Adder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	if a.eventType == data.Past && i >= togglePurchased {
 		i += 1
 	}
 
 	switch i {
 	case editMainAct:
-		a.artistEditor.AddContext(a, &a.newEvent.MainAct)
-		return a.artistEditor
+		return a.artistEditor, screens.NewScreenContext(a, &a.newEvent.MainAct)
 	case addOpener:
 		if len(a.newEvent.Openers) >= maxOpeners {
 			output.Displayln("Max number of openers is already reached!")
-			return a
+			return a, nil
 		}
 		a.newEvent.Openers = append(a.newEvent.Openers, data.Artist{})
-		a.artistEditor.AddContext(a, &a.newEvent.Openers[len(a.newEvent.Openers)-1])
-		return a.artistEditor
+		context := screens.NewScreenContext(a, &a.newEvent.Openers[len(a.newEvent.Openers)-1])
+		return a.artistEditor, context
 	case removeOpener:
-		a.openerRemover.AddContext(a, &a.newEvent.Openers)
-		return a.openerRemover
+		return a.openerRemover, screens.NewScreenContext(a, &a.newEvent.Openers)
 	case editVenue:
-		a.venueEditor.AddContext(a, &a.newEvent.Venue)
-		return a.venueEditor
+		return a.venueEditor, screens.NewScreenContext(a, &a.newEvent.Venue)
 	case editDate:
 		if a.eventType == data.Future {
 			a.newEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", input.FutureDateValidation)
@@ -117,12 +115,12 @@ func (a *Adder) NextScreen(i int) screens.Screen {
 		}
 		if err := a.cache.AddEvent(a.newEvent); err != nil {
 			output.Displayf("Failed to save event: %v\n", err)
-			return a
+			return a, nil
 		}
-		return a.returnScreen
+		return a.returnScreen, nil
 	case cancelAddEvent:
 		a.newEvent = data.Event{}
-		return a.returnScreen
+		return a.returnScreen, nil
 	}
-	return a
+	return a, nil
 }
