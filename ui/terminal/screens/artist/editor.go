@@ -2,19 +2,20 @@ package artist
 
 import (
 	"concert-manager/data"
-	"concert-manager/log"
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
 	"concert-manager/ui/terminal/screens"
-	"strings"
 )
 
+type artistAddCache interface {
+	AddArtist(data.Artist) error
+}
+
 type Editor struct {
-	artist         *data.Artist
-	tempArtist     data.Artist
-	Artists        *[]data.Artist
-	AddEventScreen screens.Screen
-	actions        []string
+	actions      []string
+	artist       *data.Artist
+	tempArtist   data.Artist
+	returnScreen screens.Screen
 }
 
 const (
@@ -31,15 +32,11 @@ func NewEditScreen() *Editor {
 	return &e
 }
 
-func (e *Editor) AddArtistContext(artist *data.Artist) {
-	log.Debugf("in Artist editor - add artist context: %p", artist)
-	log.Debugf("in Artist editor - add artist context: %+v", artist)
-	e.artist = artist
-	e.tempArtist.Name = strings.Clone(artist.Name)
-	e.tempArtist.Genre = strings.Clone(artist.Genre)
-	log.Debugf("st Artist editor - add artist context: %p", e.artist)
-	log.Debugf("st Artist editor - add artist context: %+v", e.artist)
-	log.Debug("tp Artist editor - add artist context:", e.tempArtist)
+func (e *Editor) AddContext(returnScreen screens.Screen, props ...any) {
+	e.returnScreen = returnScreen
+	e.artist = props[0].(*data.Artist)
+	e.tempArtist.Name = e.artist.Name
+	e.tempArtist.Genre = e.artist.Genre
 }
 
 func (e Editor) Title() string {
@@ -63,14 +60,14 @@ func (e *Editor) NextScreen(i int) screens.Screen {
 	case setGenre:
 		e.tempArtist.Genre = input.PromptAndGetInput("artist genre", input.NoValidation)
 	case save:
-		if e.artist.Populated() {
+		if e.tempArtist.Populated() {
 			*e.artist = e.tempArtist
-			return e.AddEventScreen
+			return e.returnScreen
 		} else {
-			output.Displayf("Failed to save artist: all fields are required")
+			output.Displayln("Failed to save artist: all fields are required")
 		}
 	case cancel:
-		return e.AddEventScreen
+		return e.returnScreen
 	}
 	return e
 }

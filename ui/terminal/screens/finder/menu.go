@@ -6,10 +6,10 @@ import (
 )
 
 type Menu struct {
-	UpcomingEventViewer screens.Screen
-	RecommendedEventViewer screens.Screen
-	MainMenu screens.Screen
 	actions []string
+	upcomingEventViewer screens.ContextScreen
+	recommendedEventViewer screens.ContextScreen
+	returnScreen screens.Screen
 }
 
 const (
@@ -18,10 +18,16 @@ const (
 	mainMenu
 )
 
-func NewMenu() *Menu {
+func NewMenu(upcomingViewer screens.ContextScreen, recommendedViewer screens.ContextScreen) *Menu {
 	menu := Menu{}
+	menu.upcomingEventViewer = upcomingViewer
+	menu.recommendedEventViewer = recommendedViewer
 	menu.actions = []string{"All Upcoming Concerts", "Recommended Concerts", "Main Menu"}
     return &menu
+}
+
+func (m *Menu) AddContext(returnScreen screens.Screen, _ ...any) {
+    m.returnScreen = returnScreen
 }
 
 func (m Menu) Title() string {
@@ -35,11 +41,12 @@ func (m Menu) Actions() []string {
 func (m Menu) NextScreen(i int) screens.Screen {
 	switch i {
     case viewAllUpcoming:
-		return m.UpcomingEventViewer
+		m.upcomingEventViewer.AddContext(m)
+		return m.upcomingEventViewer
 	case viewRecommended:
 		output.Displayln("Not yet implemented!")
 	case mainMenu:
-		return m.MainMenu
+		return m.returnScreen
 	}
 	return m
 }

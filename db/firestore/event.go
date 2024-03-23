@@ -36,10 +36,8 @@ type Event = data.Event
 
 func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 	log.Debug("Attemping to add event", event)
-	var (
-		mainActDoc *firestore.DocumentSnapshot
-		err error
-	)
+	var mainActDoc *firestore.DocumentSnapshot
+	var err error
 	if event.MainAct.Populated() {
 		mainActDoc, err = repo.artistRepo.findDocRef(ctx, event.MainAct.Name)
 		if err != nil {
@@ -140,7 +138,7 @@ func (repo *EventRepo) Exists(ctx context.Context, event Event) (bool, error) {
 	return true, nil
 }
 
-func (repo *EventRepo) FindAll(ctx context.Context) (*[]Event, error) {
+func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 	log.Debug("Finding all events")
 	eventDocs, err := repo.db.Client.Collection(eventCollection).
 		Select(eventFields...).
@@ -200,7 +198,7 @@ func (repo *EventRepo) FindAll(ctx context.Context) (*[]Event, error) {
 	}
 
 	log.Debugf("Returning %d constructed events", len(events))
-	return &events, nil
+	return events, nil
 }
 
 func (repo *EventRepo) findEventDocRef(ctx context.Context, date string, venueRef *firestore.DocumentRef) (*firestore.DocumentSnapshot, error) {

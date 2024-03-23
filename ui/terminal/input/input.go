@@ -20,7 +20,7 @@ func PromptAndGetInput(prompt string, isValid func(string) error) string {
 
 		val := in[:len(in) - 1]
 		if err := isValid(val); err != nil {
-			output.Displayf("Invalid input: %v, try again:", err)
+			output.Displayf("Invalid input: %v, try again:\n", err)
 			continue
 		}
 

@@ -9,8 +9,8 @@ import (
 )
 
 type OpenerRemover struct {
-	AddEventScreen screens.Screen
-	openers        *[]data.Artist
+	openers      *[]data.Artist
+	returnScreen screens.Screen
 }
 
 func NewOpenerRemoveScreen() *OpenerRemover {
@@ -19,8 +19,9 @@ func NewOpenerRemoveScreen() *OpenerRemover {
 	return &or
 }
 
-func (or *OpenerRemover) AddOpenerContext(openers *[]data.Artist) {
-	or.openers = openers
+func (or *OpenerRemover) AddContext(returnScreen screens.Screen, props ...any) {
+	or.returnScreen = returnScreen
+	or.openers = props[0].(*[]data.Artist)
 }
 
 func (or OpenerRemover) Title() string {
@@ -44,7 +45,7 @@ func (or OpenerRemover) Actions() []string {
 
 func (or *OpenerRemover) NextScreen(i int) screens.Screen {
 	if i == len(*or.openers)+1 {
-		return or.AddEventScreen
+		return or.returnScreen
 	}
 	*or.openers = slices.Delete(*or.openers, i-1, i)
 	return or

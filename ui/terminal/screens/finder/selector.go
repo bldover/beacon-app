@@ -7,23 +7,21 @@ import (
 	"concert-manager/ui/terminal/screens/format"
 )
 
-type eventAdderScreen interface {
-	screens.Screen
-	AddContext(data.EventDetails)
-}
-
 type Selector struct {
-	EventAddScreen eventAdderScreen
-	ViewerScreen   screens.Screen
 	eventDetails   []data.EventDetails
+	eventAddScreen screens.ContextScreen
+	returnScreen   screens.Screen
 }
 
-func NewSelectorScreen() *Selector {
-	return &Selector{}
+func NewSelectorScreen(eventAddScreen screens.ContextScreen) *Selector {
+	selector := Selector{}
+	selector.eventAddScreen = eventAddScreen
+	return &selector
 }
 
-func (s *Selector) AddContext(eventDetails []data.EventDetails) {
-	s.eventDetails = eventDetails
+func (s *Selector) AddContext(returnScreen screens.Screen, props ...any) {
+	s.returnScreen = returnScreen
+	s.eventDetails = props[0].([]data.EventDetails)
 }
 
 func (s Selector) Title() string {
@@ -47,8 +45,8 @@ func (s Selector) Actions() []string {
 func (s *Selector) NextScreen(i int) screens.Screen {
 	if i != len(s.eventDetails)+1 {
 		eventIdx := i - 1
-		s.EventAddScreen.AddContext(s.eventDetails[eventIdx])
-		return s.EventAddScreen
+		s.eventAddScreen.AddContext(s.returnScreen, data.EventType(data.Future), s.eventDetails[eventIdx].Event)
+		return s.eventAddScreen
 	}
-	return s.ViewerScreen
+	return s.returnScreen
 }

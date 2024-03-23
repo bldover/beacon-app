@@ -5,31 +5,27 @@ import (
 	"concert-manager/ui/terminal/output"
 	"concert-manager/ui/terminal/screens"
 	"concert-manager/ui/terminal/screens/format"
-	"context"
-	"math"
-	"slices"
 )
 
-type eventDbDeleter interface {
-	DeleteEvent(context.Context, data.Event) error
+type eventDeleteCache interface {
+	DeleteEvent(data.Event) error
 }
 
 type Deleter struct {
-	Events       *[]data.Event
-	Database     eventDbDeleter
-	Viewer       screens.Screen
-	startIdx     int
-	displayCount int
+	cache        eventDeleteCache
+	events       []data.Event
+	returnScreen screens.Screen
 }
 
-func NewDeleteScreen() *Deleter {
-	return &Deleter{}
+func NewDeleteScreen(cache eventDeleteCache) *Deleter {
+	d := Deleter{cache: cache}
+	d.cache = cache
+	return &d
 }
 
-func (d *Deleter) AddDeleteContext(startIdx int, displayCount int) {
-	d.startIdx = startIdx
-	remainingEvents := len(*d.Events) - startIdx
-	d.displayCount = int(math.Min(float64(displayCount), float64(remainingEvents)))
+func (d *Deleter) AddContext(returnScreen screens.Screen, props ...any) {
+	d.returnScreen = returnScreen
+	d.events = props[0].([]data.Event)
 }
 
 func (d Deleter) Title() string {
@@ -37,24 +33,24 @@ func (d Deleter) Title() string {
 }
 
 func (d Deleter) DisplayData() {
-	if len(*d.Events) == 0 {
+	if len(d.events) == 0 {
 		output.Displayln("No concerts found")
 	}
 }
 
 func (d Deleter) Actions() []string {
 	actions := []string{}
-	pageEvents := (*d.Events)[d.startIdx : d.startIdx+d.displayCount]
-	actions = append(actions, format.FormatEventsShort(pageEvents)...)
+	actions = append(actions, format.FormatEventsShort(d.events)...)
 	actions = append(actions, "Cancel")
 	return actions
 }
 
 func (d *Deleter) NextScreen(i int) screens.Screen {
-	if i != d.displayCount+1 {
-		eventIdx := d.startIdx + i - 1
-		d.Database.DeleteEvent(context.Background(), (*d.Events)[eventIdx])
-		*d.Events = slices.Delete(*d.Events, eventIdx, eventIdx+1)
+	if i != len(d.events)+1 {
+		if err := d.cache.DeleteEvent(d.events[i-1]); err != nil {
+			output.Displayf("Failed to delete event: %v\n", err)
+			return d
+		}
 	}
-	return d.Viewer
+	return d.returnScreen
 }

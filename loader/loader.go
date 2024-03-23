@@ -15,12 +15,16 @@ import (
 
 const minColumns = 7
 
-type EventCreator interface {
-	AddEventRecursive(context.Context, data.Event) error
+type EventCache interface {
+	AddEvent(data.Event) error
 }
 
 type Loader struct {
-	EventCreator EventCreator
+	eventCache EventCache
+}
+
+func NewLoader(cache EventCache) *Loader {
+    return &Loader{cache}
 }
 
 func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
@@ -48,7 +52,7 @@ func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 	successCount := 0
 	for i, event := range events {
 		log.Debugf("Starting upload for event %v", event)
-		if err := l.EventCreator.AddEventRecursive(ctx, event); err != nil {
+		if err := l.eventCache.AddEvent(event); err != nil {
 			log.Errorf("Failed to add event at row %d, %+v, %v", i+2, event, err)
 			hasErr = true
 		} else {

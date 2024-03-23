@@ -42,7 +42,7 @@ func Date(ts time.Time) string {
 	return fmt.Sprintf("%d/%d/%d", month, day, year)
 }
 
-func EventSorter() func(a, b Event) int {
+func EventSorterDateAsc() func(a, b Event) int {
 	return func(a, b Event) int {
 		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
 			return -1
@@ -54,9 +54,27 @@ func EventSorter() func(a, b Event) int {
 	}
 }
 
-func EventDetailsSorter() func(a, b EventDetails) int {
+func EventSorterDateDesc() func(a, b Event) int {
+	return func(a, b Event) int {
+		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
+			return 1
+		} else if Timestamp(a.Date).After(Timestamp(b.Date)) {
+			return -1
+		} else {
+			return 0
+		}
+	}
+}
+
+func EventDetailsSorterDateAsc() func(a, b EventDetails) int {
 	return func(a, b EventDetails) int {
-		return EventSorter()(a.Event, b.Event)
+		return EventSorterDateAsc()(a.Event, b.Event)
+	}
+}
+
+func EventDetailsSorterDateDesc() func(a, b EventDetails) int {
+	return func(a, b EventDetails) int {
+		return EventSorterDateDesc()(a.Event, b.Event)
 	}
 }
 
@@ -64,12 +82,13 @@ func ValidPastDate(date string) bool {
 	if !ValidDate(date) {
 		return false
 	}
-	return time.Now().Equal(Timestamp(date)) || time.Now().After(Timestamp(date))
+	return Timestamp(date).Before(time.Now())
 }
 
 func ValidFutureDate(date string) bool {
 	if !ValidDate(date) {
 		return false
 	}
-	return time.Now().Before(Timestamp(date))
+	now := time.Now()
+	return Timestamp(date).Equal(now) || Timestamp(date).After(now)
 }

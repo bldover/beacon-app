@@ -5,3 +5,8 @@ type Screen interface {
 	Actions() []string
 	NextScreen(int) Screen
 }
+
+type ContextScreen interface {
+    Screen
+	AddContext(Screen, ...any)
+}

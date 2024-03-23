@@ -2,7 +2,6 @@ package finder
 
 import (
 	"concert-manager/data"
-	"concert-manager/finder"
 	"concert-manager/ui/terminal/input"
 	"concert-manager/ui/terminal/output"
 	"concert-manager/ui/terminal/screens"
@@ -17,27 +16,24 @@ import (
 const pageSize = 10
 const reloadTimeFormat = "2006-01-02T15:04:05"
 
-type addEventSelectorScreen interface {
-	screens.Screen
-	AddContext([]data.EventDetails)
-}
-
-type eventFinder interface {
-	FindAllEvents(finder.FindEventRequest) ([]data.EventDetails, error)
+type eventRetrievalCache interface {
+	GetUpcomingEvents(string, string) []data.EventDetails
+	ReloadUpcomingEvents(string, string) error
 }
 
 type Finder struct {
-	AddEventSelectorScreen addEventSelectorScreen
-	FinderMenu             screens.Screen
-	EventFinder            eventFinder
-	events                 []data.EventDetails
-	page                   int
-	actions                []string
 	title                  string
 	city                   string
 	state                  string
+	actions                []string
+	sortType               sortType
+	cache                  eventRetrievalCache
+	events                 []data.EventDetails
+	page                   int
 	loaded                 bool
 	lastLoad               string
+	addEventSelectorScreen screens.ContextScreen
+	returnScreen           screens.Screen
 }
 
 const (
@@ -51,18 +47,28 @@ const (
 	finderMenu
 )
 
-func NewViewerScreen(title string, city string, state string) *Finder {
+type sortType int
+
+const (
+	dateAsc = iota
+	dateDesc
+)
+
+func NewViewScreen(title, city, state string, addSelector screens.ContextScreen, cache eventRetrievalCache) *Finder {
 	view := Finder{}
 	view.title = title
 	view.city = city
 	view.state = state
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort",
 		"Save Concert", "Change Location", "Refresh Concerts", "Finder Menu"}
+	view.sortType = dateAsc
+	view.addEventSelectorScreen = addSelector
+	view.cache = cache
 	return &view
 }
 
-func (f Finder) numPages() int {
-	return int(math.Ceil(float64(len(f.events)) / float64(pageSize)))
+func (f *Finder) AddContext(returnScreen screens.Screen, _ ...any) {
+    f.returnScreen = returnScreen
 }
 
 func (f Finder) Title() string {
@@ -111,25 +117,25 @@ func (f *Finder) NextScreen(i int) screens.Screen {
 	case gotoPage:
 		f.page = input.PromptAndGetInputNumeric("page number", 1, f.numPages()+1) - 1
 	case toggleSort:
-		sortByDate := data.EventDetailsSorter()
-		if slices.IsSortedFunc(f.events, sortByDate) {
-			slices.Reverse(f.events)
+		if f.sortType == dateAsc {
+			f.sortType = dateDesc
 		} else {
-			slices.SortFunc(f.events, sortByDate)
+			f.sortType = dateAsc
 		}
+		f.sort()
 		f.page = 0
 	case addEvent:
 		startIdx := pageSize * f.page
 		endIdx := startIdx + pageSize
-		f.AddEventSelectorScreen.AddContext(f.events[startIdx:endIdx])
-		return f.AddEventSelectorScreen
+		f.addEventSelectorScreen.AddContext(f, f.events[startIdx:endIdx])
+		return f.addEventSelectorScreen
 	case changeLocation:
 		f.getNewLocation()
 	case refreshEvents:
 		f.reloadEvents()
 	case finderMenu:
 		f.page = 0
-		return f.FinderMenu
+		return f.returnScreen
 	}
 	return f
 }
@@ -137,17 +143,29 @@ func (f *Finder) NextScreen(i int) screens.Screen {
 func (f *Finder) getNewLocation() {
 	f.city = input.PromptAndGetInput("city", input.OnlyLettersOrSpacesValidation)
 	f.state = input.PromptAndGetInput("state code", input.StateValidation)
-	f.reloadEvents()
+	f.events = f.cache.GetUpcomingEvents(f.city, f.state)
+	f.page = 0
 }
 
 func (f *Finder) reloadEvents() error {
 	output.Displayf("Reloading concerts for %s, %s...", f.city, f.state)
-	request := finder.FindEventRequest{City: f.city, State: f.state}
-	events, err := f.EventFinder.FindAllEvents(request)
-	f.events = events
+	err := f.cache.ReloadUpcomingEvents(f.city, f.state)
+	f.events = f.cache.GetUpcomingEvents(f.city, f.state)
 	f.loaded = true
 	f.lastLoad = time.Now().Format(reloadTimeFormat)
 	f.page = 0
 	output.ClearCurrentLine()
 	return err
+}
+
+func (f Finder) numPages() int {
+	return int(math.Ceil(float64(len(f.events)) / float64(pageSize)))
+}
+
+func (f *Finder) sort() {
+	sortFunc := data.EventDetailsSorterDateAsc()
+	if f.sortType == dateDesc {
+		sortFunc = data.EventDetailsSorterDateDesc()
+	}
+	slices.SortFunc(f.events, sortFunc)
 }

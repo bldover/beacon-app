@@ -11,11 +11,20 @@ type dataDisplayer interface {
     DisplayData()
 }
 
+type refresher interface {
+    Refresh()
+}
+
 func RunUI(start screens.Screen) {
 	curr := start
+	last := start
     for {
 		output.Displayln("----------------------------------------------------------------------")
 		output.Displayln(strings.ToUpper(curr.Title()))
+
+		if refresher, ok := curr.(refresher); ok && curr.Title() != last.Title() {
+			refresher.Refresh()
+		}
 
 		if displayer, ok := curr.(dataDisplayer); ok {
 			displayer.DisplayData()
@@ -32,6 +41,6 @@ func RunUI(start screens.Screen) {
 		}
 
 		in := input.PromptAndGetInputNumeric("option index", 1, len(actions) + 1)
-		curr = curr.NextScreen(in)
+		last, curr = curr, curr.NextScreen(in)
 	}
 }

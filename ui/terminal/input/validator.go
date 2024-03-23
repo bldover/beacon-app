@@ -40,7 +40,7 @@ func PastDateValidation(date string) error {
 		return errors.New("expected date format is mm/dd/yyyy")
 	}
 	if !data.ValidPastDate(date) {
-		return errors.New("expected a past or current date")
+		return errors.New("expected a past date")
 	}
 	return nil
 }
@@ -50,7 +50,7 @@ func FutureDateValidation(date string) error {
 		return errors.New("expected date format is mm/dd/yyyy")
 	}
 	if !data.ValidFutureDate(date) {
-		return errors.New("expected a future date")
+		return errors.New("expected a future or current date")
 	}
 	return nil
 }

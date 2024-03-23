@@ -7,12 +7,15 @@ import (
 	"concert-manager/ui/terminal/screens"
 )
 
+type venueAddCache interface {
+	AddVenue(data.Venue) error
+}
+
 type VenueEditor struct {
-    venue *data.Venue
-	tempVenue data.Venue
-	Venues *[]data.Venue
-	AddEventScreen screens.Screen
-	actions []string
+	actions      []string
+	venue        *data.Venue
+	tempVenue    data.Venue
+	returnScreen screens.Screen
 }
 
 const (
@@ -27,31 +30,32 @@ const (
 func NewEditScreen() *VenueEditor {
 	e := VenueEditor{}
 	e.actions = []string{"Search Venues", "Set Name", "Set City", "Set State", "Save Venue", "Cancel"}
-    return &e
+	return &e
 }
 
-func (e *VenueEditor) AddVenueContext(venue *data.Venue) {
-    e.venue = venue
-	e.tempVenue.Name = venue.Name
-	e.tempVenue.City = venue.City
-	e.tempVenue.State = venue.State
+func (e *VenueEditor) AddContext(returnScreen screens.Screen, props ...any) {
+	e.returnScreen = returnScreen
+	e.venue = props[0].(*data.Venue)
+	e.tempVenue.Name = e.venue.Name
+	e.tempVenue.City = e.venue.City
+	e.tempVenue.State = e.venue.State
 }
 
 func (e VenueEditor) Title() string {
-    return "Edit Venue"
+	return "Edit Venue"
 }
 
 func (e VenueEditor) DisplayData() {
-    output.Displayf("%+v\n", e.tempVenue)
+	output.Displayf("%+v\n", e.tempVenue)
 }
 
 func (e VenueEditor) Actions() []string {
-    return e.actions
+	return e.actions
 }
 
 func (e *VenueEditor) NextScreen(i int) screens.Screen {
 	switch i {
-    case search:
+	case search:
 		e.handleVenueSearch()
 	case setName:
 		e.tempVenue.Name = input.PromptAndGetInput("venue name", input.NoValidation)
@@ -60,14 +64,14 @@ func (e *VenueEditor) NextScreen(i int) screens.Screen {
 	case setState:
 		e.tempVenue.State = input.PromptAndGetInput("venue state", input.NoValidation)
 	case save:
-		if e.venue.Populated() {
+		if e.tempVenue.Populated() {
 			*e.venue = e.tempVenue
-			return e.AddEventScreen
+			return e.returnScreen
 		} else {
 			output.Displayln("Failed to save venue: all fields are required")
 		}
 	case cancelEdit:
-		return e.AddEventScreen
+		return e.returnScreen
 	}
 	return e
 }

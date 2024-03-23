@@ -77,7 +77,7 @@ func (repo *ArtistRepo) Exists(ctx context.Context, artist Artist) (bool, error)
 	return true, nil
 }
 
-func (repo *ArtistRepo) FindAll(ctx context.Context) (*[]Artist, error) {
+func (repo *ArtistRepo) FindAll(ctx context.Context) ([]Artist, error) {
 	log.Debug("Finding all artists")
 	artistDocs, err := repo.db.Client.Collection(artistCollection).
 		Select(artistFields...).
@@ -93,7 +93,7 @@ func (repo *ArtistRepo) FindAll(ctx context.Context) (*[]Artist, error) {
 		artists = append(artists, toArtist(a))
 	}
 	log.Debugf("Found %d artists", len(artists))
-	return &artists, nil
+	return artists, nil
 }
 
 func toArtist(doc *firestore.DocumentSnapshot) Artist {

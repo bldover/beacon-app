@@ -78,7 +78,7 @@ func (repo *VenueRepo) Exists(ctx context.Context, venue Venue) (bool, error) {
 	return true, nil
 }
 
-func (repo *VenueRepo) FindAll(ctx context.Context) (*[]Venue, error) {
+func (repo *VenueRepo) FindAll(ctx context.Context) ([]Venue, error) {
 	log.Debug("Finding all venues")
 	venueDocs, err := repo.db.Client.Collection(venueCollection).
 		Select(venueFields...).
@@ -94,7 +94,7 @@ func (repo *VenueRepo) FindAll(ctx context.Context) (*[]Venue, error) {
 		venues = append(venues, toVenue(v))
 	}
 	log.Debugf("Found %d artists", len(venues))
-	return &venues, nil
+	return venues, nil
 }
 
 func toVenue(doc *firestore.DocumentSnapshot) Venue {
