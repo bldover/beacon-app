@@ -1,7 +1,7 @@
 package screens
 
 import (
-	"concert-manager/ui/terminal/output"
+	"concert-manager/ui/textui/output"
 	"os"
 )
 

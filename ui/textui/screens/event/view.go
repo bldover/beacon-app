@@ -2,10 +2,10 @@ package event
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/input"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
-	"concert-manager/ui/terminal/screens/format"
+	"concert-manager/ui/textui/input"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
+	"concert-manager/util/format"
 	"fmt"
 	"math"
 	"slices"
@@ -20,15 +20,15 @@ type eventViewCache interface {
 }
 
 type Viewer struct {
-	title             string
+	ScreenTitle       string
+	ViewType          data.EventType
+	AddEventScreen    screens.Screen
+	DeleteEventScreen screens.Screen
+	Cache             eventViewCache
 	actions           []string
 	sortType          sortType
-	viewType          data.EventType
-	cache             eventViewCache
 	events            []data.Event
 	page              int
-	addEventScreen    screens.ContextScreen
-	deleteEventScreen screens.ContextScreen
 	returnScreen      screens.Screen
 }
 
@@ -49,31 +49,26 @@ const (
 	dateDesc
 )
 
-func NewViewScreen(title string, viewType data.EventType, addScreen, deleteScreen screens.ContextScreen, cache eventViewCache) *Viewer {
+func NewViewScreen() *Viewer {
 	view := Viewer{}
-	view.title = title
-	view.viewType = viewType
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort", "Add Event", "Delete Event", "Main Menu"}
 	view.sortType = dateAsc
-	view.addEventScreen = addScreen
-	view.deleteEventScreen = deleteScreen
-	view.cache = cache
 	return &view
 }
 
 func (v *Viewer) AddContext(context screens.ScreenContext) {
-    v.returnScreen = context.ReturnScreen
+	v.returnScreen = context.ReturnScreen
 }
 
 func (v Viewer) Title() string {
-	return v.title
+	return v.ScreenTitle
 }
 
 func (v *Viewer) Refresh() {
-	if v.viewType == data.Past {
-		v.events = v.cache.GetPastEvents()
+	if v.ViewType == data.Past {
+		v.events = v.Cache.GetPastEvents()
 	} else {
-		v.events = v.cache.GetFutureEvents()
+		v.events = v.Cache.GetFutureEvents()
 	}
 
 	v.sort()
@@ -125,12 +120,12 @@ func (v *Viewer) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 		v.sort()
 		v.page = 0
 	case addEvent:
-		return v.addEventScreen, screens.NewScreenContext(v, v.viewType)
+		return v.AddEventScreen, screens.NewScreenContext(v)
 	case deleteEvent:
 		eventIdx := v.page * pageSize
-		pageEvents := int(math.Min(float64(pageSize), float64(len(v.events) - eventIdx)))
+		pageEvents := int(math.Min(float64(pageSize), float64(len(v.events)-eventIdx)))
 		context := screens.NewScreenContext(v, v.events[eventIdx:eventIdx+pageEvents])
-		return v.deleteEventScreen, context
+		return v.DeleteEventScreen, context
 	case mainMenu:
 		v.page = 0
 		return v.returnScreen, nil

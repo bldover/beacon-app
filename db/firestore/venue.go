@@ -13,11 +13,7 @@ const venueCollection = "venues"
 var venueFields = []string{"Name", "City", "State"}
 
 type VenueRepo struct {
-	db *Firestore
-}
-
-func NewVenueRepo(fs *Firestore) *VenueRepo {
-	return &VenueRepo{fs}
+	Connection *Firestore
 }
 
 type VenueEntity struct {
@@ -41,7 +37,7 @@ func (repo *VenueRepo) Add(ctx context.Context, venue Venue) (string, error) {
 	}
 
 	venueEntity := VenueEntity{venue.Name, venue.City, venue.State}
-	venues := repo.db.Client.Collection(venueCollection)
+	venues := repo.Connection.Client.Collection(venueCollection)
 	docRef, _, err := venues.Add(ctx, venueEntity)
 	if err != nil {
 		log.Errorf("Failed to add new venue %+v, %v", venue, err)
@@ -80,7 +76,7 @@ func (repo *VenueRepo) Exists(ctx context.Context, venue Venue) (bool, error) {
 
 func (repo *VenueRepo) FindAll(ctx context.Context) ([]Venue, error) {
 	log.Debug("Finding all venues")
-	venueDocs, err := repo.db.Client.Collection(venueCollection).
+	venueDocs, err := repo.Connection.Client.Collection(venueCollection).
 		Select(venueFields...).
 		Documents(ctx).
 	 	GetAll()
@@ -107,7 +103,7 @@ func toVenue(doc *firestore.DocumentSnapshot) Venue {
 }
 
 func (repo *VenueRepo) findDocRef(ctx context.Context, name string, city string, state string) (*firestore.DocumentSnapshot, error) {
-	return repo.db.Client.Collection(venueCollection).
+	return repo.Connection.Client.Collection(venueCollection).
 		Select().
 		Where("Name", "==", name).
 		Where("City", "==", city).
@@ -117,7 +113,7 @@ func (repo *VenueRepo) findDocRef(ctx context.Context, name string, city string,
 }
 
 func (repo *VenueRepo) findAllDocs(ctx context.Context) (*map[string]Venue, error) {
-	venueDocs, err := repo.db.Client.Collection(venueCollection).
+	venueDocs, err := repo.Connection.Client.Collection(venueCollection).
 		Select(venueFields...).
 		Documents(ctx).
 		GetAll()

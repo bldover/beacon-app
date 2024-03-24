@@ -27,15 +27,11 @@ type (
 		FindAll(context.Context) ([]data.Event, error)
 	}
 	DatabaseRepository struct {
-		venueRepo  VenueRepo
-		artistRepo ArtistRepo
-		eventRepo  EventRepo
+		VenueRepo  VenueRepo
+		ArtistRepo ArtistRepo
+		EventRepo  EventRepo
 	}
 )
-
-func NewDatabaseRepository(venueRepo VenueRepo, artistRepo ArtistRepo, eventRepo EventRepo) *DatabaseRepository {
-    return &DatabaseRepository{venueRepo, artistRepo, eventRepo}
-}
 
 func (interactor *DatabaseRepository) AddVenue(ctx context.Context, venue data.Venue) error {
 	log.Debug("Request to add venue", venue)
@@ -44,7 +40,7 @@ func (interactor *DatabaseRepository) AddVenue(ctx context.Context, venue data.V
 		return errors.New("failed to create venue due to empty fields")
 	}
 
-	_, err := interactor.venueRepo.Add(ctx, venue)
+	_, err := interactor.VenueRepo.Add(ctx, venue)
 	if err != nil {
 		log.Errorf("Error while adding venue %v, %v\n", venue, err)
 		return err
@@ -54,7 +50,7 @@ func (interactor *DatabaseRepository) AddVenue(ctx context.Context, venue data.V
 
 func (interactor *DatabaseRepository) DeleteVenue(ctx context.Context, venue data.Venue) error {
 	log.Debug("Request to delete venue", venue)
-	err := interactor.venueRepo.Delete(ctx, venue)
+	err := interactor.VenueRepo.Delete(ctx, venue)
 	if err != nil {
 		log.Errorf("Error while deleting venue %v, %v\n", venue, err)
 		return err
@@ -64,7 +60,7 @@ func (interactor *DatabaseRepository) DeleteVenue(ctx context.Context, venue dat
 
 func (interactor *DatabaseRepository) ListVenues(ctx context.Context) ([]data.Venue, error) {
 	log.Debug("Request to list all venues")
-    venues, err := interactor.venueRepo.FindAll(ctx)
+    venues, err := interactor.VenueRepo.FindAll(ctx)
 	if err != nil {
 		log.Error("Error while listing all venues,", err)
 		return nil, err
@@ -79,7 +75,7 @@ func (interactor *DatabaseRepository) AddArtist(ctx context.Context, artist data
 		return errors.New("failed to create artist due to empty fields")
 	}
 
-	_, err := interactor.artistRepo.Add(ctx, artist)
+	_, err := interactor.ArtistRepo.Add(ctx, artist)
 	if err != nil {
 		log.Errorf("Error while adding artist %v, %v\n", artist, err)
 		return err
@@ -89,7 +85,7 @@ func (interactor *DatabaseRepository) AddArtist(ctx context.Context, artist data
 
 func (interactor *DatabaseRepository) DeleteArtist(ctx context.Context, artist data.Artist) error {
 	log.Debug("Request to delete artist", artist)
-	err := interactor.artistRepo.Delete(ctx, artist)
+	err := interactor.ArtistRepo.Delete(ctx, artist)
 	if err != nil {
 		log.Errorf("Error while deleting artist %v, %v\n", artist, err)
 		return err
@@ -99,7 +95,7 @@ func (interactor *DatabaseRepository) DeleteArtist(ctx context.Context, artist d
 
 func (interactor *DatabaseRepository) ListArtists(ctx context.Context) ([]data.Artist, error) {
 	log.Debug("Request to list all artists")
-    artists, err := interactor.artistRepo.FindAll(ctx)
+    artists, err := interactor.ArtistRepo.FindAll(ctx)
 	if err != nil {
 		log.Error("Error while listing all artists", err)
 		return nil, err
@@ -115,7 +111,7 @@ func (interactor *DatabaseRepository) AddEvent(ctx context.Context, event data.E
 		return errors.New("failed to create event due to empty fields")
 	}
 
-	_, err := interactor.eventRepo.Add(ctx, event)
+	_, err := interactor.EventRepo.Add(ctx, event)
 	if err != nil {
 		log.Errorf("Error while adding event %v, %v\n", event, err)
 		return err
@@ -148,7 +144,7 @@ func (interactor *DatabaseRepository) AddEventRecursive(ctx context.Context, eve
 		}
 	}
 
-	_, err := interactor.eventRepo.Add(ctx, event)
+	_, err := interactor.EventRepo.Add(ctx, event)
 	if err != nil {
 		log.Errorf("Error while recursively adding event %v, %v\n", event, err)
 		return err
@@ -158,7 +154,7 @@ func (interactor *DatabaseRepository) AddEventRecursive(ctx context.Context, eve
 
 func (interactor *DatabaseRepository) DeleteEvent(ctx context.Context, event data.Event) error {
 	log.Debug("Request to delete event", event)
-    err := interactor.eventRepo.Delete(ctx, event)
+    err := interactor.EventRepo.Delete(ctx, event)
 	if err != nil {
 		log.Errorf("Error while deleting event %v, %v\n", event, err)
 		return err
@@ -168,7 +164,7 @@ func (interactor *DatabaseRepository) DeleteEvent(ctx context.Context, event dat
 
 func (interactor *DatabaseRepository) ListEvents(ctx context.Context) ([]data.Event, error) {
 	log.Debug("Request to list all events")
-    events, err := interactor.eventRepo.FindAll(ctx)
+    events, err := interactor.EventRepo.FindAll(ctx)
 	if err != nil {
 		log.Error("Error while listing all events", err)
 		return nil, err

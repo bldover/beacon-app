@@ -1,9 +1,9 @@
-package terminal
+package textui
 
 import (
-	"concert-manager/ui/terminal/input"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/textui/input"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
 	"strings"
 )
 
@@ -15,7 +15,7 @@ type refresher interface {
     Refresh()
 }
 
-func RunUI(start screens.Screen) {
+func run(start screens.Screen) {
 	curr := start
 	last := start
 	var context *screens.ScreenContext

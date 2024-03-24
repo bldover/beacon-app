@@ -2,10 +2,10 @@ package event
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/input"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
-	"concert-manager/ui/terminal/screens/format"
+	"concert-manager/ui/textui/input"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
+	"concert-manager/util/format"
 	"slices"
 )
 
@@ -14,13 +14,13 @@ type eventAddCache interface {
 }
 
 type Adder struct {
+	ArtistEditor  screens.Screen
+	VenueEditor   screens.Screen
+	OpenerRemover screens.Screen
+	Cache         eventAddCache
 	actions       map[data.EventType][]string
 	eventType     data.EventType
-	cache         eventAddCache
 	newEvent      data.Event
-	artistEditor  screens.ContextScreen
-	venueEditor   screens.ContextScreen
-	openerRemover screens.ContextScreen
 	returnScreen  screens.Screen
 }
 
@@ -37,26 +37,29 @@ const (
 
 const maxOpeners = 20
 
-func NewAddScreen(artistEditor, venueEditor, openerRemover screens.ContextScreen, cache eventAddCache) *Adder {
+func NewAddScreen() *Adder {
 	a := Adder{}
 	a.actions = make(map[data.EventType][]string)
 	a.actions[data.Future] = []string{"Edit Main Act", "Add Opener", "Remove Opener", "Edit Venue",
 		"Edit Date", "Toggle Purchased", "Save Event", "Cancel"}
 	a.actions[data.Past] = []string{"Edit Main Act", "Add Opener", "Remove Opener", "Edit Venue",
 		"Edit Date", "Save Event", "Cancel"}
-	a.artistEditor = artistEditor
-	a.venueEditor = venueEditor
-	a.openerRemover = openerRemover
-	a.cache = cache
 	return &a
 }
 
 func (a *Adder) AddContext(context screens.ScreenContext) {
 	a.returnScreen = context.ReturnScreen
 	props := context.Props
-	a.eventType = props[0].(data.EventType)
-	if len(props) > 1 {
-		a.newEvent = props[1].(data.Event)
+	if len(props) > 0 {
+		a.newEvent = props[0].(data.Event)
+	}
+
+	// TODO: reconsider this since it requires changes here for new screens using this screen
+	switch a.returnScreen.Title() {
+	case "Concert History":
+		a.eventType = data.Past
+	case "Future Concerts", "All Upcoming Events":
+		a.eventType = data.Future
 	}
 }
 
@@ -88,7 +91,7 @@ func (a *Adder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 
 	switch i {
 	case editMainAct:
-		return a.artistEditor, screens.NewScreenContext(a, &a.newEvent.MainAct)
+		return a.ArtistEditor, screens.NewScreenContext(a, &a.newEvent.MainAct)
 	case addOpener:
 		if len(a.newEvent.Openers) >= maxOpeners {
 			output.Displayln("Max number of openers is already reached!")
@@ -96,11 +99,11 @@ func (a *Adder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 		}
 		a.newEvent.Openers = append(a.newEvent.Openers, data.Artist{})
 		context := screens.NewScreenContext(a, &a.newEvent.Openers[len(a.newEvent.Openers)-1])
-		return a.artistEditor, context
+		return a.ArtistEditor, context
 	case removeOpener:
-		return a.openerRemover, screens.NewScreenContext(a, &a.newEvent.Openers)
+		return a.OpenerRemover, screens.NewScreenContext(a, &a.newEvent.Openers)
 	case editVenue:
-		return a.venueEditor, screens.NewScreenContext(a, &a.newEvent.Venue)
+		return a.VenueEditor, screens.NewScreenContext(a, &a.newEvent.Venue)
 	case editDate:
 		if a.eventType == data.Future {
 			a.newEvent.Date = input.PromptAndGetInput("event date (mm/dd/yyyy)", input.FutureDateValidation)
@@ -113,7 +116,7 @@ func (a *Adder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 		if a.eventType == data.Past {
 			a.newEvent.Purchased = true
 		}
-		if err := a.cache.AddEvent(a.newEvent); err != nil {
+		if err := a.Cache.AddEvent(a.newEvent); err != nil {
 			output.Displayf("Failed to save event: %v\n", err)
 			return a, nil
 		}

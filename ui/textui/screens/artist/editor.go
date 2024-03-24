@@ -2,16 +2,18 @@ package artist
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/input"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/textui/input"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
 )
 
-type artistAddCache interface {
-	AddArtist(data.Artist) error
+type Search interface {
+	FindFuzzyArtistMatchesByName(string) []data.Artist
 }
 
 type Editor struct {
+	Search       Search
+	SelectScreen screens.Screen
 	actions      []string
 	artist       *data.Artist
 	tempArtist   data.Artist
@@ -33,6 +35,11 @@ func NewEditScreen() *Editor {
 }
 
 func (e *Editor) AddContext(context screens.ScreenContext) {
+	if context.ContextType == screens.Selector {
+		e.tempArtist = context.Props[0].(data.Artist)
+		return
+	}
+
 	e.returnScreen = context.ReturnScreen
 	props := context.Props
 	e.artist = props[0].(*data.Artist)
@@ -55,7 +62,9 @@ func (e Editor) Actions() []string {
 func (e *Editor) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
 	case search:
-		e.handleSearch()
+		name := input.PromptAndGetInput("artist name", input.NoValidation)
+		matches := e.Search.FindFuzzyArtistMatchesByName(name)
+		return e.SelectScreen, screens.NewScreenContext(e, matches)
 	case setName:
 		e.tempArtist.Name = input.PromptAndGetInput("artist name", input.NoValidation)
 	case setGenre:
@@ -71,9 +80,4 @@ func (e *Editor) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 		return e.returnScreen, nil
 	}
 	return e, nil
-}
-
-func (e *Editor) handleSearch() {
-	output.Displayln("Not yet implemented!")
-	//TODO: add search functionality
 }

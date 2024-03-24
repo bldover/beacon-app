@@ -2,7 +2,6 @@ package cache
 
 import (
 	"concert-manager/data"
-	"concert-manager/db"
 	"concert-manager/finder"
 	"concert-manager/log"
 	"context"
@@ -29,8 +28,8 @@ type Database interface {
 }
 
 type LocalCache struct {
-	db             Database
-	finder         Finder
+	Database             Database
+	Finder         Finder
 	savedEvents    map[int][]data.Event
 	upcomingEvents map[string][]data.EventDetails
 	artists        []data.Artist
@@ -42,18 +41,15 @@ const (
 	upcomingEventsInitCapacity = 500
 )
 
-func NewLocalCache(db *db.DatabaseRepository, finder *finder.EventFinder) *LocalCache {
+func NewLocalCache() *LocalCache {
 	cache := LocalCache{}
-	cache.db = db
-	cache.finder = finder
 	cache.savedEvents = make(map[int][]data.Event, savedEventsInitCapacity)
 	cache.upcomingEvents = make(map[string][]data.EventDetails, upcomingEventsInitCapacity)
-	cache.Sync()
 	return &cache
 }
 
 func (c *LocalCache) Sync() {
-	events, err := c.db.ListEvents(context.Background())
+	events, err := c.Database.ListEvents(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize events:", err)
 	}
@@ -71,14 +67,14 @@ func (c *LocalCache) Sync() {
 	c.savedEvents[data.Future] = futureEvents
 	log.Info("Successfully initialized events")
 
-	artists, err := c.db.ListArtists(context.Background())
+	artists, err := c.Database.ListArtists(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize artists:", err)
 	}
 	c.artists = artists
 	log.Info("Successfully initialized artists")
 
-	venues, err := c.db.ListVenues(context.Background())
+	venues, err := c.Database.ListVenues(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize venues:", err)
 	}
@@ -117,7 +113,7 @@ func (c *LocalCache) AddEvent(event data.Event) error {
 		return err
 	}
 
-	if err := c.db.AddEventRecursive(context.Background(), event); err != nil {
+	if err := c.Database.AddEventRecursive(context.Background(), event); err != nil {
 		return err
 	}
 
@@ -139,7 +135,7 @@ func (c *LocalCache) DeleteEvent(event data.Event) error {
 		return errors.New("event is not cached")
 	}
 
-	if err := c.db.DeleteEvent(context.Background(), event); err != nil {
+	if err := c.Database.DeleteEvent(context.Background(), event); err != nil {
 		return err
 	}
 
@@ -157,7 +153,7 @@ func (c *LocalCache) AddArtist(artist data.Artist) error {
 		return nil
 	}
 
-	if err := c.db.AddArtist(context.Background(), artist); err != nil {
+	if err := c.Database.AddArtist(context.Background(), artist); err != nil {
 		return err
 	}
 
@@ -172,7 +168,7 @@ func (c *LocalCache) DeleteArtist(artist data.Artist) error {
 		return errors.New("artist is not cached")
 	}
 
-	if err := c.db.DeleteArtist(context.Background(), artist); err != nil {
+	if err := c.Database.DeleteArtist(context.Background(), artist); err != nil {
 		return err
 	}
 
@@ -190,7 +186,7 @@ func (c *LocalCache) AddVenue(venue data.Venue) error {
 		return nil
 	}
 
-	if err := c.db.AddVenue(context.Background(), venue); err != nil {
+	if err := c.Database.AddVenue(context.Background(), venue); err != nil {
 		return err
 	}
 
@@ -205,7 +201,7 @@ func (c *LocalCache) DeleteVenue(venue data.Venue) error {
 		return errors.New("venue is not cached")
 	}
 
-	if err := c.db.DeleteVenue(context.Background(), venue); err != nil {
+	if err := c.Database.DeleteVenue(context.Background(), venue); err != nil {
 		return err
 	}
 
@@ -224,7 +220,7 @@ func (c LocalCache) GetUpcomingEvents(city, stateCode string) []data.EventDetail
 
 func (c *LocalCache) ReloadUpcomingEvents(city, stateCode string) error {
 	request := finder.FindEventRequest{City: city, State: stateCode}
-	events, err := c.finder.FindAllEvents(request)
+	events, err := c.Finder.FindAllEvents(request)
 	if err != nil {
 		log.Errorf("Error while loading events for %s, %s: %v", city, stateCode, err)
 	}

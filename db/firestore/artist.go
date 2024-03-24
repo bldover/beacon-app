@@ -13,11 +13,7 @@ const artistCollection string = "artists"
 var artistFields = []string{"Name", "Genre"}
 
 type ArtistRepo struct {
-	db *Firestore
-}
-
-func NewArtistRepo(fs *Firestore) *ArtistRepo {
-	return &ArtistRepo{fs}
+	Connection *Firestore
 }
 
 type ArtistEntity struct {
@@ -40,7 +36,7 @@ func (repo *ArtistRepo) Add(ctx context.Context, artist Artist) (string, error) 
 	}
 
 	artistEntity := ArtistEntity{artist.Name, artist.Genre}
-	artists := repo.db.Client.Collection(artistCollection)
+	artists := repo.Connection.Client.Collection(artistCollection)
 	docRef, _, err := artists.Add(ctx, artistEntity)
 	if err != nil {
 		log.Errorf("Failed to add new artist %+v, %v", artist, err)
@@ -79,7 +75,7 @@ func (repo *ArtistRepo) Exists(ctx context.Context, artist Artist) (bool, error)
 
 func (repo *ArtistRepo) FindAll(ctx context.Context) ([]Artist, error) {
 	log.Debug("Finding all artists")
-	artistDocs, err := repo.db.Client.Collection(artistCollection).
+	artistDocs, err := repo.Connection.Client.Collection(artistCollection).
 		Select(artistFields...).
 		Documents(ctx).
 		GetAll()
@@ -105,7 +101,7 @@ func toArtist(doc *firestore.DocumentSnapshot) Artist {
 }
 
 func (repo *ArtistRepo) findDocRef(ctx context.Context, name string) (*firestore.DocumentSnapshot, error) {
-	artist, err := repo.db.Client.Collection(artistCollection).
+	artist, err := repo.Connection.Client.Collection(artistCollection).
 		Select().
 		Where("Name", "==", name).
 		Documents(ctx).
@@ -117,7 +113,7 @@ func (repo *ArtistRepo) findDocRef(ctx context.Context, name string) (*firestore
 }
 
 func (repo *ArtistRepo) findAllDocs(ctx context.Context) (*map[string]Artist, error) {
-	artistDocs, err := repo.db.Client.Collection(artistCollection).
+	artistDocs, err := repo.Connection.Client.Collection(artistCollection).
 		Select(artistFields...).
 		Documents(ctx).
 		GetAll()

@@ -2,8 +2,8 @@ package artist
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
 	"fmt"
 	"slices"
 )
@@ -14,9 +14,7 @@ type OpenerRemover struct {
 }
 
 func NewOpenerRemoveScreen() *OpenerRemover {
-	or := OpenerRemover{}
-	or.openers = &[]data.Artist{}
-	return &or
+	return &OpenerRemover{openers: new([]data.Artist)}
 }
 
 func (or *OpenerRemover) AddContext(context screens.ScreenContext) {

@@ -2,10 +2,10 @@ package finder
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/input"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
-	"concert-manager/ui/terminal/screens/format"
+	"concert-manager/ui/textui/input"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
+	"concert-manager/util/format"
 	"fmt"
 	"math"
 	"slices"
@@ -22,18 +22,18 @@ type eventRetrievalCache interface {
 }
 
 type Finder struct {
-	title                  string
-	city                   string
-	state                  string
-	actions                []string
-	sortType               sortType
-	cache                  eventRetrievalCache
-	events                 []data.EventDetails
-	page                   int
-	loaded                 bool
-	lastLoad               string
-	addEventSelectorScreen screens.ContextScreen
-	returnScreen           screens.Screen
+	ScreenTitle          string
+	City                 string
+	State                string
+	AddEventSelectScreen screens.Screen
+	Cache                eventRetrievalCache
+	actions              []string
+	events               []data.EventDetails
+	sortType             sortType
+	page                 int
+	loaded               bool
+	lastLoad             string
+	returnScreen         screens.Screen
 }
 
 const (
@@ -54,25 +54,20 @@ const (
 	dateDesc
 )
 
-func NewViewScreen(title, city, state string, addSelector screens.ContextScreen, cache eventRetrievalCache) *Finder {
+func NewViewScreen() *Finder {
 	view := Finder{}
-	view.title = title
-	view.city = city
-	view.state = state
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort",
 		"Save Concert", "Change Location", "Refresh Concerts", "Finder Menu"}
 	view.sortType = dateAsc
-	view.addEventSelectorScreen = addSelector
-	view.cache = cache
 	return &view
 }
 
 func (f *Finder) AddContext(context screens.ScreenContext) {
-    f.returnScreen = context.ReturnScreen
+	f.returnScreen = context.ReturnScreen
 }
 
 func (f Finder) Title() string {
-	return f.title
+	return f.ScreenTitle
 }
 
 func (f *Finder) DisplayData() {
@@ -127,7 +122,7 @@ func (f *Finder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	case addEvent:
 		startIdx := pageSize * f.page
 		endIdx := startIdx + pageSize
-		return f.addEventSelectorScreen, screens.NewScreenContext(f, f.events[startIdx:endIdx])
+		return f.AddEventSelectScreen, screens.NewScreenContext(f, f.events[startIdx:endIdx])
 	case changeLocation:
 		f.getNewLocation()
 	case refreshEvents:
@@ -140,16 +135,16 @@ func (f *Finder) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 }
 
 func (f *Finder) getNewLocation() {
-	f.city = input.PromptAndGetInput("city", input.OnlyLettersOrSpacesValidation)
-	f.state = input.PromptAndGetInput("state code", input.StateValidation)
-	f.events = f.cache.GetUpcomingEvents(f.city, f.state)
+	f.City = input.PromptAndGetInput("city", input.OnlyLettersOrSpacesValidation)
+	f.State = input.PromptAndGetInput("state code", input.StateValidation)
+	f.events = f.Cache.GetUpcomingEvents(f.City, f.State)
 	f.page = 0
 }
 
 func (f *Finder) reloadEvents() error {
-	output.Displayf("Reloading concerts for %s, %s...", f.city, f.state)
-	err := f.cache.ReloadUpcomingEvents(f.city, f.state)
-	f.events = f.cache.GetUpcomingEvents(f.city, f.state)
+	output.Displayf("Reloading concerts for %s, %s...", f.City, f.State)
+	err := f.Cache.ReloadUpcomingEvents(f.City, f.State)
+	f.events = f.Cache.GetUpcomingEvents(f.City, f.State)
 	f.loaded = true
 	f.lastLoad = time.Now().Format(reloadTimeFormat)
 	f.page = 0

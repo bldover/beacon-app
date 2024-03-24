@@ -2,9 +2,9 @@ package event
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
-	"concert-manager/ui/terminal/screens/format"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
+	"concert-manager/util/format"
 )
 
 type eventDeleteCache interface {
@@ -12,15 +12,9 @@ type eventDeleteCache interface {
 }
 
 type Deleter struct {
-	cache        eventDeleteCache
+	Cache        eventDeleteCache
 	events       []data.Event
 	returnScreen screens.Screen
-}
-
-func NewDeleteScreen(cache eventDeleteCache) *Deleter {
-	d := Deleter{cache: cache}
-	d.cache = cache
-	return &d
 }
 
 func (d *Deleter) AddContext(context screens.ScreenContext) {
@@ -47,7 +41,7 @@ func (d Deleter) Actions() []string {
 
 func (d *Deleter) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	if i != len(d.events)+1 {
-		if err := d.cache.DeleteEvent(d.events[i-1]); err != nil {
+		if err := d.Cache.DeleteEvent(d.events[i-1]); err != nil {
 			output.Displayf("Failed to delete event: %v\n", err)
 			return d, nil
 		}

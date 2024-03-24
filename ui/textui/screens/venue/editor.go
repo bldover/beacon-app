@@ -2,16 +2,18 @@ package venue
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/terminal/input"
-	"concert-manager/ui/terminal/output"
-	"concert-manager/ui/terminal/screens"
+	"concert-manager/ui/textui/input"
+	"concert-manager/ui/textui/output"
+	"concert-manager/ui/textui/screens"
 )
 
-type venueAddCache interface {
-	AddVenue(data.Venue) error
+type Search interface {
+    FindFuzzyVenueMatchesByName(string) []data.Venue
 }
 
 type VenueEditor struct {
+	Search       Search
+	SelectScreen screens.Screen
 	actions      []string
 	venue        *data.Venue
 	tempVenue    data.Venue
@@ -34,9 +36,14 @@ func NewEditScreen() *VenueEditor {
 }
 
 func (e *VenueEditor) AddContext(context screens.ScreenContext) {
+	if context.ContextType == screens.Selector {
+		e.tempVenue = context.Props[0].(data.Venue)
+		return
+	}
+
 	e.returnScreen = context.ReturnScreen
 	props := context.Props
-	e.venue = props[0].(*data.Venue)
+ 	e.venue = props[0].(*data.Venue)
 	e.tempVenue.Name = e.venue.Name
 	e.tempVenue.City = e.venue.City
 	e.tempVenue.State = e.venue.State
@@ -57,7 +64,9 @@ func (e VenueEditor) Actions() []string {
 func (e *VenueEditor) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
 	switch i {
 	case search:
-		e.handleVenueSearch()
+		name := input.PromptAndGetInput("venue name", input.NoValidation)
+		matches := e.Search.FindFuzzyVenueMatchesByName(name)
+		return e.SelectScreen, screens.NewScreenContext(e, matches)
 	case setName:
 		e.tempVenue.Name = input.PromptAndGetInput("venue name", input.NoValidation)
 	case setCity:
@@ -75,9 +84,4 @@ func (e *VenueEditor) NextScreen(i int) (screens.Screen, *screens.ScreenContext)
 		return e.returnScreen, nil
 	}
 	return e, nil
-}
-
-func (e *VenueEditor) handleVenueSearch() {
-	output.Displayln("Not yet implemented!")
-	//TODO: add search functionality
 }
