@@ -1,4 +1,4 @@
-package data
+package util
 
 import (
 	"fmt"
@@ -27,6 +27,18 @@ func ValidDate(date string) bool {
 	return true
 }
 
+func FutureDate(date string) bool {
+	if !ValidDate(date) {
+		return false
+	}
+	now := time.Now()
+	return Timestamp(date).Equal(now) || Timestamp(date).After(now)
+}
+
+func PastDate(date string) bool {
+	return !FutureDate(date)
+}
+
 // format is "mm/dd/yyyy", with leading zeros optional
 // expected that the date string has been previously validated to not error when converted to ints
 func Timestamp(date string) time.Time {
@@ -42,53 +54,17 @@ func Date(ts time.Time) string {
 	return fmt.Sprintf("%d/%d/%d", month, day, year)
 }
 
-func EventSorterDateAsc() func(a, b Event) int {
-	return func(a, b Event) int {
-		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
-			return -1
-		} else if Timestamp(a.Date).After(Timestamp(b.Date)) {
-			return 1
-		} else {
-			return 0
-		}
+// adds leading zeros if needed
+func FormatDate(date string) string {
+	parts := strings.Split(date, "/")
+	month := parts[0]
+	day := parts[1]
+	year := parts[2]
+	if len(month) == 1 {
+		month = "0" + month
 	}
-}
-
-func EventSorterDateDesc() func(a, b Event) int {
-	return func(a, b Event) int {
-		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
-			return 1
-		} else if Timestamp(a.Date).After(Timestamp(b.Date)) {
-			return -1
-		} else {
-			return 0
-		}
+	if len(day) == 1 {
+		day = "0" + day
 	}
-}
-
-func EventDetailsSorterDateAsc() func(a, b EventDetails) int {
-	return func(a, b EventDetails) int {
-		return EventSorterDateAsc()(a.Event, b.Event)
-	}
-}
-
-func EventDetailsSorterDateDesc() func(a, b EventDetails) int {
-	return func(a, b EventDetails) int {
-		return EventSorterDateDesc()(a.Event, b.Event)
-	}
-}
-
-func ValidPastDate(date string) bool {
-	if !ValidDate(date) {
-		return false
-	}
-	return Timestamp(date).Before(time.Now())
-}
-
-func ValidFutureDate(date string) bool {
-	if !ValidDate(date) {
-		return false
-	}
-	now := time.Now()
-	return Timestamp(date).Equal(now) || Timestamp(date).After(now)
+	return fmt.Sprintf("%s/%s/%s", month, day, year)
 }

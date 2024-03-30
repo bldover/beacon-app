@@ -4,6 +4,7 @@ import (
 	"concert-manager/data"
 	"concert-manager/finder"
 	"concert-manager/log"
+	"concert-manager/util"
 	"context"
 	"errors"
 	"fmt"
@@ -28,44 +29,40 @@ type Database interface {
 }
 
 type LocalCache struct {
-	Database             Database
+	Database       Database
 	Finder         Finder
-	savedEvents    map[int][]data.Event
+	savedEvents    []data.Event
 	upcomingEvents map[string][]data.EventDetails
 	artists        []data.Artist
 	venues         []data.Venue
 }
 
+type eventType int
+
 const (
-	savedEventsInitCapacity = 300
+	past = iota
+	future
+)
+
+const (
+	savedEventsInitCapacity    = 300
 	upcomingEventsInitCapacity = 500
 )
 
 func NewLocalCache() *LocalCache {
 	cache := LocalCache{}
-	cache.savedEvents = make(map[int][]data.Event, savedEventsInitCapacity)
+	cache.savedEvents = make([]data.Event, savedEventsInitCapacity)
 	cache.upcomingEvents = make(map[string][]data.EventDetails, upcomingEventsInitCapacity)
 	return &cache
 }
 
 func (c *LocalCache) Sync() {
-	events, err := c.Database.ListEvents(context.Background())
+	savedEvents, err := c.Database.ListEvents(context.Background())
 	if err != nil {
 		log.Fatal("Failed to initialize events:", err)
 	}
-
-	pastEvents := []data.Event{}
-	futureEvents := []data.Event{}
-	for _, e := range events {
-		if data.ValidFutureDate(e.Date) {
-			futureEvents = append(futureEvents, e)
-		} else {
-			pastEvents = append(pastEvents, e)
-		}
-	}
-	c.savedEvents[data.Past] = pastEvents
-	c.savedEvents[data.Future] = futureEvents
-	log.Info("Successfully initialized events")
+	c.savedEvents = savedEvents
+	log.Info("Successfully initialized saved events")
 
 	artists, err := c.Database.ListArtists(context.Background())
 	if err != nil {
@@ -82,27 +79,36 @@ func (c *LocalCache) Sync() {
 	log.Info("Successfully initialized venues")
 }
 
-func (c LocalCache) GetFutureEvents() []data.Event {
-	return c.savedEvents[data.Future]
-}
-
-func (c LocalCache) GetPastEvents() []data.Event {
-	return slices.Clone(c.savedEvents[data.Past])
-}
-
-func (c *LocalCache) AddEvent(event data.Event) error {
-	key := data.Past
-	if data.ValidFutureDate(event.Date) {
-		key = data.Future
+func (c LocalCache) GetSavedEvents() []data.Event {
+	savedEvents := slices.Clone(c.savedEvents)
+	for i := range savedEvents {
+		savedEvents[i].Openers = slices.Clone(savedEvents[i].Openers)
 	}
+	return savedEvents
+}
 
-	if slices.ContainsFunc(c.savedEvents[key], event.Equals) {
+func (c LocalCache) GetPassedSavedEvents() []data.Event {
+	passedEvents := []data.Event{}
+	for _, event := range c.GetSavedEvents() {
+		if util.PastDate(event.Date) && !event.Purchased {
+			passedEvents = append(passedEvents, event)
+		}
+	}
+	for i := range passedEvents {
+		passedEvents[i].Openers = slices.Clone(passedEvents[i].Openers)
+	}
+	return passedEvents
+}
+
+func (c *LocalCache) AddSavedEvent(event data.Event) error {
+	if slices.ContainsFunc(c.savedEvents, event.Equals) {
 		log.Debugf("Skipping adding event %v because it already existed in the cache", event)
 		return nil
 	}
-
-	if err := c.AddArtist(event.MainAct); err != nil {
-		return err
+	if event.MainAct.Populated() {
+		if err := c.AddArtist(event.MainAct); err != nil {
+			return err
+		}
 	}
 	for _, opener := range event.Openers {
 		if err := c.AddArtist(opener); err != nil {
@@ -117,19 +123,14 @@ func (c *LocalCache) AddEvent(event data.Event) error {
 		return err
 	}
 
-	events := c.savedEvents[key]
+	events := c.savedEvents
 	updatedEvents := append(events, event)
-	c.savedEvents[key] = updatedEvents
+	c.savedEvents = updatedEvents
 	return nil
 }
 
-func (c *LocalCache) DeleteEvent(event data.Event) error {
-	key := data.Past
-	if data.ValidFutureDate(event.Date) {
-		key = data.Future
-	}
-
-	eventIdx := slices.IndexFunc(c.savedEvents[key], event.Equals)
+func (c *LocalCache) DeleteSavedEvent(event data.Event) error {
+	eventIdx := slices.IndexFunc(c.savedEvents, event.Equals)
 	if eventIdx == -1 {
 		log.Errorf("Unable to find event %v when deleting from cache", event)
 		return errors.New("event is not cached")
@@ -139,7 +140,7 @@ func (c *LocalCache) DeleteEvent(event data.Event) error {
 		return err
 	}
 
-	c.savedEvents[key] = slices.Delete(c.savedEvents[key], eventIdx, eventIdx+1)
+	c.savedEvents = slices.Delete(c.savedEvents, eventIdx, eventIdx+1)
 	return nil
 }
 
@@ -211,11 +212,18 @@ func (c *LocalCache) DeleteVenue(venue data.Venue) error {
 
 func (c LocalCache) GetUpcomingEvents(city, stateCode string) []data.EventDetails {
 	key := buildUpcomingEventKey(city, stateCode)
-	if events, ok := c.upcomingEvents[key]; ok {
-		return events
+	var events []data.EventDetails
+	if upcomingEvents, ok := c.upcomingEvents[key]; ok {
+		events = slices.Clone(upcomingEvents)
+	} else {
+		c.ReloadUpcomingEvents(city, stateCode)
+		events = slices.Clone(c.upcomingEvents[key])
 	}
-	c.ReloadUpcomingEvents(city, stateCode)
-	return slices.Clone(c.upcomingEvents[key])
+
+	for i := range events {
+		events[i].Event.Openers = slices.Clone(events[i].Event.Openers)
+	}
+	return events
 }
 
 func (c *LocalCache) ReloadUpcomingEvents(city, stateCode string) error {

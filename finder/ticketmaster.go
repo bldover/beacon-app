@@ -3,6 +3,7 @@ package finder
 import (
 	"concert-manager/data"
 	"concert-manager/log"
+	"concert-manager/util"
 	"errors"
 	"fmt"
 	"net/http"
@@ -272,7 +273,7 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 			MainAct: mainAct,
 			Openers: openers,
 			Venue:   venue,
-			Date:    data.Date(date),
+			Date:    util.Date(date),
 		},
 	}
 

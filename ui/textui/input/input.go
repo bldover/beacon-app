@@ -2,6 +2,7 @@ package input
 
 import (
 	"bufio"
+	"concert-manager/log"
 	"concert-manager/ui/textui/output"
 	"os"
 	"strconv"
@@ -13,6 +14,7 @@ func PromptAndGetInput(prompt string, isValid func(string) error) string {
 	for {
 		output.Display(">> ")
 		in, err := reader.ReadString('\n')
+		log.Info("Input:", in[:len(in) - 1])
 		if err != nil {
 			output.Displayln("Error while reading input, try again:")
 			continue
@@ -35,6 +37,7 @@ func PromptAndGetInputNumeric(prompt string, lowerLimit int, upperLimit int) int
 	for {
 		output.Display(">> ")
 		in, err := reader.ReadString('\n')
+		log.Info("Input:", in[:len(in) - 1])
 		if err != nil {
 			output.Displayln("Error while reading input, try again:")
 			continue

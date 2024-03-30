@@ -6,12 +6,13 @@ import (
 
 	"concert-manager/data"
 	"concert-manager/log"
+	"concert-manager/util"
 
 	"cloud.google.com/go/firestore"
 	"google.golang.org/api/iterator"
 )
 
-const eventCollection string = "concerts"
+const eventCollection string = "events"
 var eventFields = []string{"MainActRef", "OpenerRefs", "VenueRef", "Date", "Purchased"}
 
 type EventRepo struct {
@@ -77,7 +78,7 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 		return "", err
 	}
 
-	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, data.Timestamp(event.Date), event.Purchased}
+	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, util.Timestamp(event.Date), event.Purchased}
 	events := repo.Connection.Client.Collection(eventCollection)
 	docRef, _, err := events.Add(ctx, eventEntity)
 	if err != nil {
@@ -186,7 +187,7 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 			MainAct: mainAct,
 			Openers: openers,
 			Venue: venue,
-			Date: data.Date(eventData["Date"].(time.Time)),
+			Date: util.Date(eventData["Date"].(time.Time)),
 			Purchased: eventData["Purchased"].(bool),
 		}
 
@@ -200,7 +201,7 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 func (repo *EventRepo) findEventDocRef(ctx context.Context, date string, venueRef *firestore.DocumentRef) (*firestore.DocumentSnapshot, error) {
 	event, err := repo.Connection.Client.Collection(eventCollection).
 		Select().
-		Where("Date", "==", data.Timestamp(date)).
+		Where("Date", "==", util.Timestamp(date)).
 		Where("VenueRef", "==", venueRef).
 		Documents(ctx).
 		Next()

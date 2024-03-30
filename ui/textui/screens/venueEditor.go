@@ -1,49 +1,42 @@
-package venue
+package screens
 
 import (
 	"concert-manager/data"
 	"concert-manager/ui/textui/input"
 	"concert-manager/ui/textui/output"
-	"concert-manager/ui/textui/screens"
+	"concert-manager/util"
 )
 
-type Search interface {
-    FindFuzzyVenueMatchesByName(string) []data.Venue
+type venueSearch interface {
+	FindFuzzyVenueMatchesByName(string) []data.Venue
+	WithMaxCount(int)
 }
 
 type VenueEditor struct {
-	Search       Search
-	SelectScreen screens.Screen
+	Search       venueSearch
+	ReturnScreen Screen
 	actions      []string
 	venue        *data.Venue
 	tempVenue    data.Venue
-	returnScreen screens.Screen
 }
 
 const (
-	search = iota + 1
-	setName
-	setCity
-	setState
-	save
-	cancelEdit
+	searchVenue = iota + 1
+	setVenueName
+	setVenueCity
+	setVenueState
+	saveVenue
+	cancelVenueEdit
 )
 
-func NewEditScreen() *VenueEditor {
+func NewVenueEditScreen() *VenueEditor {
 	e := VenueEditor{}
 	e.actions = []string{"Search Venues", "Set Name", "Set City", "Set State", "Save Venue", "Cancel"}
 	return &e
 }
 
-func (e *VenueEditor) AddContext(context screens.ScreenContext) {
-	if context.ContextType == screens.Selector {
-		e.tempVenue = context.Props[0].(data.Venue)
-		return
-	}
-
-	e.returnScreen = context.ReturnScreen
-	props := context.Props
- 	e.venue = props[0].(*data.Venue)
+func (e *VenueEditor) SetVenue(venue *data.Venue) {
+	e.venue = venue
 	e.tempVenue.Name = e.venue.Name
 	e.tempVenue.City = e.venue.City
 	e.tempVenue.State = e.venue.State
@@ -61,27 +54,37 @@ func (e VenueEditor) Actions() []string {
 	return e.actions
 }
 
-func (e *VenueEditor) NextScreen(i int) (screens.Screen, *screens.ScreenContext) {
+func (e *VenueEditor) NextScreen(i int) Screen {
 	switch i {
-	case search:
-		name := input.PromptAndGetInput("venue name", input.NoValidation)
+	case searchVenue:
+		name := input.PromptAndGetInput("venue name to search", input.NoValidation)
+		e.Search.WithMaxCount(pageSize)
 		matches := e.Search.FindFuzzyVenueMatchesByName(name)
-		return e.SelectScreen, screens.NewScreenContext(e, matches)
-	case setName:
+		selectScreen := &Selector[data.Venue]{
+			ScreenTitle: "Select Venue",
+			Next:        e.ReturnScreen,
+			Options:     matches,
+			HandleSelect: func(v data.Venue) {
+				*e.venue = v
+			},
+			Formatter: util.FormatVenue,
+		}
+		return selectScreen
+	case setVenueName:
 		e.tempVenue.Name = input.PromptAndGetInput("venue name", input.NoValidation)
-	case setCity:
+	case setVenueCity:
 		e.tempVenue.City = input.PromptAndGetInput("venue city", input.NoValidation)
-	case setState:
+	case setVenueState:
 		e.tempVenue.State = input.PromptAndGetInput("venue state", input.NoValidation)
-	case save:
+	case saveVenue:
 		if e.tempVenue.Populated() {
 			*e.venue = e.tempVenue
-			return e.returnScreen, nil
+			return nil
 		} else {
 			output.Displayln("Failed to save venue: all fields are required")
 		}
-	case cancelEdit:
-		return e.returnScreen, nil
+	case cancelVenueEdit:
+		return nil
 	}
-	return e, nil
+	return e
 }

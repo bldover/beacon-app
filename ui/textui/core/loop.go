@@ -1,4 +1,4 @@
-package textui
+package core
 
 import (
 	"concert-manager/ui/textui/input"
@@ -15,18 +15,14 @@ type refresher interface {
     Refresh()
 }
 
-func run(start screens.Screen) {
+func Run(start screens.Screen) {
+	history := history{[]screens.Screen{start}}
 	curr := start
 	last := start
-	var context *screens.ScreenContext
+	var screenChange bool
     for {
-		screenChange := curr.Title() != last.Title()
 		output.Displayln("----------------------------------------------------------------------")
 		output.Displayln(strings.ToUpper(curr.Title()))
-
-		if contextScreen, ok := curr.(screens.ContextScreen); ok && screenChange && context != nil {
-			contextScreen.AddContext(*context)
-		}
 
 		if refresher, ok := curr.(refresher); ok && screenChange {
 			refresher.Refresh()
@@ -47,7 +43,15 @@ func run(start screens.Screen) {
 		}
 
 		in := input.PromptAndGetInputNumeric("option index", 1, len(actions) + 1)
-		last = curr
-		curr, context = curr.NextScreen(in)
+		last, curr = curr, curr.NextScreen(in)
+
+		screenChange = curr == nil || curr.Title() != last.Title()
+		if screenChange {
+			if curr == nil {
+				curr = history.getPrevious()
+			} else {
+				history.update(curr)
+			}
+		}
 	}
 }

@@ -1,7 +1,7 @@
 package input
 
 import (
-	"concert-manager/data"
+	"concert-manager/util"
 	"errors"
 	"unicode"
 )
@@ -35,22 +35,9 @@ func StateValidation(in string) error {
     return OnlyLettersValidation(in)
 }
 
-func PastDateValidation(date string) error {
-	if !data.ValidDate(date) {
+func DateValidation(date string) error {
+	if !util.ValidDate(date) {
 		return errors.New("expected date format is mm/dd/yyyy")
-	}
-	if !data.ValidPastDate(date) {
-		return errors.New("expected a past date")
-	}
-	return nil
-}
-
-func FutureDateValidation(date string) error {
-	if !data.ValidDate(date) {
-		return errors.New("expected date format is mm/dd/yyyy")
-	}
-	if !data.ValidFutureDate(date) {
-		return errors.New("expected a future or current date")
 	}
 	return nil
 }

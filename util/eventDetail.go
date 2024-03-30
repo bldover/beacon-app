@@ -1,4 +1,4 @@
-package format
+package util
 
 import (
 	"concert-manager/data"
@@ -12,7 +12,7 @@ func FormatEventDetails(d data.EventDetails) string {
 	fmtParts := []any{}
 	event := d.Event
 
-	date := formatDate(event.Date)
+	date := FormatDate(event.Date)
 	fmtParts = append(fmtParts, date)
 
 	fmtParts = append(fmtParts, event.Venue.Name)
@@ -79,7 +79,7 @@ func FormatEventDetailsShort(details []data.EventDetails) []string {
 	formattedEvents := []string{}
 	for i, detail := range details {
 		eventName := eventNames[i]
-		date := detail.Event.Date
+		date := FormatDate(detail.Event.Date)
 		venue := detail.Event.Venue.Name
 
 		var spacing strings.Builder
@@ -91,4 +91,16 @@ func FormatEventDetailsShort(details []data.EventDetails) []string {
 		formattedEvents = append(formattedEvents, formattedEvent)
 	}
 	return formattedEvents
+}
+
+func EventDetailsSorterDateAsc() func(a, b data.EventDetails) int {
+	return func(a, b data.EventDetails) int {
+		return EventSorterDateAsc()(a.Event, b.Event)
+	}
+}
+
+func EventDetailsSorterDateDesc() func(a, b data.EventDetails) int {
+	return func(a, b data.EventDetails) int {
+		return EventSorterDateDesc()(a.Event, b.Event)
+	}
 }

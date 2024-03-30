@@ -2,87 +2,66 @@ package textui
 
 import (
 	"concert-manager/cache"
-	"concert-manager/data"
 	"concert-manager/log"
+	"concert-manager/ui/textui/core"
 	"concert-manager/ui/textui/screens"
-	"concert-manager/ui/textui/screens/artist"
-	"concert-manager/ui/textui/screens/common"
-	"concert-manager/ui/textui/screens/event"
-	"concert-manager/ui/textui/screens/finder"
-	"concert-manager/ui/textui/screens/venue"
-	"concert-manager/util/format"
-	"concert-manager/util/search"
+	"concert-manager/util"
 )
 
 func Start(cache *cache.LocalCache) {
-	search := &search.Search{Cache: cache}
+	search := util.NewSearch()
+	search.Cache = cache
 
-	addScreen := event.NewAddScreen()
-	artistEditScreen := artist.NewEditScreen()
+	addScreen := screens.NewEventAddScreen()
 
-	artistSelectScreen := &common.Selector[data.Artist, data.Artist]{
-		ScreenTitle: "Select Artist",
-		Formatter: format.FormatArtist,
-		OutputTransformer: common.IdentityTransform[data.Artist, data.Artist],
-		Next: addScreen,
-	}
+	artistEditScreen := screens.NewArtistEditScreen()
 	artistEditScreen.Search = search
-	artistEditScreen.SelectScreen = artistSelectScreen
+	artistEditScreen.ReturnScreen = addScreen
 
-	venueEditScreen := venue.NewEditScreen()
-	venueSelectScreen := &common.Selector[data.Venue, data.Venue]{
-		ScreenTitle: "Select Venue",
-		Formatter: format.FormatVenue,
-		OutputTransformer: common.IdentityTransform[data.Venue, data.Venue],
-		Next: addScreen,
-	}
+	venueEditScreen := screens.NewVenueEditScreen()
 	venueEditScreen.Search = search
-	venueEditScreen.SelectScreen = venueSelectScreen
-
-	openerRemoveScreen := artist.NewOpenerRemoveScreen()
+	venueEditScreen.ReturnScreen = addScreen
 
 	addScreen.ArtistEditor = artistEditScreen
 	addScreen.VenueEditor = venueEditScreen
-	addScreen.OpenerRemover = openerRemoveScreen
 	addScreen.Cache = cache
 
-	deleteScreen := &event.Deleter{Cache: cache}
+	savedEventSearchResultScreen := screens.NewEventSearchResultScreen()
+	savedEventSearchResultScreen.AddEventScreen = addScreen
+	savedEventSearchResultScreen.Cache = cache
 
-	historyViewScreen := event.NewViewScreen()
-	historyViewScreen.ScreenTitle = "Concert History"
-	historyViewScreen.AddEventScreen = addScreen
-	historyViewScreen.DeleteEventScreen = deleteScreen
-	historyViewScreen.ViewType = data.Past
-	historyViewScreen.Cache = cache
+	savedEventViewScreen := screens.NewSavedEventViewScreen()
+	savedEventViewScreen.AddEventScreen = addScreen
+	savedEventViewScreen.Search = search
+	savedEventViewScreen.SearchResultScreen = savedEventSearchResultScreen
+	savedEventViewScreen.Cache = cache
 
-	futureViewScreen := event.NewViewScreen()
-	futureViewScreen.ScreenTitle = "Future Concerts"
-	futureViewScreen.AddEventScreen = addScreen
-	futureViewScreen.DeleteEventScreen = deleteScreen
-	futureViewScreen.ViewType = data.Future
-	futureViewScreen.Cache = cache
+	discoverySearchResultScreen := screens.NewDiscoverySearchResultScreen()
+	discoverySearchResultScreen.AddEventScreen = addScreen
 
-	eventDetailSelectScreen := &common.Selector[data.EventDetails, data.Event]{
-		ScreenTitle: "Select Concert",
-		Formatter: format.FormatEventDetailsShort,
-		OutputTransformer: func(detail data.EventDetails) data.Event { return detail.Event },
-		Next: addScreen,
-	}
-	finderViewScreen := finder.NewViewScreen()
-	finderViewScreen.ScreenTitle = "All Upcoming Events"
-	finderViewScreen.City = "Atlanta"
-	finderViewScreen.State = "GA"
-	finderViewScreen.Cache = cache
-	finderViewScreen.AddEventSelectScreen = eventDetailSelectScreen
+	discoveryViewScreen := screens.NewDiscoveryViewScreen()
+	discoveryViewScreen.City = "Atlanta"
+	discoveryViewScreen.State = "GA"
+	discoveryViewScreen.AddEventScreen = addScreen
+	discoveryViewScreen.Search = search
+	discoveryViewScreen.SearchResultScreen = discoverySearchResultScreen
+	discoveryViewScreen.Cache = cache
 
-	finderMenuScreen := finder.NewMenu()
-	finderMenuScreen.UpcomingEventViewer = finderViewScreen
+	discoveryMenuScreen := screens.NewDiscoveryMenu()
+	discoveryMenuScreen.DiscoveryViewScreen = discoveryViewScreen
+
+	passedEventsScreen := screens.NewPassedEventManager()
+	passedEventsScreen.Cache = cache
+	passedEventsScreen.AddEventScreen = addScreen
+
+	utilityMenuScreen := screens.NewUtilMenu()
+	utilityMenuScreen.PassedEventManager = passedEventsScreen
 
 	mainMenuScreen := screens.NewMainMenu()
-	mainMenuScreen.Children[1] = historyViewScreen
-	mainMenuScreen.Children[2] = futureViewScreen
-	mainMenuScreen.Children[3] = finderMenuScreen
+	mainMenuScreen.Children[1] = savedEventViewScreen
+	mainMenuScreen.Children[2] = discoveryMenuScreen
+	mainMenuScreen.Children[3] = utilityMenuScreen
 
 	log.Info("Successfully initialized terminal UI, starting display...")
-	run(mainMenuScreen)
+	core.Run(mainMenuScreen)
 }

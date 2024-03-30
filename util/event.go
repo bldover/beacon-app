@@ -1,4 +1,4 @@
-package format
+package util
 
 import (
 	"concert-manager/data"
@@ -11,7 +11,7 @@ import (
 func FormatEvent(e data.Event) string {
 	fmtParts := []any{}
 
-	date := formatDate(e.Date)
+	date := FormatDate(e.Date)
 	fmtParts = append(fmtParts, date)
 
 	location := fmt.Sprintf("%s, %s, %s", e.Venue.Name, e.Venue.City, e.Venue.State)
@@ -38,7 +38,7 @@ func FormatEvent(e data.Event) string {
 	fmtParts = append(fmtParts, artistStr, genreStr)
 
 	format := "%v @ %s\n\tArtists: %s\n\tGenres: %s\n"
-	if data.ValidFutureDate(e.Date) {
+	if FutureDate(e.Date) {
 		format += "\tPurchased: %v\n"
 		fmtParts = append(fmtParts, e.Purchased)
 	}
@@ -63,7 +63,7 @@ func FormatEventsShort(events []data.Event) []string {
 	formattedEvents := []string{}
 	for i, event := range events {
 		artist := artistNames[i]
-		date := event.Date
+		date := FormatDate(event.Date)
 		venue := event.Venue.Name
 
 		var spacing strings.Builder
@@ -77,7 +77,8 @@ func FormatEventsShort(events []data.Event) []string {
 	return formattedEvents
 }
 
-func FormatEventExpanded(e data.Event, future bool) string {
+func FormatEventExpanded(e data.Event) string {
+	eventFmt := "%s\n%s\n%s\n%s\n%s\n"
 	mainActFmt := "Main Act: %+v"
 	mainActNaFmt := "Main Act: N/A"
 	openerFmt := "Openers: %s"
@@ -113,22 +114,42 @@ func FormatEventExpanded(e data.Event, future bool) string {
 	}
 
 	date := dateNaFmt
-	if data.ValidDate(e.Date) {
-		date = fmt.Sprintf(dateFmt, e.Date)
+	if ValidDate(e.Date) {
+		date = fmt.Sprintf(dateFmt, FormatDate(e.Date))
 	}
+
+	purchased := fmt.Sprintf(purchasedFmt, e.Purchased)
 
 	fmtParts := []any{}
 	fmtParts = append(fmtParts, mainAct)
 	fmtParts = append(fmtParts, openers)
 	fmtParts = append(fmtParts, venue)
 	fmtParts = append(fmtParts, date)
+	fmtParts = append(fmtParts, purchased)
 
-	finalFmt := "%s\n%s\n%s\n%s\n"
-	if future {
-		finalFmt = "%s\n%s\n%s\n%s\n%s\n"
-		purchased := fmt.Sprintf(purchasedFmt, e.Purchased)
-		fmtParts = append(fmtParts, purchased)
+    return fmt.Sprintf(eventFmt, fmtParts...)
+}
+
+func EventSorterDateAsc() func(a, b data.Event) int {
+	return func(a, b data.Event) int {
+		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
+			return -1
+		} else if Timestamp(a.Date).After(Timestamp(b.Date)) {
+			return 1
+		} else {
+			return 0
+		}
 	}
+}
 
-    return fmt.Sprintf(finalFmt, fmtParts...)
+func EventSorterDateDesc() func(a, b data.Event) int {
+	return func(a, b data.Event) int {
+		if Timestamp(a.Date).Before(Timestamp(b.Date)) {
+			return 1
+		} else if Timestamp(a.Date).After(Timestamp(b.Date)) {
+			return -1
+		} else {
+			return 0
+		}
+	}
 }

@@ -25,13 +25,6 @@ type (
 	}
 )
 
-type EventType int
-
-const (
-	Past = iota
-	Future
-)
-
 func (v *Venue) Populated() bool {
 	return allNotEmpty(v.Name, v.City, v.State)
 }
@@ -51,11 +44,15 @@ func (e *Event) Populated() bool {
 		invalidArtist = invalidArtist || opener.Invalid()
 		populated = populated || opener.Populated()
 	}
-	return populated && !invalidArtist && e.Venue.Populated() && ValidDate(e.Date)
+	return populated && !invalidArtist && e.Venue.Populated() && e.Date != ""
 }
 
 func (e Event) Equals(o Event) bool {
-    return e.MainAct == o.MainAct && e.Venue == o.Venue && e.Date == o.Date
+	return e.MainAct == o.MainAct && e.Venue == o.Venue && e.Date == o.Date
+}
+
+func (a Artist) Equals(o Artist) bool {
+	return a == o
 }
 
 func allNotEmpty(fields ...string) bool {

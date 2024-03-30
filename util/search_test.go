@@ -1,4 +1,4 @@
-package search
+package util
 
 import (
 	"concert-manager/data"

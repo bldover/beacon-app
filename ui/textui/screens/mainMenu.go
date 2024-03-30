@@ -6,13 +6,17 @@ import (
 )
 
 type MainMenu struct {
-    Children map[int]ContextScreen
+    Children map[int]Screen
 }
 
 func NewMainMenu() *MainMenu {
 	mm := MainMenu{}
-	mm.Children = make(map[int]ContextScreen)
+	mm.Children = make(map[int]Screen)
     return &mm
+}
+
+func (mm MainMenu) AddReturnContext(Screen) {
+    // noop, this is the only screen that never needs to return
 }
 
 func (mm MainMenu) Title() string {
@@ -28,11 +32,11 @@ func (mm MainMenu) Actions() []string {
     return actions
 }
 
-func (mm MainMenu) NextScreen(i int) (Screen, *ScreenContext) {
+func (mm MainMenu) NextScreen(i int) Screen {
 	if i == len(mm.Children) + 1 {
 		output.Displayln("Received exit request, terminating...")
 		os.Exit(0)
 	}
 	next := mm.Children[i]
-	return next, NewScreenContext(mm)
+	return next
 }
