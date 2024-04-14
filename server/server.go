@@ -1,22 +1,23 @@
 package server
 
 import (
-	"concert-manager/finder"
 	"concert-manager/log"
+	"concert-manager/spotify"
 	"context"
 	"fmt"
 	"io"
 	"net/http"
 )
 
-const port = ":3001"
+const Port = ":3001"
 const maxFileSizeBytes = 100000
 
 func StartServer(l Loader) {
 	http.Handle("/upload", &uploadHandler{l})
 	http.Handle("/test", &testHandler{})
-	log.Info("Starting server on port", port)
-	log.Fatal(http.ListenAndServe(port, nil))
+	http.Handle("/spotify/callback", &spotify.SpotifyAuthHandler{})
+	log.Info("Starting server on port", Port)
+	log.Fatal(http.ListenAndServe(Port, nil))
 }
 
 type Loader interface {
@@ -57,13 +58,5 @@ func (handler *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 type testHandler struct {}
 
 func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	req := finder.FindEventRequest{City: "Atlanta", State: "GA"}
-	finder := finder.NewEventFinder()
-    events, err := finder.FindAllEvents(req)
-	if err != nil {
-		log.Error(err)
-	}
-	for _, event := range events {
-		log.Infof("Found event: %+v", event)
-	}
+	log.Info("No active test")
 }

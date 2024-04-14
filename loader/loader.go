@@ -2,7 +2,6 @@ package loader
 
 import (
 	"bufio"
-	"bytes"
 	"concert-manager/data"
 	"concert-manager/log"
 	"context"
@@ -10,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"unicode"
 )
 
 const minColumns = 7
@@ -23,6 +21,7 @@ type Loader struct {
 	Cache eventCache
 }
 
+// requires a UTF-8 encoded CSV file
 func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 	log.Debug("Starting processing event file upload")
 	scanner := bufio.NewScanner(file)
@@ -35,7 +34,7 @@ func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 		}
 		line := scanner.Text()
 		log.Debugf("Parsed event line: %s", line)
-		event, err := toEvent(convertSpecialChars(line))
+		event, err := toEvent(line)
 		if err != nil {
 			log.Errorf("Error while parsing event: %v", err)
 			return 0, fmt.Errorf("unable to convert line to event: %s, %v", line, err)
@@ -115,16 +114,4 @@ func toEvent(row string) (data.Event, error) {
 	}
 
 	return event, nil
-}
-
-func convertSpecialChars(input string) string {
-    var buf bytes.Buffer
-    for _, r := range input {
-        if unicode.IsControl(r) {
-            fmt.Fprintf(&buf, "\\u%04X", r)
-        } else {
-            fmt.Fprintf(&buf, "%c", r)
-        }
-    }
-    return buf.String()
 }

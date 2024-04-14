@@ -7,6 +7,7 @@ import (
 	"concert-manager/util"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 )
 
@@ -103,6 +104,7 @@ func (s *EventSearchResult) NextScreen(i int) Screen {
 				if err := s.Cache.DeleteSavedEvent(e); err != nil {
 					output.Displayf("Failed to delete event: %v\n", err)
 				}
+				s.Events = slices.DeleteFunc(s.Events, e.Equals)
 			},
 			Formatter: util.FormatEventsShort,
 		}
