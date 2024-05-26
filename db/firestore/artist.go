@@ -27,7 +27,7 @@ func (repo *ArtistRepo) Add(ctx context.Context, artist Artist) (string, error) 
 	log.Debug("Attempting to add artist", artist)
 	existingArtist, err := repo.findDocRef(ctx, artist.Name)
 	if err == nil {
-		log.Infof("Skipping adding artist because it already exists %+v, %v", artist, existingArtist.Ref.ID)
+		log.Debugf("Skipping adding artist because it already exists %+v, %v", artist, existingArtist.Ref.ID)
 		return existingArtist.Ref.ID, nil
 	}
 	if err != iterator.Done {

@@ -4,7 +4,7 @@ import (
 	"concert-manager/cache"
 	"concert-manager/db"
 	"concert-manager/db/firestore"
-	finderSvc "concert-manager/finder"
+	"concert-manager/finder"
 	"concert-manager/loader"
 	"concert-manager/log"
 	"concert-manager/server"
@@ -34,10 +34,10 @@ func main() {
 		EventRepo:  eventRepo,
 	}
 
-	finder := finderSvc.NewEventFinder()
+	eventFinder := finder.NewEventFinder()
 	cache := cache.NewLocalCache()
 	cache.Database = interactor
-	cache.Finder = finder
+	cache.Finder = eventFinder
 	cache.Sync()
 
 	loader := &loader.Loader{Cache: cache}

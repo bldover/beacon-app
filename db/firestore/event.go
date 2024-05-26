@@ -70,7 +70,7 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 
 	existingEvent, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
 	if err == nil {
-		log.Infof("Skipped adding event because it already existed as %+v, %v", event, existingEvent.Ref.ID)
+		log.Debugf("Skipped adding event because it already existed as %+v, %v", event, existingEvent.Ref.ID)
 		return existingEvent.Ref.ID, nil
 	}
 	if err != iterator.Done {

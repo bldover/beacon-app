@@ -14,8 +14,8 @@ import (
 const (
 	refreshUrl = "https://accounts.spotify.com/api/token"
 	refreshParamsFmt = "?grant_type=refresh_token&refresh_token=%s"
-	refreshKey = "SPOTIFY_REFRESH_TOKEN"
-	authKey = "SPOTIFY_AUTH_TOKEN"
+	refreshKey = "CM_SPOTIFY_REFRESH_TOKEN"
+	authKey = "CM_SPOTIFY_AUTH_TOKEN"
 )
 
 type authentication struct {

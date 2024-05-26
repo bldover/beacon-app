@@ -28,7 +28,7 @@ func (repo *VenueRepo) Add(ctx context.Context, venue Venue) (string, error) {
 	log.Debug("Attemping to add venue", venue)
 	existingVenue, err := repo.findDocRef(ctx, venue.Name, venue.City, venue.State)
 	if err == nil {
-		log.Infof("Skipping adding venue because it already exists %+v, %v", venue, existingVenue.Ref.ID)
+		log.Debugf("Skipping adding venue because it already exists %+v, %v", venue, existingVenue.Ref.ID)
 		return existingVenue.Ref.ID, nil
 	}
 	if err != iterator.Done {

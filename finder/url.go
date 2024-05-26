@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	apiKey         = "TICKETMASTER_API_KEY"
+	apiKey         = "CM_TICKETMASTER_API_KEY"
 	host           = "https://app.ticketmaster.com"
 	eventPath      = "/discovery/v2/events"
 	urlFmt         = "%s%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%v"

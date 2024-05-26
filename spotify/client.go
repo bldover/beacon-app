@@ -19,7 +19,7 @@ type Track struct {
 
 type RankedTrack struct {
 	Track Track
-	Rank int
+	Rank float64
 }
 
 type Artist struct {
@@ -29,15 +29,15 @@ type Artist struct {
 
 type RankedArtist struct {
 	Artist Artist
-	Rank int
+	Rank float64
 }
 
-type Spotify struct {
+type Client struct {
 	auth *authentication
 }
 
-func NewClient() *Spotify {
-    return &Spotify{newAuthentication()}
+func NewClient() *Client {
+    return &Client{newAuthentication()}
 }
 
 const baseUrl = "https://api.spotify.com/v1"
@@ -53,8 +53,8 @@ type SavedTrackResponse struct {
 
 const savedTracksPath = "/me/tracks"
 
-func (s *Spotify) GetSavedTracks() ([]Track, error) {
-	log.Debug("Request to get saved Spotify tracks")
+func (s *Client) GetSavedTracks() ([]Track, error) {
+	log.Info("Request to get saved Spotify tracks")
 	var tracks []Track
 	savedTrackUrl := baseUrl + savedTracksPath
 	for savedTrackUrl != "" {
@@ -89,7 +89,7 @@ func (s *Spotify) GetSavedTracks() ([]Track, error) {
 
 		savedTrackUrl = trackResponse.Next
 	}
-	log.Debugf("Found %v saved tracks", len(tracks))
+	log.Infof("Found %v saved tracks", len(tracks))
 	return tracks, nil
 }
 
@@ -101,10 +101,14 @@ type TopTrackResponse struct {
 }
 
 const topTracksPath = "/me/top/tracks"
-const topTracksTimeRange = "long_term"
 
-func (s *Spotify) GetTopTracks() ([]RankedTrack, error) {
-	log.Debug("Request to get top Spotify tracks")
+type TimeRange string
+const LongTerm = "long_term"
+const MediumTerm = "medium_term"
+const ShortTerm = "short_term"
+
+func (s *Client) GetTopTracks(timeRange TimeRange) ([]RankedTrack, error) {
+	log.Info("Request to get top Spotify tracks with range:", timeRange)
 	var tracks []RankedTrack
 	topTracksUrl := baseUrl + topTracksPath
 	for topTracksUrl != "" {
@@ -115,7 +119,7 @@ func (s *Spotify) GetTopTracks() ([]RankedTrack, error) {
 		if req.URL.RawQuery == "" {
 			params := url.Values{}
 			params.Set("limit", strconv.Itoa(limit))
-			params.Set("time_range", topTracksTimeRange)
+			params.Set("time_range", string(timeRange))
 			req.URL.RawQuery = params.Encode()
 		}
 
@@ -137,14 +141,14 @@ func (s *Spotify) GetTopTracks() ([]RankedTrack, error) {
 		for _, topTrack := range trackResponse.TopTracks {
 			rankedTrack := RankedTrack{
 				Track: topTrack,
-				Rank: trackResponse.Offset / limit,
+				Rank: float64(trackResponse.Offset / limit),
 			}
 			tracks = append(tracks, rankedTrack)
 		}
 
 		topTracksUrl = trackResponse.Next
 	}
-	log.Debugf("Found %v top tracks", len(tracks))
+	log.Infof("Found %v top tracks", len(tracks))
 	return tracks, nil
 }
 
@@ -156,10 +160,9 @@ type TopArtistResponse struct {
 }
 
 const topArtistsPath = "/me/top/artists"
-const topArtistsTimeRange = "long_term"
 
-func (s *Spotify) GetTopArtists() ([]RankedArtist, error) {
-	log.Debug("Request to get top Spotify artists")
+func (s *Client) GetTopArtists(timeRange TimeRange) ([]RankedArtist, error) {
+	log.Info("Request to get top Spotify artists with range:", timeRange)
 	var artists []RankedArtist
 	topArtistsUrl := baseUrl + topArtistsPath
 	for topArtistsUrl != "" {
@@ -170,7 +173,7 @@ func (s *Spotify) GetTopArtists() ([]RankedArtist, error) {
 		if req.URL.RawQuery == "" {
 			params := url.Values{}
 			params.Set("limit", strconv.Itoa(limit))
-			params.Set("time_range", topArtistsTimeRange)
+			params.Set("time_range", string(timeRange))
 			req.URL.RawQuery = params.Encode()
 		}
 
@@ -192,14 +195,14 @@ func (s *Spotify) GetTopArtists() ([]RankedArtist, error) {
 		for _, topArtist := range artistResponse.TopArtists {
 			rankedArtist := RankedArtist{
 				Artist: topArtist,
-				Rank: artistResponse.Offset / limit,
+				Rank: float64(artistResponse.Offset / limit),
 			}
 			artists = append(artists, rankedArtist)
 		}
 
 		topArtistsUrl = artistResponse.Next
 	}
-	log.Debugf("Found %v top artists", len(artists))
+	log.Infof("Found %v top artists", len(artists))
 	return artists, nil
 }
 
@@ -209,8 +212,8 @@ type RelatedArtistResponse struct {
 
 const relatedArtistPath = "/artists/%s/related-artists"
 
-func (s *Spotify) GetRelatedArtists(artist Artist) ([]Artist, error) {
-	log.Debugf("Request to get related Spotify artists to %v", artist)
+func (s *Client) GetRelatedArtists(artist Artist) ([]Artist, error) {
+	log.Infof("Request to get related Spotify artists to %v", artist)
 	url := fmt.Sprintf(baseUrl + relatedArtistPath, artist.Id)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -236,7 +239,7 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
-func (s *Spotify) call(req *http.Request) (*http.Response, error) {
+func (s *Client) call(req *http.Request) (*http.Response, error) {
 	retries := 0
 	if s.auth.accessToken == "" {
 		if err := s.auth.refresh(); err != nil {
@@ -246,21 +249,21 @@ func (s *Spotify) call(req *http.Request) (*http.Response, error) {
 	}
 	req.Header.Set("Authorization", s.auth.accessToken)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Infof("%+v", req)
+	log.Debugf("%+v", req)
 	for retries < 3 {
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return nil, err
 		}
 
-		log.Info(resp)
+		log.Debug(resp)
 		if resp.StatusCode == http.StatusOK {
 			return resp, nil
 		}
 
 		var errorResp errorResponse
 		if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
-			log.Error("Failed to decode Spotify error response")
+			log.Error("Failed to decode error response")
 		} else {
 			log.Error("Received Spotify error response", errorResp)
 		}
@@ -274,7 +277,7 @@ func (s *Spotify) call(req *http.Request) (*http.Response, error) {
 			req.Header.Set("Authentication", s.auth.accessToken)
 		case http.StatusTooManyRequests:
 			delay := getDelay(resp)
-			log.Infof("Waiting %v seconds before retrying", delay)
+			log.Debugf("Waiting %v seconds before retrying", delay)
 			time.Sleep(time.Duration(delay))
 		default:
 			return nil, errors.New("unexpected error")

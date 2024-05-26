@@ -16,7 +16,7 @@ var (
 const (
 	logPath = "/.concert_manager/logs/"
 	fileName = "concert_manager.log"
-	logLevelEnv = "LOG_LEVEL"
+	logLevelEnv = "CM_LOG_LEVEL"
 )
 
 type loggerLevel int

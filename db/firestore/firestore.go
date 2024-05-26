@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	projectIdEnv = "PROJ_ID"
+	projectIdEnv = "CM_PROJ_ID"
 )
 
 type Firestore struct {
