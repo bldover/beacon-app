@@ -1,6 +1,7 @@
 package core
 
 import (
+	"concert-manager/log"
 	"concert-manager/ui/textui/input"
 	"concert-manager/ui/textui/output"
 	"concert-manager/ui/textui/screens"
@@ -21,6 +22,7 @@ func Run(start screens.Screen) {
 	last := start
 	var screenChange bool
     for {
+		log.Debug("displaying screen:", curr.Title())
 		output.Displayln("----------------------------------------------------------------------")
 		output.Displayln(strings.ToUpper(curr.Title()))
 
@@ -29,7 +31,9 @@ func Run(start screens.Screen) {
 		}
 
 		if displayer, ok := curr.(dataDisplayer); ok {
+			log.Debug("Screen is dataDisplayer, calling DisplayData()")
 			displayer.DisplayData()
+			log.Debug("DisplayData() finished")
 		}
 
 		output.Displayln("Options:")
@@ -47,6 +51,7 @@ func Run(start screens.Screen) {
 
 		screenChange = curr == nil || curr.Title() != last.Title()
 		if screenChange {
+			log.Debug("Identified screen change")
 			if curr == nil {
 				curr = history.getPrevious()
 			} else {

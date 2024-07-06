@@ -5,53 +5,53 @@ import (
 	"concert-manager/log"
 	"concert-manager/ui/textui/core"
 	"concert-manager/ui/textui/screens"
-	"concert-manager/util"
 )
 
-func Start(cache *cache.LocalCache) {
-	search := util.NewSearch()
-	search.Cache = cache
+func Start(savedCache *cache.SavedEventCache, upcomingCache *cache.UpcomingEventCache) {
+	log.Info("Initializing terminal UI")
 
 	addScreen := screens.NewEventAddScreen()
 
 	artistEditScreen := screens.NewArtistEditScreen()
-	artistEditScreen.Search = search
+	artistEditScreen.ArtistCache = savedCache
 	artistEditScreen.ReturnScreen = addScreen
 
 	venueEditScreen := screens.NewVenueEditScreen()
-	venueEditScreen.Search = search
+	venueEditScreen.VenueCache = savedCache
 	venueEditScreen.ReturnScreen = addScreen
 
 	addScreen.ArtistEditor = artistEditScreen
 	addScreen.VenueEditor = venueEditScreen
-	addScreen.Cache = cache
+	addScreen.Cache = savedCache
 
 	savedEventSearchResultScreen := screens.NewEventSearchResultScreen()
 	savedEventSearchResultScreen.AddEventScreen = addScreen
-	savedEventSearchResultScreen.Cache = cache
+	savedEventSearchResultScreen.Cache = savedCache
 
 	savedEventViewScreen := screens.NewSavedEventViewScreen()
 	savedEventViewScreen.AddEventScreen = addScreen
-	savedEventViewScreen.Search = search
 	savedEventViewScreen.SearchResultScreen = savedEventSearchResultScreen
-	savedEventViewScreen.Cache = cache
+	savedEventViewScreen.Cache = savedCache
 
 	discoverySearchResultScreen := screens.NewDiscoverySearchResultScreen()
 	discoverySearchResultScreen.AddEventScreen = addScreen
 
 	discoveryViewScreen := screens.NewDiscoveryViewScreen()
-	discoveryViewScreen.City = "Atlanta"
-	discoveryViewScreen.State = "GA"
 	discoveryViewScreen.AddEventScreen = addScreen
-	discoveryViewScreen.Search = search
 	discoveryViewScreen.SearchResultScreen = discoverySearchResultScreen
-	discoveryViewScreen.Cache = cache
+	discoveryViewScreen.Cache = upcomingCache
+
+	recommendedViewScreen := screens.NewRecommendationScreen()
+	recommendedViewScreen.AddEventScreen = addScreen
+	recommendedViewScreen.RecommendationCache = upcomingCache
+	recommendedViewScreen.SavedCache = savedCache
 
 	discoveryMenuScreen := screens.NewDiscoveryMenu()
 	discoveryMenuScreen.DiscoveryViewScreen = discoveryViewScreen
+	discoveryMenuScreen.RecommendationViewScreen = recommendedViewScreen
 
 	passedEventsScreen := screens.NewPassedEventManager()
-	passedEventsScreen.Cache = cache
+	passedEventsScreen.Cache = savedCache
 	passedEventsScreen.AddEventScreen = addScreen
 
 	utilityMenuScreen := screens.NewUtilMenu()
@@ -62,6 +62,6 @@ func Start(cache *cache.LocalCache) {
 	mainMenuScreen.Children[2] = discoveryMenuScreen
 	mainMenuScreen.Children[3] = utilityMenuScreen
 
-	log.Info("Successfully initialized terminal UI, starting display...")
+	log.Info("Successfully initialized terminal UI")
 	core.Run(mainMenuScreen)
 }

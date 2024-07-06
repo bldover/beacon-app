@@ -17,13 +17,7 @@ type eventViewCache interface {
 	DeleteSavedEvent(data.Event) error
 }
 
-type savedEventSearch interface {
-    FindFuzzyEventMatchesByArtist(string) []data.Event
-    FindFuzzyEventMatchesByVenue(string) []data.Event
-}
-
 type SavedEventViewer struct {
-	Search             savedEventSearch
 	SearchResultScreen *EventSearchResult
 	AddEventScreen     *EventAdder
 	Cache              eventViewCache
@@ -134,10 +128,10 @@ func (v *SavedEventViewer) NextScreen(i int) Screen {
 				switch s {
 				case searchByArtist:
 					name := input.PromptAndGetInput("artist name to search", input.NoValidation)
-					v.SearchResultScreen.Events = v.Search.FindFuzzyEventMatchesByArtist(name)
+					v.SearchResultScreen.Events = util.SearchEventsByArtists(name, v.Cache.GetSavedEvents(), util.NoMaxResults, util.LenientTolerance)
 				case searchByVenue:
 					name := input.PromptAndGetInput("venue name to search", input.NoValidation)
-					v.SearchResultScreen.Events = v.Search.FindFuzzyEventMatchesByVenue(name)
+					v.SearchResultScreen.Events = util.SearchEventsByVenue(name, v.Cache.GetSavedEvents(), util.NoMaxResults, util.LenientTolerance)
 				default:
 					output.Display("Internal error! Check the logs")
 					log.Error("Invalid search type selection:", s)

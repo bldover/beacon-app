@@ -23,6 +23,16 @@ type (
 		Price      string
 		Event      Event
 	}
+	EventRank struct {
+		Event EventDetails
+		ArtistRanks []ArtistRank
+		Rank float64
+	}
+    ArtistRank struct {
+		Artist Artist
+		Rank float64
+		Related []string
+	}
 )
 
 func (v *Venue) Populated() bool {

@@ -1,9 +1,5 @@
 package screens
 
-import (
-	"concert-manager/ui/textui/output"
-)
-
 type DiscoveryMenu struct {
 	DiscoveryViewScreen      Screen
 	RecommendationViewScreen Screen
@@ -35,7 +31,7 @@ func (m DiscoveryMenu) NextScreen(i int) Screen {
 	case viewAllUpcoming:
 		return m.DiscoveryViewScreen
 	case viewRecommended:
-		output.Displayln("Not yet implemented!")
+		return m.RecommendationViewScreen
 	case discoveryMenuToMainMenu:
 		return nil
 	}

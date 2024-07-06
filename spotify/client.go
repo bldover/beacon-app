@@ -37,7 +37,10 @@ type Client struct {
 }
 
 func NewClient() *Client {
-    return &Client{newAuthentication()}
+	log.Info("Initializing Spotify client")
+    client := &Client{newAuthentication()}
+	log.Info("Successfully initialized Spotify client")
+	return client
 }
 
 const baseUrl = "https://api.spotify.com/v1"
@@ -213,7 +216,7 @@ type RelatedArtistResponse struct {
 const relatedArtistPath = "/artists/%s/related-artists"
 
 func (s *Client) GetRelatedArtists(artist Artist) ([]Artist, error) {
-	log.Infof("Request to get related Spotify artists to %v", artist)
+	log.Debugf("Request to get related Spotify artists to %v", artist)
 	url := fmt.Sprintf(baseUrl + relatedArtistPath, artist.Id)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -247,11 +250,14 @@ func (s *Client) call(req *http.Request) (*http.Response, error) {
 			return nil, errors.New(errMsg)
 		}
 	}
-	req.Header.Set("Authorization", s.auth.accessToken)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Debugf("%+v", req)
+	log.Debugf("Spotify request without auth%+v", req)
+	req.Header.Set("Authorization", s.auth.accessToken)
+
 	for retries < 3 {
+		startTs := time.Now()
 		resp, err := http.DefaultClient.Do(req)
+		log.Debugf("Request response time: %v ms\n", time.Since(startTs).Milliseconds())
 		if err != nil {
 			return nil, err
 		}

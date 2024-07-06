@@ -41,11 +41,10 @@ type EventCount struct {
 type ticketmasterRetriever struct {}
 
 func (r ticketmasterRetriever) GetUpcomingEvents(request FindEventRequest) ([]data.EventDetails, error) {
-	city := request.City
 	state := request.State
-	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s, %s", city, state)
+	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s", state)
 
-	url, err := buildTicketmasterUrl(city, state)
+	url, err := buildTicketmasterUrl(state)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +276,7 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 		},
 	}
 
-	if event.Dates.Status.Code == "cancelled" {
+	if event.Dates.Status.Code == "cancelled" || eventDetails.Event.MainAct.Name == "Test artist" {
 		return &eventDetails, EventCancelledError{"Event has been cancelled"}
 	}
 	return &eventDetails, nil

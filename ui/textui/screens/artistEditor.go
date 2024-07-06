@@ -7,13 +7,12 @@ import (
 	"concert-manager/util"
 )
 
-type artistSearch interface {
-	FindFuzzyArtistMatchesByName(string) []data.Artist
-	WithMaxCount(int)
+type artistCache interface {
+    GetArtists() []data.Artist
 }
 
 type Editor struct {
-	Search       artistSearch
+	ArtistCache  artistCache
 	ReturnScreen Screen
 	actions      []string
 	artist       *data.Artist
@@ -56,8 +55,7 @@ func (e *Editor) NextScreen(i int) Screen {
 	switch i {
 	case searchArtist:
 		name := input.PromptAndGetInput("artist name to search", input.NoValidation)
-		e.Search.WithMaxCount(pageSize)
-		matches := e.Search.FindFuzzyArtistMatchesByName(name)
+		matches := util.SearchArtists(name, e.ArtistCache.GetArtists(), pageSize, util.LenientTolerance)
 		selectScreen := &Selector[data.Artist]{
 			ScreenTitle: "Select Artist",
 			Next:        e.ReturnScreen,

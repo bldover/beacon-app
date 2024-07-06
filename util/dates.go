@@ -68,3 +68,8 @@ func FormatDate(date string) string {
 	}
 	return fmt.Sprintf("%s/%s/%s", month, day, year)
 }
+
+func TruncateDate(ts time.Time) time.Time {
+	day, month, year := ts.Day(), ts.Month(), ts.Year()
+	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
+}

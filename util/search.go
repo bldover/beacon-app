@@ -2,225 +2,95 @@ package util
 
 import (
 	"concert-manager/data"
-	"math"
-	"slices"
-	"strings"
+	"sort"
 )
 
-type Search struct {
-    Cache cache
-	maxCount int
+const (
+	ExactTolerance    = 0.0
+	StrictTolerance   = 0.1
+	ModerateTolerance = 0.25
+	LenientTolerance  = 0.4
+)
+
+const NoMaxResults = 0
+
+type optionDistance[T any] struct {
+	Option   T
+	Distance int
 }
 
-type cache interface {
-    GetArtists() []data.Artist
-	GetVenues() []data.Venue
-	GetSavedEvents() []data.Event
-	GetUpcomingEvents(string, string) []data.EventDetails
-}
+func SearchOptions[T any](term string, options []T, maxResults int, tolerance float64, computeDistance func(string, T) int) []T {
+	threshold := int(float64(len(term)) * tolerance)
+	var optionDistances []optionDistance[T]
 
-const threshold = 0.4
-
-func NewSearch() *Search {
-	s := &Search{}
-	s.resetMaxCount()
-	return s
-}
-
-func (s *Search) WithMaxCount(maxCount int) {
-    s.maxCount = maxCount
-}
-
-func (s *Search) resetMaxCount() {
-    s.maxCount = 999999
-}
-
-func (s *Search) FindFuzzyArtistMatches(artist data.Artist) []data.Artist {
-	return s.FindFuzzyArtistMatchesByName(artist.Name)
-}
-
-func (s *Search) FindFuzzyArtistMatchesByName(name string) []data.Artist {
-	eligibleMatches := []data.Artist{}
-	maxDistance := int(math.Ceil(float64(len(name)) * threshold))
-
-	existingArtists := s.Cache.GetArtists()
-	distances := map[data.Artist]int{}
-	for _, artist := range existingArtists {
-		distance := getLevenshteinDistance(name, artist.Name)
-		if distance <= maxDistance {
-			distances[artist] = distance
-			eligibleMatches = append(eligibleMatches, artist)
+	for _, option := range options {
+		distance := computeDistance(term, option)
+		if distance <= threshold {
+			optionDistances = append(optionDistances, optionDistance[T]{Option: option, Distance: distance})
 		}
 	}
 
-	slices.SortFunc(eligibleMatches, compareDistancesAsc[data.Artist](distances))
-	returnCount := int(math.Min(float64(len(eligibleMatches)), float64(s.maxCount)))
-	s.resetMaxCount()
-	return eligibleMatches[:returnCount]
-}
+	sort.Slice(optionDistances, func(i, j int) bool {
+		return optionDistances[i].Distance < optionDistances[j].Distance
+	})
 
-func (s *Search) FindFuzzyVenueMatches(venue data.Venue) []data.Venue {
-    return s.FindFuzzyVenueMatchesByName(venue.Name)
-}
-
-func (s *Search) FindFuzzyVenueMatchesByName(name string) []data.Venue {
-	eligibleMatches := []data.Venue{}
-	maxDistance := int(math.Ceil(float64(len(name)) * threshold))
-
-	existingVenues := s.Cache.GetVenues()
-	distances := map[data.Venue]int{}
-	for _, venue := range existingVenues {
-		distance := getLevenshteinDistance(name, venue.Name)
-		if distance <= maxDistance {
-			distances[venue] = distance
-			eligibleMatches = append(eligibleMatches, venue)
-		}
+	var results []T
+	for i := 0; i < len(optionDistances) && (maxResults == NoMaxResults || i < maxResults); i++ {
+		results = append(results, optionDistances[i].Option)
 	}
 
-	slices.SortFunc(eligibleMatches, compareDistancesAsc[data.Venue](distances))
-	returnCount := int(math.Min(float64(len(eligibleMatches)), float64(s.maxCount)))
-	s.resetMaxCount()
-	return eligibleMatches[:returnCount]
+	return results
 }
 
-func (s *Search) FindFuzzyEventMatchesByArtist(name string) []data.Event {
-	eligibleMatches := []data.Event{}
-	maxDistance := int(math.Ceil(float64(len(name)) * threshold))
+func SearchArtists(term string, options []data.Artist, maxResults int, tolerance float64) []data.Artist {
+	return SearchOptions(term, options, maxResults, tolerance, computeArtistDistance)
+}
 
-	existingEvents := s.Cache.GetSavedEvents()
-	distances := map[string]int{}
-	for _, event := range existingEvents {
-		artistNames := []string{event.MainAct.Name}
-		for _, opener := range event.Openers {
-			artistNames = append(artistNames, opener.Name)
-		}
+func SearchVenues(term string, options []data.Venue, maxResults int, tolerance float64) []data.Venue {
+	return SearchOptions(term, options, maxResults, tolerance, computeVenueDistance)
+}
 
-		eventDist := 99999
-		for _, artistName := range artistNames {
-			artistDistance := getLevenshteinDistance(name, artistName)
-			eventDist = int(math.Min(float64(eventDist), float64(artistDistance)))
-		}
+func SearchEventsByArtists(term string, options []data.Event, maxResults int, tolerance float64) []data.Event {
+	return SearchOptions(term, options, maxResults, tolerance, computeEventDistanceByArtists)
+}
 
-		if eventDist <= maxDistance {
-			eventKey := getEventKey(event)
-			distances[eventKey] = eventDist
-			eligibleMatches = append(eligibleMatches, event)
+func SearchEventsByVenue(term string, options []data.Event, maxResults int, tolerance float64) []data.Event {
+	return SearchOptions(term, options, maxResults, tolerance, func(term string, option data.Event) int {
+		return computeVenueDistance(term, option.Venue)
+	})
+}
+
+func SearchEventDetailsByArtist(term string, options []data.EventDetails, maxResults int, tolerance float64) []data.EventDetails {
+	return SearchOptions(term, options, maxResults, tolerance, func(term string, option data.EventDetails) int {
+		return computeEventDistanceByArtists(term, option.Event)
+	})
+}
+
+func SearchEventDetailsByVenue(term string, options []data.EventDetails, maxResults int, tolerance float64) []data.EventDetails {
+	return SearchOptions(term, options, maxResults, tolerance, func(term string, option data.EventDetails) int {
+		return computeVenueDistance(term, option.Event.Venue)
+	})
+}
+
+func SearchStrings(term string, options []string, maxResults int, tolerance float64) []string {
+	return SearchOptions(term, options, maxResults, tolerance, getLevenshteinDistance)
+}
+
+func computeVenueDistance(term string, option data.Venue) int {
+	return getLevenshteinDistance(term, option.Name)
+}
+
+func computeArtistDistance(term string, option data.Artist) int {
+	return getLevenshteinDistance(term, option.Name)
+}
+
+func computeEventDistanceByArtists(term string, option data.Event) int {
+	minDistance := getLevenshteinDistance(term, option.MainAct.Name)
+	for _, opener := range option.Openers {
+		d := getLevenshteinDistance(term, opener.Name)
+		if d < minDistance {
+			minDistance = d
 		}
 	}
-
-	slices.SortFunc(eligibleMatches, compareDistancesUsingKeyFuncAsc[data.Event, string](distances, getEventKey))
-	returnCount := int(math.Min(float64(len(eligibleMatches)), float64(s.maxCount)))
-	s.resetMaxCount()
-	return eligibleMatches[:returnCount]
-}
-
-func (s *Search) FindFuzzyEventMatchesByVenue(venue string) []data.Event {
-	eligibleMatches := []data.Event{}
-	maxDistance := int(math.Ceil(float64(len(venue)) * threshold))
-
-	existingEvents := s.Cache.GetSavedEvents()
-	distances := map[string]int{}
-	for _, event := range existingEvents {
-		distance := getLevenshteinDistance(venue, event.Venue.Name)
-		if distance <= maxDistance {
-			eventKey := getEventKey(event)
-			distances[eventKey] = distance
-			eligibleMatches = append(eligibleMatches, event)
-		}
-	}
-
-	slices.SortFunc(eligibleMatches, compareDistancesUsingKeyFuncAsc[data.Event, string](distances, getEventKey))
-	returnCount := int(math.Min(float64(len(eligibleMatches)), float64(s.maxCount)))
-	s.resetMaxCount()
-	return eligibleMatches[:returnCount]
-}
-
-func getEventKey(event data.Event) string {
-    key := strings.Builder{}
-	key.WriteString(event.MainAct.Name)
-	key.WriteString(event.Venue.Name)
-	key.WriteString(event.Date)
-	return key.String()
-}
-
-func (s *Search) FindFuzzyEventDetailsMatchesByArtist(name, city, state string) []data.EventDetails {
-	eligibleMatches := []data.EventDetails{}
-	maxDistance := int(math.Ceil(float64(len(name)) * threshold))
-
-	existingEvents := s.Cache.GetUpcomingEvents(city, state)
-	distances := map[string]int{}
-	for _, event := range existingEvents {
-		artistNames := []string{event.Event.MainAct.Name}
-		for _, opener := range event.Event.Openers {
-			artistNames = append(artistNames, opener.Name)
-		}
-
-		eventDist := 99999
-		for _, artistName := range artistNames {
-			artistDistance := getLevenshteinDistance(name, artistName)
-			eventDist = int(math.Min(float64(eventDist), float64(artistDistance)))
-		}
-
-		if eventDist <= maxDistance {
-			eventKey := getEventDetailsKey(event)
-			distances[eventKey] = eventDist
-			eligibleMatches = append(eligibleMatches, event)
-		}
-	}
-
-	slices.SortFunc(eligibleMatches, compareDistancesUsingKeyFuncAsc[data.EventDetails, string](distances, getEventDetailsKey))
-	returnCount := int(math.Min(float64(len(eligibleMatches)), float64(s.maxCount)))
-	s.resetMaxCount()
-	return eligibleMatches[:returnCount]
-}
-
-func (s *Search) FindFuzzyEventDetailsMatchesByVenue(venue, city, state string) []data.EventDetails {
-	eligibleMatches := []data.EventDetails{}
-	maxDistance := int(math.Ceil(float64(len(venue)) * threshold))
-
-	existingEvents := s.Cache.GetUpcomingEvents(city, state)
-	distances := map[string]int{}
-	for _, event := range existingEvents {
-		distance := getLevenshteinDistance(venue, event.Event.Venue.Name)
-		if distance <= maxDistance {
-			eventKey := getEventDetailsKey(event)
-			distances[eventKey] = distance
-			eligibleMatches = append(eligibleMatches, event)
-		}
-	}
-
-	slices.SortFunc(eligibleMatches, compareDistancesUsingKeyFuncAsc[data.EventDetails, string](distances, getEventDetailsKey))
-	returnCount := int(math.Min(float64(len(eligibleMatches)), float64(s.maxCount)))
-	s.resetMaxCount()
-	return eligibleMatches[:returnCount]
-}
-
-func getEventDetailsKey(event data.EventDetails) string {
-	return getEventKey(event.Event)
-}
-
-func compareDistancesAsc[T comparable](distances map[T]int) func(T, T) int {
-	return func(x, y T) int {
-		if distances[x] > distances[y] {
-			return 1
-		} else if distances[x] < distances[y] {
-			return -1
-		} else {
-			return 0
-		}
-	}
-}
-
-func compareDistancesUsingKeyFuncAsc[T any, U comparable](distances map[U]int, keyFunc func(T) U) func(T, T) int {
-	return func(x, y T) int {
-		xKey := keyFunc(x)
-		yKey := keyFunc(y)
-		if distances[xKey] > distances[yKey] {
-			return 1
-		} else if distances[xKey] < distances[yKey] {
-			return -1
-		} else {
-			return 0
-		}
-	}
+	return minDistance
 }

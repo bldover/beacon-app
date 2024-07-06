@@ -54,9 +54,9 @@ func postProcess(events []data.EventDetails) {
     for i := range events {
 		event := events[i].Event
 		venue := event.Venue.Name
-		if strings.Contains(venue, "The Eastern") {
+		if strings.Contains(venue, "Eastern") {
 			event.Venue.Name = "The Eastern"
-		} else if strings.Contains(venue, "Cadence Bank") {
+		} else if strings.Contains(venue, "Cadence") {
 			event.Venue.Name = "Cadence Bank Ampitheatre"
 		} else if strings.Contains(venue, "Altar") {
 			event.Venue.Name = "The Masquerade - Altar"

@@ -7,13 +7,12 @@ import (
 	"concert-manager/util"
 )
 
-type venueSearch interface {
-	FindFuzzyVenueMatchesByName(string) []data.Venue
-	WithMaxCount(int)
+type venueCache interface {
+	GetVenues() []data.Venue
 }
 
 type VenueEditor struct {
-	Search       venueSearch
+	VenueCache   venueCache
 	ReturnScreen Screen
 	actions      []string
 	venue        *data.Venue
@@ -58,8 +57,7 @@ func (e *VenueEditor) NextScreen(i int) Screen {
 	switch i {
 	case searchVenue:
 		name := input.PromptAndGetInput("venue name to search", input.NoValidation)
-		e.Search.WithMaxCount(pageSize)
-		matches := e.Search.FindFuzzyVenueMatchesByName(name)
+		matches := util.SearchVenues(name, e.VenueCache.GetVenues(), pageSize, util.LenientTolerance)
 		selectScreen := &Selector[data.Venue]{
 			ScreenTitle: "Select Venue",
 			Next:        e.ReturnScreen,

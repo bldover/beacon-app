@@ -7,8 +7,10 @@ import (
 	"concert-manager/finder"
 	"concert-manager/loader"
 	"concert-manager/log"
+	"concert-manager/ranker"
 	"concert-manager/server"
-	"concert-manager/ui/textui"
+	"concert-manager/spotify"
+	"concert-manager/ui"
 )
 
 func main() {
@@ -34,15 +36,20 @@ func main() {
 		EventRepo:  eventRepo,
 	}
 
-	eventFinder := finder.NewEventFinder()
-	cache := cache.NewLocalCache()
-	cache.Database = interactor
-	cache.Finder = eventFinder
-	cache.Sync()
+	savedCache := &cache.SavedEventCache{}
+	savedCache.Database = interactor
+	savedCache.Sync()
 
-	loader := &loader.Loader{Cache: cache}
+	eventFinder := finder.NewEventFinder()
+	artistRanker := ranker.ArtistRanker{MusicSvc: spotify.NewClient()}
+	eventRanker := &ranker.EventRanker{ArtistRanker: artistRanker}
+
+	upcomingCache := cache.NewUpcomingEventCache()
+	upcomingCache.Finder = eventFinder
+	upcomingCache.Ranker = eventRanker
+
+	loader := &loader.Loader{Cache: savedCache}
 	go server.StartServer(loader)
 
-	log.Info("Starting terminal UI initialization...")
-	textui.Start(cache)
+	ui.StartUI("", savedCache, upcomingCache)
 }

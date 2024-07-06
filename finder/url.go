@@ -12,7 +12,8 @@ const (
 	apiKey         = "CM_TICKETMASTER_API_KEY"
 	host           = "https://app.ticketmaster.com"
 	eventPath      = "/discovery/v2/events"
-	urlFmt         = "%s%s?classificationName=%s&city=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%v"
+	// radius/unit doesn't seem to work with city/state, look into getting latlong?
+	urlFmt         = "%s%s?classificationName=%s&stateCode=%s&radius=%s&unit=%s&localStartDateTime=%s&sort=%s&size=%v"
 	apiKeyFmt      = "&apikey=%s"
 	dateTimeFmt    = "2006-01-02T15:04:05"
 	dateFmt        = "2006-01-02"
@@ -21,13 +22,13 @@ const (
 	radius         = "50"
 	unit           = "miles"
 	stateCode      = "GA"
-	pageSize       = 20
+	pageSize       = 50
 )
 
 type Url string
 type UrlPath string
 
-func buildTicketmasterUrl(city string, state string) (Url, error) {
+func buildTicketmasterUrl(state string) (Url, error) {
 	token, err := getAuthToken()
 	if err != nil {
 		return "", err
@@ -40,7 +41,7 @@ func buildTicketmasterUrl(city string, state string) (Url, error) {
 	}
 	startDate := time.Now().In(location).Format(dateTimeFmt)
 
-	url := fmt.Sprintf(urlFmt, host, eventPath, classification, city, state, radius, unit, startDate, sort, pageSize)
+	url := fmt.Sprintf(urlFmt, host, eventPath, classification, state, radius, unit, startDate, sort, pageSize)
 	log.Debug("Built URL (without auth token): ", url)
 	url += fmt.Sprintf(apiKeyFmt, token)
 	return Url(url), nil

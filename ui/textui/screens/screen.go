@@ -1,8 +1,8 @@
 package screens
 
-const pageSize = 10
+const PageSize = 10
 
-type sortType int
+type SortType int
 
 const (
 	dateAsc = iota

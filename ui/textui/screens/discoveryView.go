@@ -1,6 +1,7 @@
 package screens
 
 import (
+	"concert-manager/cache"
 	"concert-manager/data"
 	"concert-manager/log"
 	"concert-manager/ui/textui/input"
@@ -10,25 +11,16 @@ import (
 	"math"
 	"slices"
 	"strings"
-	"time"
 )
 
-const reloadTimeFormat = "2006-01-02T15:04:05"
-
 type eventRetrievalCache interface {
-	GetUpcomingEvents(string, string) []data.EventDetails
-	ReloadUpcomingEvents(string, string) error
-}
-
-type upcomingEventSearch interface {
-	FindFuzzyEventDetailsMatchesByArtist(string, string, string) []data.EventDetails
-	FindFuzzyEventDetailsMatchesByVenue(string, string, string) []data.EventDetails
+	GetUpcomingEvents() []data.EventDetails
+	Invalidate()
+	ChangeLocation(string, string)
+	GetLocation() cache.Location
 }
 
 type DiscoveryViewer struct {
-	City               string
-	State              string
-	Search             upcomingEventSearch
 	SearchResultScreen *DiscoverySearchResult
 	AddEventScreen     *EventAdder
 	Cache              eventRetrievalCache
@@ -36,8 +28,6 @@ type DiscoveryViewer struct {
 	events             []data.EventDetails
 	sortType           sortType
 	page               int
-	loaded             bool
-	lastLoad           string
 }
 
 const (
@@ -55,7 +45,7 @@ const (
 func NewDiscoveryViewScreen() *DiscoveryViewer {
 	view := DiscoveryViewer{}
 	view.actions = []string{"Next Page", "Prev Page", "Goto Page", "Toggle Sort",
-		"Save Event", "Search Events", "Change Location", "Refresh Event", "Discovery Menu"}
+		"Save Event", "Search Events", "Change Location", "Refresh Events", "Discovery Menu"}
 	view.sortType = dateAsc
 	return &view
 }
@@ -64,17 +54,27 @@ func (v DiscoveryViewer) Title() string {
 	return "All Upcoming Events"
 }
 
+func (v *DiscoveryViewer) Refresh() {
+	output.Displayf("Retrieving events for %s...", v.Cache.GetLocation())
+	v.events = v.Cache.GetUpcomingEvents() // ignore possible refresh, this view maintains its own state
+	v.sort()
+	v.page = 0
+	output.ClearCurrentLine()
+}
+
 func (v *DiscoveryViewer) DisplayData() {
-	if !v.loaded {
-		v.reloadEvents()
+	if v.events == nil {
+		v.Refresh()
 	}
 
 	var eventData strings.Builder
-	pageIndicator := fmt.Sprintf("Page %d/%d - Last reloaded: %v\n", v.page+1, v.numPages(), v.lastLoad)
+	pageIndicator := fmt.Sprintf("Page %d/%d\n", v.page+1, v.numPages())
 	eventData.WriteString(pageIndicator)
 
 	if len(v.events) == 0 {
-		output.Displayln("No events found")
+		eventData.WriteString("(none)")
+		output.Displayln(eventData.String())
+		return
 	}
 
 	startEvent := (v.page * pageSize)
@@ -137,10 +137,10 @@ func (v *DiscoveryViewer) NextScreen(i int) Screen {
 				switch s {
 				case searchByArtist:
 					name := input.PromptAndGetInput("artist name to search", input.NoValidation)
-					v.SearchResultScreen.Events = v.Search.FindFuzzyEventDetailsMatchesByArtist(name, v.City, v.State)
+					v.SearchResultScreen.Events = util.SearchEventDetailsByArtist(name, v.events, util.NoMaxResults, util.LenientTolerance)
 				case searchByVenue:
 					name := input.PromptAndGetInput("venue name to search", input.NoValidation)
-					v.SearchResultScreen.Events = v.Search.FindFuzzyEventDetailsMatchesByVenue(name, v.City, v.State)
+					v.SearchResultScreen.Events = util.SearchEventDetailsByVenue(name, v.events, util.NoMaxResults, util.LenientTolerance)
 				default:
 					output.Display("Internal error! Check the logs")
 					log.Error("Invalid search type selection:", s)
@@ -151,9 +151,10 @@ func (v *DiscoveryViewer) NextScreen(i int) Screen {
 		}
 		return selectScreen
 	case changeLocation:
-		v.getNewLocation()
+		v.changeLocation()
 	case refreshEvents:
-		v.reloadEvents()
+		v.Cache.Invalidate()
+		v.events = nil
 	case discoveryViewToMenu:
 		v.page = 0
 		return nil
@@ -161,24 +162,11 @@ func (v *DiscoveryViewer) NextScreen(i int) Screen {
 	return v
 }
 
-func (v *DiscoveryViewer) getNewLocation() {
-	v.City = input.PromptAndGetInput("city", input.OnlyLettersOrSpacesValidation)
-	v.State = input.PromptAndGetInput("state code", input.StateValidation)
-	output.Displayf("Retrieving concerts for %s, %s...", v.City, v.State)
-	v.events = v.Cache.GetUpcomingEvents(v.City, v.State)
-	output.ClearCurrentLine()
-	v.page = 0
-}
-
-func (v *DiscoveryViewer) reloadEvents() error {
-	output.Displayf("Retrieving concerts for %s, %s...", v.City, v.State)
-	err := v.Cache.ReloadUpcomingEvents(v.City, v.State)
-	v.events = v.Cache.GetUpcomingEvents(v.City, v.State)
-	v.loaded = true
-	v.lastLoad = time.Now().Format(reloadTimeFormat)
-	v.page = 0
-	output.ClearCurrentLine()
-	return err
+func (v *DiscoveryViewer) changeLocation() {
+	city := input.PromptAndGetInput("city", input.OnlyLettersOrSpacesValidation)
+	state := input.PromptAndGetInput("state code", input.StateValidation)
+	v.Cache.ChangeLocation(city, state)
+	v.events = nil
 }
 
 func (v DiscoveryViewer) numPages() int {
