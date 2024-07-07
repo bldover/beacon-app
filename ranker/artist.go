@@ -4,15 +4,14 @@ import (
 	"concert-manager/data"
 	"concert-manager/log"
 	"concert-manager/spotify"
-	"concert-manager/util"
+	"slices"
+	"strings"
 	"time"
 )
 
 type ArtistRanker struct {
 	MusicSvc musicService
-	rankedArtists []string
-	ranks map[string]float64
-	related map[string][]string // which known artists were used to generate a rank for the input unknown artist
+	ranks map[string]rankData
 	lastRefresh time.Time
 }
 
@@ -20,7 +19,12 @@ type musicService interface {
     GetSavedTracks() ([]spotify.Track, error)
 	GetTopTracks(spotify.TimeRange) ([]spotify.RankedTrack, error)
 	GetTopArtists(spotify.TimeRange) ([]spotify.RankedArtist, error)
-	GetRelatedArtists(spotify.Artist) ([]spotify.Artist, error)
+	GetRelatedArtistsBatch([]spotify.Artist) (map[spotify.Artist][]spotify.Artist, error)
+}
+
+type rankData struct {
+    rank float64
+	related []string
 }
 
 const (
@@ -41,9 +45,9 @@ const (
 var rankTTL, _ = time.ParseDuration("168h")
 
 func (r *ArtistRanker) Rank(artist data.Artist) data.ArtistRank {
-	res := data.ArtistRank{Artist: artist, Related: []string{}}
+	artistRank := data.ArtistRank{Artist: artist, Related: []string{}}
 	if artist.Name == "" {
-		return res
+		return artistRank
 	}
 
 	if time.Since(r.lastRefresh) > rankTTL {
@@ -51,27 +55,22 @@ func (r *ArtistRanker) Rank(artist data.Artist) data.ArtistRank {
 		err := r.RefreshRanks()
 		if err != nil {
 			log.Error("Failed to refresh artist ranks", err)
+			// if there's a rate limit from Spotify, avoid repeatedly refreshing
+			r.lastRefresh = time.Now()
 		} else {
 			log.Info("Successfully refreshed artist ranks")
 			r.lastRefresh = time.Now()
 		}
 	}
 
-	if rank, ok := r.ranks[artist.Name]; ok {
-		res.Rank = rank
-		return res
+	if rankData, ok := r.ranks[toKey(artist.Name)]; ok {
+		artistRank.Rank = rankData.rank
+		artistRank.Related = append(artistRank.Related, rankData.related...)
+		return artistRank
 	}
 
-	match := util.SearchStrings(artist.Name, r.rankedArtists, 1, util.ExactTolerance)
-	if len(match) > 0 {
-		name := match[0]
-		log.Debugf("Ranker matched event artist %s with Spotify artist %s\n", artist.Name, name)
-		res.Rank = r.ranks[name]
-		res.Related = r.related[name]
-		return res
-	}
-	log.Debugf("Ranked artist %v\n", res)
- 	return res
+	log.Debugf("Ranked artist %v\n", artistRank)
+ 	return artistRank
 }
 
 func (r *ArtistRanker) RefreshRanks() error {
@@ -104,7 +103,7 @@ func (r *ArtistRanker) RefreshRanks() error {
 		return err
 	}
 	prevRanks := r.ranks
-	r.ranks = make(map[string]float64, len(topArtistsLongTerm) * 15)
+	r.ranks = make(map[string]rankData, len(topArtistsLongTerm) * 15)
 
 	r.normalizeTrackRanks(topTracksLongTerm)
 	r.normalizeTrackRanks(topTracksMediumTerm)
@@ -114,9 +113,9 @@ func (r *ArtistRanker) RefreshRanks() error {
 	r.updateRankForRankedTracks(topTracksMediumTerm, topTrackMediumTermFactor, trackRankCeilingPercent)
 	r.updateRankForRankedTracks(topTracksShortTerm, topTrackShortTermFactor, trackRankCeilingPercent)
 
-	r.normalizeArtistRanker(topArtistsLongTerm)
-	r.normalizeArtistRanker(topArtistsMediumTerm)
-	r.normalizeArtistRanker(topArtistsShortTerm)
+	r.normalizeArtistRanks(topArtistsLongTerm)
+	r.normalizeArtistRanks(topArtistsMediumTerm)
+	r.normalizeArtistRanks(topArtistsShortTerm)
 	r.updateRankForArtists(topArtistsLongTerm, topArtistLongTermFactor)
 	r.updateRankForArtists(topArtistsMediumTerm, topArtistMediumTermFactor)
 	r.updateRankForArtists(topArtistsShortTerm, topArtistShortTermFactor)
@@ -127,12 +126,20 @@ func (r *ArtistRanker) RefreshRanks() error {
 		return err
 	}
 
+	allTracks := slices.Clone(savedTracks)
+	for _, t := range topTracksLongTerm {
+		allTracks = append(allTracks, t.Track)
+	}
+	for _, t := range topTracksMediumTerm {
+		allTracks = append(allTracks, t.Track)
+	}
+	for _, t := range topTracksShortTerm {
+		allTracks = append(allTracks, t.Track)
+	}
+	r.populateRelatedForFeaturedArtists(allTracks)
+
 	r.normalizeRanks()
 
-	r.rankedArtists = make([]string, 0, len(r.ranks))
-	for k := range r.ranks {
-		r.rankedArtists = append(r.rankedArtists, k)
-	}
 	return nil
 }
 
@@ -148,7 +155,7 @@ func (r ArtistRanker) normalizeTrackRanks(topTracks []spotify.RankedTrack) {
 
 // from spotify client, artists are ranked 0 -> N, with top artists at 0
 // convert these to (0, 1], where top artists have rank 1
-func (r ArtistRanker) normalizeArtistRanker(topArtists []spotify.RankedArtist) {
+func (r ArtistRanker) normalizeArtistRanks(topArtists []spotify.RankedArtist) {
     max := topArtists[len(topArtists)-1].Rank + 1 // add 1 here so even the last place artist has rank > 1
 	for i := range topArtists {
 		artist := &topArtists[i]
@@ -158,11 +165,12 @@ func (r ArtistRanker) normalizeArtistRanker(topArtists []spotify.RankedArtist) {
 
 func (r *ArtistRanker) normalizeRanks() {
 	maxRank := 0.
-	for _, rank := range r.ranks {
-		maxRank = max(maxRank, rank)
+	for _, rankData := range r.ranks {
+		maxRank = max(maxRank, rankData.rank)
 	}
-	for artist, rank := range r.ranks {
-		r.ranks[artist] = rank / maxRank
+	for artist, rankData := range r.ranks {
+		rankData.rank /= maxRank
+		r.ranks[artist] = rankData
 	}
 }
 
@@ -175,8 +183,9 @@ func (r *ArtistRanker) updateRankForSavedTracks(tracks []spotify.Track, factor f
 			if i > 0 {
 				rank *= featuredArtistFactor
 			}
-			tempRanks[artist.Name] += rank
-			maxRank = max(tempRanks[artist.Name], maxRank)
+			key := toKey(artist.Name)
+			tempRanks[key] += rank
+			maxRank = max(tempRanks[key], maxRank)
 		}
 	}
 
@@ -184,7 +193,11 @@ func (r *ArtistRanker) updateRankForSavedTracks(tracks []spotify.Track, factor f
 	for artist, rank := range tempRanks {
 		adjRank := min(rank, rankCeiling)
 		normalizedRank := (adjRank / rankCeiling) * factor
-		r.ranks[artist] += normalizedRank
+
+		key := toKey(artist)
+		rankData := r.ranks[key]
+		rankData.rank += normalizedRank
+		r.ranks[key] = rankData
 	}
 }
 
@@ -197,8 +210,9 @@ func (r *ArtistRanker) updateRankForRankedTracks(tracks []spotify.RankedTrack, f
 			if i > 0 {
 				rank *= featuredArtistFactor
 			}
-			tempRanks[artist.Name] += rank
-			maxRank = max(tempRanks[artist.Name], maxRank)
+			key := toKey(artist.Name)
+			tempRanks[key] += rank
+			maxRank = max(tempRanks[key], maxRank)
 		}
 	}
 
@@ -206,13 +220,20 @@ func (r *ArtistRanker) updateRankForRankedTracks(tracks []spotify.RankedTrack, f
 	for artist, rank := range tempRanks {
 		adjRank := min(rank, rankCeiling)
 		normalizedRank := (adjRank / rankCeiling) * factor
-		r.ranks[artist] += normalizedRank
+
+		key := toKey(artist)
+		rankData := r.ranks[key]
+		rankData.rank += normalizedRank
+		r.ranks[key] = rankData
 	}
 }
 
 func (r ArtistRanker) updateRankForArtists(artists []spotify.RankedArtist, weight float64) {
 	for _, artist := range artists {
-		r.ranks[artist.Artist.Name] += artist.Rank * weight
+		key :=toKey(artist.Artist.Name)
+		rankData := r.ranks[key]
+		rankData.rank += artist.Rank * weight
+		r.ranks[key] = rankData
 	}
 }
 
@@ -221,24 +242,76 @@ func (r *ArtistRanker) populateRelatedArtistRanks(artists []spotify.RankedArtist
 	// need this so we don't reference increasing ranks of known artists as we iterate
 	relatedArtistRanks := make(map[string]float64, len(artists) * 5)
 
-	r.related = make(map[string][]string, len(artists) * 5)
-	for _, artist := range artists {
-		relatedArtists, err := r.MusicSvc.GetRelatedArtists(artist.Artist)
-		if err != nil {
-			return err
-		}
+	allArtists := []spotify.Artist{}
+	for _, knownArtist := range artists {
+		allArtists = append(allArtists, knownArtist.Artist)
+	}
+	relatedArtistMap, err := r.MusicSvc.GetRelatedArtistsBatch(allArtists)
+	if err != nil {
+		return err
+	}
+
+	for knownArtist, relatedArtists := range relatedArtistMap {
 		for _, relatedArtist := range relatedArtists {
-			rank := r.ranks[artist.Artist.Name] * relatedArtistFactor
-			relatedArtistRanks[relatedArtist.Name] += rank
-			if _, ok := r.related[relatedArtist.Name]; !ok {
-				r.related[relatedArtist.Name] = []string{}
+			knownArtistData := r.ranks[toKey(knownArtist.Name)]
+			calcRankInc := knownArtistData.rank * relatedArtistFactor
+
+			key := toKey(relatedArtist.Name)
+			relatedArtistRanks[key] += calcRankInc
+			relatedRankData := r.ranks[key]
+			if relatedRankData.related == nil {
+				relatedRankData.related = []string{}
 			}
-			r.related[relatedArtist.Name] = append(r.related[relatedArtist.Name], artist.Artist.Name)
+			relatedRankData.related = append(relatedRankData.related, knownArtist.Name)
+			r.ranks[key] = relatedRankData
 		}
 	}
+
 	for name, rank := range relatedArtistRanks {
-		r.ranks[name] = r.ranks[name] + rank
+		key := toKey(name)
+		rankData := r.ranks[key]
+		rankData.rank += rank
+		r.ranks[key] = rankData
 	}
 	log.Info("Finished retrieving related artist data")
 	return nil
+}
+
+func (r *ArtistRanker) populateRelatedForFeaturedArtists(tracks []spotify.Track) {
+	related := map[string][]string{}
+	for _, track := range tracks {
+		primaryArtist := track.Artists[0].Name
+		for i, artist := range track.Artists {
+			if i == 0 {
+				// if it's a primary artist, we will already know enough about them
+				related[toKey(primaryArtist)] = nil
+			}
+			if i > 0 {
+				featuredArtist := artist.Name
+				key := toKey(featuredArtist)
+				if _, exists := related[key]; !exists {
+					related[key] = []string{}
+				}
+
+				relatedArtists := related[key]
+				if relatedArtists != nil {
+					relatedArtists = append(relatedArtists, primaryArtist)
+					related[key] = relatedArtists
+				}
+			}
+		}
+	}
+	for artistName, relatedArtists := range related {
+		key := toKey(artistName)
+		rankData := r.ranks[key]
+		if rankData.related == nil {
+			rankData.related = []string{}
+		}
+		rankData.related = relatedArtists
+		r.ranks[key] = rankData
+	}
+}
+
+func toKey(name string) string {
+    return strings.ToLower(name)
 }

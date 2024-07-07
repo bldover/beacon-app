@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -46,53 +47,174 @@ func NewClient() *Client {
 const baseUrl = "https://api.spotify.com/v1"
 const limit = 50
 
+type RequestEntity struct {
+    requestUrl string
+	pathParams map[string]any
+}
+
+func (c *Client) getPage(httpMethod string, reqEntity RequestEntity, response any) error {
+	req, err := http.NewRequest(httpMethod, reqEntity.requestUrl, nil)
+	if err != nil {
+		return err
+	}
+
+	params := url.Values{}
+	for name, value := range reqEntity.pathParams {
+		params.Set(name, fmt.Sprintf("%v", value))
+	}
+	req.URL.RawQuery = params.Encode()
+
+	resp, err := c.call(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
+		errMsg := fmt.Sprintf("failed to parse response: %v", err)
+		return errors.New(errMsg)
+	}
+
+	return nil
+}
+
+type errorResponse struct {
+    Status int `json:"Status"`
+	Message string `json:"Message"`
+}
+
+func (c *Client) call(req *http.Request) (*http.Response, error) {
+	retries := 0
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	log.Debugf("Spotify request without auth%+v", req)
+
+	for retries < 3 {
+		authToken, err := c.auth.getAuthToken()
+		req.Header.Set("Authorization", authToken)
+
+		startTs := time.Now()
+		resp, err := http.DefaultClient.Do(req)
+		log.Debugf("Request response time: %v ms\n", time.Since(startTs).Milliseconds())
+		if err != nil {
+			return nil, err
+		}
+
+		log.Debugf("For URL %s, received response: %+v", req.URL, resp)
+		if resp.StatusCode == http.StatusOK {
+			return resp, nil
+		}
+
+		errorResp := &errorResponse{}
+		if err := json.NewDecoder(resp.Body).Decode(errorResp); err != nil {
+			log.Error("Failed to decode error response", resp)
+		} else {
+			log.Error("Received Spotify error response", errorResp)
+		}
+
+		switch resp.StatusCode {
+		case http.StatusUnauthorized:
+			c.auth.markAuthExpired(authToken)
+		case http.StatusTooManyRequests:
+			delay := getDelay(resp)
+			if delay > (30 * time.Second) {
+				log.Errorf("Spotify API returned high retry delay of %d, try again later", delay.Seconds())
+				return nil, errors.New("exceeded rate limit and retry delay too high")
+			}
+			log.Debugf("Waiting %v seconds before retrying", delay.Seconds())
+			time.Sleep(delay)
+		default:
+			log.Debug("Unexpected error, waiting 100 ms and retrying; attempt:", retries)
+			time.Sleep(100 * time.Millisecond)
+		}
+		retries++
+	}
+	return nil, errors.New("max retries exceeded calling Spotify URL: " + req.URL.Host + req.URL.Path)
+}
+
+func getDelay(resp *http.Response) time.Duration {
+	delayHeader := resp.Header.Get("Retry-After")
+	delay, err := strconv.Atoi(delayHeader)
+	if err != nil {
+		log.Error("Failed to parse Retry-After header for Spotify 429 response", delayHeader)
+		delay = 30
+	}
+	return (time.Duration(delay) + 1) * time.Second
+}
+
+type SavedTrack struct {
+    Track Track `json:"track"`
+}
+
 type SavedTrackResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
-	SavedTracks []struct {
-		Track Track `json:"track"`
-	} `json:"items"`
+	SavedTracks []SavedTrack `json:"items"`
 }
-
 const savedTracksPath = "/me/tracks"
 
-func (s *Client) GetSavedTracks() ([]Track, error) {
+func (c *Client) GetSavedTracks() ([]Track, error) {
 	log.Info("Request to get saved Spotify tracks")
-	var tracks []Track
-	savedTrackUrl := baseUrl + savedTracksPath
-	for savedTrackUrl != "" {
-		req, err := http.NewRequest(http.MethodGet, savedTrackUrl, nil)
-		if err != nil {
-			return tracks, err
-		}
-		if req.URL.RawQuery == "" {
-			params := url.Values{}
-			params.Set("limit", strconv.Itoa(limit))
-			req.URL.RawQuery = params.Encode()
-		}
+	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
+	tracks := []Track{}
+	savedTracksUrl := baseUrl + savedTracksPath
 
-		resp, err := s.call(req)
-		if err != nil {
-			return tracks, err
-		}
-		defer resp.Body.Close()
-
-		var trackResponse SavedTrackResponse
-		if err := json.NewDecoder(resp.Body).Decode(&trackResponse); err != nil {
-			errMsg := fmt.Sprintf("failed to parse response: %v", err)
-			return tracks, errors.New(errMsg)
-		}
-
-		if tracks == nil {
-			tracks = make([]Track, 0, trackResponse.Total)
-		}
-		for _, savedTrack := range trackResponse.SavedTracks {
-			tracks = append(tracks, savedTrack.Track)
-		}
-
-		savedTrackUrl = trackResponse.Next
+	// First request to get the total number of tracks
+	pathParams := map[string]any{}
+	pathParams["limit"] = limit
+	request := RequestEntity{savedTracksUrl, pathParams}
+	response := &SavedTrackResponse{}
+	err := c.getPage(http.MethodGet, request, response)
+	if err != nil {
+		return tracks, err
 	}
-	log.Infof("Found %v saved tracks", len(tracks))
+
+	savedTrackBatch := []Track{}
+	for _, track := range response.SavedTracks {
+		savedTrackBatch = append(savedTrackBatch, track.Track)
+	}
+	tracks = append(tracks, savedTrackBatch...)
+
+	total := response.Total
+	totalPages := (total + limit - 1) / limit
+	log.Debugf("Spotify indicated %d total saved tracks in %d pages", total, totalPages)
+
+	for i := 1; i < totalPages; i++ {
+		wg.Add(1)
+		go func(offset int) {
+			defer wg.Done()
+			pathParams := map[string]any{}
+			pathParams["limit"] = limit
+			pathParams["offset"] = offset
+			request := RequestEntity{savedTracksUrl, pathParams}
+			response := &SavedTrackResponse{}
+			err := c.getPage(http.MethodGet, request, response)
+			if err != nil {
+				log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
+				return
+			}
+
+			savedTrackBatch := []Track{}
+			for _, track := range response.SavedTracks {
+				savedTrackBatch = append(savedTrackBatch, track.Track)
+			}
+			mu.Lock()
+			tracks = append(tracks, savedTrackBatch...)
+			mu.Unlock()
+		}(i * limit)
+		// For whatever reason, we get 500 errors only for this endpoint when sending all the
+		// requests with no delay. The retry handles it, but it's faster to avoid it altogether
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	wg.Wait()
+	retrievedCount := len(tracks)
+	if retrievedCount < total {
+		// tracks may still be valid for any successful batches; let the caller decide to use it or not
+		errMsg := fmt.Sprintf("failed to retrieve all saved tracks, found %d/%d", retrievedCount, total)
+		return tracks, errors.New(errMsg)
+	}
+	log.Infof("Found %v saved tracks", retrievedCount)
 	return tracks, nil
 }
 
@@ -110,46 +232,68 @@ const LongTerm = "long_term"
 const MediumTerm = "medium_term"
 const ShortTerm = "short_term"
 
-func (s *Client) GetTopTracks(timeRange TimeRange) ([]RankedTrack, error) {
+func (c *Client) GetTopTracks(timeRange TimeRange) ([]RankedTrack, error) {
 	log.Info("Request to get top Spotify tracks with range:", timeRange)
-	var tracks []RankedTrack
+	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
+	tracks := []RankedTrack{}
 	topTracksUrl := baseUrl + topTracksPath
-	for topTracksUrl != "" {
-		req, err := http.NewRequest(http.MethodGet, topTracksUrl, nil)
-		if err != nil {
-			return tracks, err
-		}
-		if req.URL.RawQuery == "" {
-			params := url.Values{}
-			params.Set("limit", strconv.Itoa(limit))
-			params.Set("time_range", string(timeRange))
-			req.URL.RawQuery = params.Encode()
-		}
 
-		resp, err := s.call(req)
-		if err != nil {
-			return tracks, err
-		}
-		defer resp.Body.Close()
+	// First request to get the total number of tracks
+	pathParams := map[string]any{}
+	pathParams["limit"] = limit
+	pathParams["time_range"] = timeRange
+	request := RequestEntity{topTracksUrl, pathParams}
+	response := &TopTrackResponse{}
+	err := c.getPage(http.MethodGet, request, response)
+	if err != nil {
+		return tracks, err
+	}
 
-		var trackResponse TopTrackResponse
-		if err := json.NewDecoder(resp.Body).Decode(&trackResponse); err != nil {
-			errMsg := fmt.Sprintf("failed to parse response: %v", err)
-			return tracks, errors.New(errMsg)
-		}
+	rankedTrackBatch := []RankedTrack{}
+	for _, track := range response.TopTracks {
+		rankedArtist := RankedTrack{Track: track, Rank: 0}
+		rankedTrackBatch = append(rankedTrackBatch, rankedArtist)
+	}
+	tracks = append(tracks, rankedTrackBatch...)
 
-		if tracks == nil {
-			tracks = make([]RankedTrack, 0, trackResponse.Total)
-		}
-		for _, topTrack := range trackResponse.TopTracks {
-			rankedTrack := RankedTrack{
-				Track: topTrack,
-				Rank: float64(trackResponse.Offset / limit),
+	total := response.Total
+	totalPages := (total + limit - 1) / limit
+	log.Debugf("Spotify indicated %d total top tracks in %d pages", total, totalPages)
+
+	for i := 1; i < totalPages; i++ {
+		wg.Add(1)
+		go func(offset int) {
+			defer wg.Done()
+			pathParams := map[string]any{}
+			pathParams["limit"] = limit
+			pathParams["time_range"] = timeRange
+			pathParams["offset"] = offset
+			request := RequestEntity{topTracksUrl, pathParams}
+			response := &TopTrackResponse{}
+			err := c.getPage(http.MethodGet, request, response)
+			if err != nil {
+				log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
+				return
 			}
-			tracks = append(tracks, rankedTrack)
-		}
 
-		topTracksUrl = trackResponse.Next
+			rankedTrackBatch := []RankedTrack{}
+			for _, track := range response.TopTracks {
+				rankedArtist := RankedTrack{Track: track, Rank: float64(offset / total)}
+				rankedTrackBatch = append(rankedTrackBatch, rankedArtist)
+			}
+			mu.Lock()
+			tracks = append(tracks, rankedTrackBatch...)
+			mu.Unlock()
+		}(i * limit)
+	}
+
+	wg.Wait()
+	retrievedCount := len(tracks)
+	if retrievedCount < total {
+		// tracks may still be valid for any successful batches; let the caller decide to use it or not
+		errMsg := fmt.Sprintf("failed to retrieve all top tracks, found %d/%d", retrievedCount, total)
+		return tracks, errors.New(errMsg)
 	}
 	log.Infof("Found %v top tracks", len(tracks))
 	return tracks, nil
@@ -164,46 +308,68 @@ type TopArtistResponse struct {
 
 const topArtistsPath = "/me/top/artists"
 
-func (s *Client) GetTopArtists(timeRange TimeRange) ([]RankedArtist, error) {
+func (c *Client) GetTopArtists(timeRange TimeRange) ([]RankedArtist, error) {
 	log.Info("Request to get top Spotify artists with range:", timeRange)
-	var artists []RankedArtist
+	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
+	artists := []RankedArtist{}
 	topArtistsUrl := baseUrl + topArtistsPath
-	for topArtistsUrl != "" {
-		req, err := http.NewRequest(http.MethodGet, topArtistsUrl, nil)
-		if err != nil {
-			return artists, err
-		}
-		if req.URL.RawQuery == "" {
-			params := url.Values{}
-			params.Set("limit", strconv.Itoa(limit))
-			params.Set("time_range", string(timeRange))
-			req.URL.RawQuery = params.Encode()
-		}
 
-		resp, err := s.call(req)
-		if err != nil {
-			return artists, err
-		}
-		defer resp.Body.Close()
+	// First request to get the total number of artists
+	pathParams := map[string]any{}
+	pathParams["limit"] = limit
+	pathParams["time_range"] = timeRange
+	request := RequestEntity{topArtistsUrl, pathParams}
+	response := &TopArtistResponse{}
+	err := c.getPage(http.MethodGet, request, response)
+	if err != nil {
+		return artists, err
+	}
 
-		var artistResponse TopArtistResponse
-		if err := json.NewDecoder(resp.Body).Decode(&artistResponse); err != nil {
-			errMsg := fmt.Sprintf("failed to parse response: %v", err)
-			return artists, errors.New(errMsg)
-		}
+	rankedArtistBatch := []RankedArtist{}
+	for _, artist := range response.TopArtists {
+		rankedArtist := RankedArtist{Artist: artist, Rank: 0}
+		rankedArtistBatch = append(rankedArtistBatch, rankedArtist)
+	}
+	artists = append(artists, rankedArtistBatch...)
 
-		if artists == nil {
-			artists = make([]RankedArtist, 0, artistResponse.Total)
-		}
-		for _, topArtist := range artistResponse.TopArtists {
-			rankedArtist := RankedArtist{
-				Artist: topArtist,
-				Rank: float64(artistResponse.Offset / limit),
+	total := response.Total
+	totalPages := (total + limit - 1) / limit
+	log.Debugf("Spotify indicated %d total top artists in %d pages", total, totalPages)
+
+	for i := 1; i < totalPages; i++ {
+		wg.Add(1)
+		go func(offset int) {
+			defer wg.Done()
+			pathParams := map[string]any{}
+			pathParams["limit"] = limit
+			pathParams["time_range"] = timeRange
+			pathParams["offset"] = offset
+			request := RequestEntity{topArtistsUrl, pathParams}
+			response := &TopArtistResponse{}
+			err := c.getPage(http.MethodGet, request, response)
+			if err != nil {
+				log.Errorf("Error fetching artists at offset %d: %v", offset, err)
+				return
 			}
-			artists = append(artists, rankedArtist)
-		}
 
-		topArtistsUrl = artistResponse.Next
+			rankedArtistBatch := []RankedArtist{}
+			for _, artist := range response.TopArtists {
+				rankedArtist := RankedArtist{Artist: artist, Rank: float64(offset / total)}
+				rankedArtistBatch = append(rankedArtistBatch, rankedArtist)
+			}
+			mu.Lock()
+			artists = append(artists, rankedArtistBatch...)
+			mu.Unlock()
+		}(i * limit)
+	}
+
+	wg.Wait()
+	retrievedCount := len(artists)
+	if retrievedCount < total {
+		// artists may still be valid for any successful batches; let the caller decide to use it or not
+		errMsg := fmt.Sprintf("failed to retrieve all top artists, found %d/%d", retrievedCount, total)
+		return artists, errors.New(errMsg)
 	}
 	log.Infof("Found %v top artists", len(artists))
 	return artists, nil
@@ -215,15 +381,15 @@ type RelatedArtistResponse struct {
 
 const relatedArtistPath = "/artists/%s/related-artists"
 
-func (s *Client) GetRelatedArtists(artist Artist) ([]Artist, error) {
-	log.Debugf("Request to get related Spotify artists to %v", artist)
+func (c *Client) GetRelatedArtists(artist Artist) ([]Artist, error) {
+	log.Info("Request to get related Spotify artists to artist:", artist)
 	url := fmt.Sprintf(baseUrl + relatedArtistPath, artist.Id)
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := s.call(req)
+	resp, err := c.call(req)
 	if err != nil {
 		return nil, err
 	}
@@ -234,71 +400,37 @@ func (s *Client) GetRelatedArtists(artist Artist) ([]Artist, error) {
 		errMsg := fmt.Sprintf("failed to parse response: %v", err)
 		return nil, errors.New(errMsg)
 	}
+	log.Infof("Found related artists %v for requested artist %s", relatedArtistResp.Artists, artist.Name)
     return relatedArtistResp.Artists, nil
 }
 
-type errorResponse struct {
-    Status int `json:"status"`
-	Message string `json:"message"`
-}
-
-func (s *Client) call(req *http.Request) (*http.Response, error) {
-	retries := 0
-	if s.auth.accessToken == "" {
-		if err := s.auth.refresh(); err != nil {
-			errMsg := fmt.Sprintf("failed to refresh Spotify token: %v", err)
-			return nil, errors.New(errMsg)
-		}
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Debugf("Spotify request without auth%+v", req)
-	req.Header.Set("Authorization", s.auth.accessToken)
-
-	for retries < 3 {
-		startTs := time.Now()
-		resp, err := http.DefaultClient.Do(req)
-		log.Debugf("Request response time: %v ms\n", time.Since(startTs).Milliseconds())
-		if err != nil {
-			return nil, err
-		}
-
-		log.Debug(resp)
-		if resp.StatusCode == http.StatusOK {
-			return resp, nil
-		}
-
-		var errorResp errorResponse
-		if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
-			log.Error("Failed to decode error response")
-		} else {
-			log.Error("Received Spotify error response", errorResp)
-		}
-
-		switch resp.StatusCode {
-		case http.StatusUnauthorized:
-			if err := s.auth.refresh(); err != nil {
-				errMsg := fmt.Sprintf("failed to refresh Spotify token: %v", err)
-				return nil, errors.New(errMsg)
+func (c *Client) GetRelatedArtistsBatch(artists []Artist) (map[Artist][]Artist, error) {
+	log.Infof("Retrieved batch related artist request for %v artists", len(artists))
+	var wg sync.WaitGroup
+	mu := &sync.Mutex{}
+	relatedMap := map[Artist][]Artist{}
+	for _, artist := range artists {
+		wg.Add(1)
+		go func(a Artist) {
+			defer wg.Done()
+			related, err := c.GetRelatedArtists(a)
+			if err != nil {
+				log.Errorf("Failed to retrieve related artists for %v: %v", a, err)
+				return
 			}
-			req.Header.Set("Authentication", s.auth.accessToken)
-		case http.StatusTooManyRequests:
-			delay := getDelay(resp)
-			log.Debugf("Waiting %v seconds before retrying", delay)
-			time.Sleep(time.Duration(delay))
-		default:
-			return nil, errors.New("unexpected error")
-		}
-		retries++
+			mu.Lock()
+			relatedMap[a] = related
+			mu.Unlock()
+		}(artist)
 	}
-	return nil, errors.New("max retries exceeded calling Spotify URL: " + req.URL.Host + req.URL.Path)
-}
 
-func getDelay(resp *http.Response) int {
-	delayHeader := resp.Header.Get("Retry-After")
-	delay, err := strconv.Atoi(delayHeader)
-	if err != nil {
-		log.Error("Failed to parse Retry-After header for Spotify 429 response", delayHeader)
-		delay = 30
+	wg.Wait()
+	successCount := len(relatedMap)
+	if successCount < len(artists) {
+		// artists may still be valid for any successful batches; let the caller decide to use it or not
+		errMsg := fmt.Sprintf("failed to retrieve some related artists, found %d/%d", successCount, len(artists))
+		return relatedMap, errors.New(errMsg)
 	}
-	return delay
+	log.Info("Finished batch related artist request")
+	return relatedMap, nil
 }

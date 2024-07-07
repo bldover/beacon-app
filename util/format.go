@@ -2,6 +2,7 @@ package util
 
 import (
 	"concert-manager/data"
+	"concert-manager/log"
 	"fmt"
 	"math"
 	"slices"
@@ -291,6 +292,8 @@ func FormatEventRank(e data.EventRank) string {
 		for _, relatedArtist := range artistRank.Related {
 			if matches := SearchStrings(relatedArtist, artists, 1, ExactTolerance); len(matches) == 0 {
 				similar = append(similar, relatedArtist)
+			} else {
+				log.Debugf("Hiding similar artist %s due to being part of the event", relatedArtist)
 			}
 		}
 	}
