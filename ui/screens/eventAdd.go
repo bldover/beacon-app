@@ -3,14 +3,14 @@ package screens
 import (
 	"concert-manager/data"
 	"concert-manager/log"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 	"slices"
 )
 
 type eventAddCache interface {
-	AddSavedEvent(data.Event) error
+	AddSavedEvent(data.Event) (*data.Event, error)
 }
 
 type artistEditor interface {
@@ -143,7 +143,7 @@ func (a *EventAdder) NextScreen(i int) Screen {
 				return a
 			}
 		}
-		if err := a.Cache.AddSavedEvent(a.newEvent); err != nil {
+		if _, err := a.Cache.AddSavedEvent(a.newEvent); err != nil {
 			output.Displayf("Failed to save event: %v\n", err)
 			return a
 		}

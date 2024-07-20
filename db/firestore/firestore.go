@@ -20,7 +20,7 @@ type Firestore struct {
 func Setup() (*Firestore, error) {
 	projectID := os.Getenv(projectIdEnv)
 	if projectID == "" {
-		return nil, errors.New("PROJ_ID environment variable must be set")
+		return nil, errors.New("CM_PROJ_ID environment variable must be set")
 	}
 	log.Debug("Connecting to Firestore in project", projectID)
 

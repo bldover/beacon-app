@@ -1,7 +1,7 @@
 package screens
 
 import (
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/output"
 )
 
 type Selector[T any] struct {

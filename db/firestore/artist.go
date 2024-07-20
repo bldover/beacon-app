@@ -46,15 +46,16 @@ func (repo *ArtistRepo) Add(ctx context.Context, artist Artist) (string, error) 
 	return docRef.ID, nil
 }
 
-func (repo *ArtistRepo) Delete(ctx context.Context, artist Artist) error {
-	log.Debug("Attempting to delete artist", artist)
-	artistDoc, err := repo.findDocRef(ctx, artist.Name)
+func (repo *ArtistRepo) Delete(ctx context.Context, id string) error {
+	log.Debug("Attempting to delete artist", id)
+	docId := repo.Connection.Client.Collection(artistCollection).Doc(id)
+	artistDoc, err := docId.Get(ctx)
 	if err != nil {
-		log.Errorf("Failed to find existing artist while deleting %+v, %v", artist, err)
+		log.Errorf("Failed to find existing artist while deleting %+v, %v", id, err)
 		return err
 	}
 	artistDoc.Ref.Delete(ctx)
-	log.Infof("Successfully deleted artist %+v", artist)
+	log.Infof("Successfully deleted artist %+v", id)
 	return nil
 }
 
@@ -97,6 +98,7 @@ func toArtist(doc *firestore.DocumentSnapshot) Artist {
 	return Artist{
 		Name:  artistData["Name"].(string),
 		Genre: artistData["Genre"].(string),
+		Id:    doc.Ref.ID,
 	}
 }
 

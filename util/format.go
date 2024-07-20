@@ -19,6 +19,11 @@ func FormatArtist(artists []data.Artist) []string {
 	return formattedArtists
 }
 
+func FormatArtistExpanded(artist data.Artist) string {
+    artistFmt := "Name: %s\nGenre: %s"
+	return fmt.Sprintf(artistFmt, artist.Name, artist.Genre)
+}
+
 func FormatVenue(venues []data.Venue) []string {
 	venueFmt := "%s - %s, %s"
     formattedVenues := []string{}
@@ -27,6 +32,11 @@ func FormatVenue(venues []data.Venue) []string {
 		formattedVenues = append(formattedVenues, formattedVenue)
 	}
 	return formattedVenues
+}
+
+func FormatVenueExpanded(venue data.Venue) string {
+    venueFmt := "Name: %s\nCity: %s\nState: %s"
+	return fmt.Sprintf(venueFmt, venue.Name, venue.City, venue.State)
 }
 
 func FormatEvent(e data.Event) string {

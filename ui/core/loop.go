@@ -2,9 +2,9 @@ package core
 
 import (
 	"concert-manager/log"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
-	"concert-manager/ui/textui/screens"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
+	"concert-manager/ui/screens"
 	"strings"
 )
 

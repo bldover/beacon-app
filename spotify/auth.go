@@ -48,11 +48,6 @@ func newAuthentication() *authentication {
 	}
 }
 
-type refreshResponse struct {
-    Token string `json:"access_token"`
-	TokenType string `json:"token_type"`
-}
-
 func (a *authentication) getAuthToken() (string, error) {
 	a.authMutex.Lock()
 	defer a.authMutex.Unlock()
@@ -83,6 +78,16 @@ func (a *authentication) markAuthExpired(token string) {
 	}
 }
 
+type refreshResponse struct {
+    Token string `json:"access_token"`
+	TokenType string `json:"token_type"`
+}
+
+type refreshErrorResponse struct {
+    Error string `json:"error"`
+	ErrorDesc string `json:"error_description"`
+}
+
 func (a *authentication) refresh() error {
 	log.Debug("Refreshing Spotify access token")
 	params := url.Values{}
@@ -102,8 +107,12 @@ func (a *authentication) refresh() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		msg := fmt.Sprintf("received non-200 response from refresh call: %v, %s", resp.StatusCode, resp.Status)
-		return errors.New(msg)
+		errMsg := fmt.Sprintf("received non-200 response from refresh call: %v, %s", resp.StatusCode, resp.Status)
+		var errResp refreshErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&errResp); err == nil {
+			errMsg += fmt.Sprintf(", %+v", errResp)
+		}
+		return errors.New(errMsg)
 	}
 
 	var apiToken refreshResponse

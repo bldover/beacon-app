@@ -2,8 +2,8 @@ package screens
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 )
 
@@ -44,7 +44,7 @@ func (e Editor) Title() string {
 }
 
 func (e Editor) DisplayData() {
-	output.Displayf("%+v\n", e.tempArtist)
+	output.Displayf("%+v\n\n", util.FormatArtistExpanded(e.tempArtist))
 }
 
 func (e Editor) Actions() []string {

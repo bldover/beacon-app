@@ -13,10 +13,11 @@ import (
 )
 
 const eventCollection string = "events"
+
 var eventFields = []string{"MainActRef", "OpenerRefs", "VenueRef", "Date", "Purchased"}
 
 type EventRepo struct {
-	Connection         *Firestore
+	Connection *Firestore
 	VenueRepo  *VenueRepo
 	ArtistRepo *ArtistRepo
 }
@@ -89,23 +90,16 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 	return docRef.ID, nil
 }
 
-func (repo *EventRepo) Delete(ctx context.Context, event Event) error {
-	log.Debug("Attemting to delete event", event)
-	venueDoc, err := repo.VenueRepo.findDocRef(ctx, event.Venue.Name, event.Venue.City, event.Venue.State)
+func (repo *EventRepo) Delete(ctx context.Context, id string) error {
+	log.Debug("Attemting to delete event", id)
+	docId := repo.Connection.Client.Collection(eventCollection).Doc(id)
+	eventDoc, err := docId.Get(ctx)
 	if err != nil {
-		log.Errorf("Failed to convert venue to ref while removing event %+v", event)
+		log.Errorf("Failed to find existing event while removing %+v", id)
 		return err
 	}
-	log.Debugf("Found existing venue %v with document ID %v while deleting event", event.Venue, venueDoc.Ref.ID)
-
-	eventDoc, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
-	if err != nil {
-		log.Errorf("Failed to find existing event while removing %+v", event)
-		return err
-	}
-	log.Debugf("Found existing event document ID %v while deleting event %v", eventDoc.Ref.ID, event)
 	eventDoc.Ref.Delete(ctx)
-	log.Infof("Successfully deleted event %+v", event)
+	log.Infof("Successfully deleted event %+v", id)
 	return nil
 }
 
@@ -179,16 +173,17 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 
 		openers := []Artist{}
 		if openerRefs, ok := eventData["OpenerRefs"].([]interface{}); ok {
- 			for _, openerRef := range openerRefs {
+			for _, openerRef := range openerRefs {
 				openers = append(openers, (*artists)[openerRef.(*firestore.DocumentRef).ID])
 			}
 		}
 		event := Event{
-			MainAct: mainAct,
-			Openers: openers,
-			Venue: venue,
-			Date: util.Date(eventData["Date"].(time.Time)),
+			MainAct:   mainAct,
+			Openers:   openers,
+			Venue:     venue,
+			Date:      util.Date(eventData["Date"].(time.Time)),
 			Purchased: eventData["Purchased"].(bool),
+			Id:        e.Ref.ID,
 		}
 
 		events = append(events, event)

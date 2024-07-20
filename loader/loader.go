@@ -14,7 +14,7 @@ import (
 const minColumns = 7
 
 type eventCache interface {
-	AddSavedEvent(data.Event) error
+	AddSavedEvent(data.Event) (*data.Event, error)
 }
 
 type Loader struct {
@@ -47,7 +47,7 @@ func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 	successCount := 0
 	for i, event := range events {
 		log.Debugf("Starting upload for event %v", event)
-		if err := l.Cache.AddSavedEvent(event); err != nil {
+		if _, err := l.Cache.AddSavedEvent(event); err != nil {
 			log.Errorf("Failed to add event at row %d, %+v, %v", i+2, event, err)
 			hasErr = true
 		} else {

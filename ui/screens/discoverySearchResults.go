@@ -2,8 +2,8 @@ package screens
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 	"fmt"
 	"math"

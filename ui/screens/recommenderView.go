@@ -4,8 +4,8 @@ import (
 	"concert-manager/cache"
 	"concert-manager/data"
 	"concert-manager/log"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 	"fmt"
 	"strings"
@@ -21,7 +21,6 @@ type recommendationCache interface {
 
 type savedEventCache interface {
 	GetSavedEvents() []data.Event
-	AddSavedEvent(data.Event) error
 }
 
 type RecommendationViewer struct {

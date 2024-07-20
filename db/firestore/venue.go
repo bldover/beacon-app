@@ -47,15 +47,16 @@ func (repo *VenueRepo) Add(ctx context.Context, venue Venue) (string, error) {
 	return docRef.ID, nil
 }
 
-func (repo *VenueRepo) Delete(ctx context.Context, venue Venue) error {
-	log.Debug("Attemping to delete venue", venue)
-	venueDoc, err := repo.findDocRef(ctx, venue.Name, venue.City, venue.State)
+func (repo *VenueRepo) Delete(ctx context.Context, id string) error {
+	log.Debug("Attemping to delete venue", id)
+	docId := repo.Connection.Client.Collection(venueCollection).Doc(id)
+	venueDoc, err := docId.Get(ctx)
 	if err != nil {
-		log.Errorf("Failed to find existing venue while deleting %+v, %v", venue, err)
+		log.Errorf("Failed to find existing venue while deleting %+v, %v", id, err)
 		return err
 	}
 	venueDoc.Ref.Delete(ctx)
-	log.Infof("Successfully deleted venue %+v", venue)
+	log.Infof("Successfully deleted venue %+v", id)
 	return nil
 }
 
@@ -99,6 +100,7 @@ func toVenue(doc *firestore.DocumentSnapshot) Venue {
 		Name:    venueData["Name"].(string),
 		City:    venueData["City"].(string),
 		State:   venueData["State"].(string),
+		Id:      doc.Ref.ID,
 	}
 }
 

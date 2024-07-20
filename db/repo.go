@@ -10,19 +10,19 @@ import (
 type (
 	VenueRepo interface {
 		Add(context.Context, data.Venue) (string, error)
-		Delete(context.Context, data.Venue) error
+		Delete(context.Context, string) error
 		Exists(context.Context, data.Venue) (bool, error)
 		FindAll(context.Context) ([]data.Venue, error)
 	}
 	ArtistRepo interface {
 		Add(context.Context, data.Artist) (string, error)
-		Delete(context.Context, data.Artist) error
+		Delete(context.Context, string) error
 		Exists(context.Context, data.Artist) (bool, error)
 		FindAll(context.Context) ([]data.Artist, error)
 	}
 	EventRepo interface {
 		Add(context.Context, data.Event) (string, error)
-		Delete(context.Context, data.Event) error
+		Delete(context.Context, string) error
 		Exists(context.Context, data.Event) (bool, error)
 		FindAll(context.Context) ([]data.Event, error)
 	}
@@ -33,26 +33,26 @@ type (
 	}
 )
 
-func (interactor *DatabaseRepository) AddVenue(ctx context.Context, venue data.Venue) error {
+func (interactor *DatabaseRepository) AddVenue(ctx context.Context, venue data.Venue) (string, error) {
 	log.Debug("Request to add venue", venue)
 	if !venue.Populated() {
 		log.Debug("Skipping adding venue because required fields are missing", venue)
-		return errors.New("failed to create venue due to empty fields")
+		return "", errors.New("failed to create venue due to empty fields")
 	}
 
-	_, err := interactor.VenueRepo.Add(ctx, venue)
+	id, err := interactor.VenueRepo.Add(ctx, venue)
 	if err != nil {
 		log.Errorf("Error while adding venue %v, %v\n", venue, err)
-		return err
+		return "", err
 	}
-	return nil
+	return id, nil
 }
 
-func (interactor *DatabaseRepository) DeleteVenue(ctx context.Context, venue data.Venue) error {
-	log.Debug("Request to delete venue", venue)
-	err := interactor.VenueRepo.Delete(ctx, venue)
+func (interactor *DatabaseRepository) DeleteVenue(ctx context.Context, id string) error {
+	log.Debug("Request to delete venue", id)
+	err := interactor.VenueRepo.Delete(ctx, id)
 	if err != nil {
-		log.Errorf("Error while deleting venue %v, %v\n", venue, err)
+		log.Errorf("Error while deleting venue %v, %v\n", id, err)
 		return err
 	}
 	return nil
@@ -68,26 +68,26 @@ func (interactor *DatabaseRepository) ListVenues(ctx context.Context) ([]data.Ve
 	return venues, nil
 }
 
-func (interactor *DatabaseRepository) AddArtist(ctx context.Context, artist data.Artist) error {
+func (interactor *DatabaseRepository) AddArtist(ctx context.Context, artist data.Artist) (string, error) {
 	log.Debug("Request to add artist", artist)
 	if !artist.Populated() {
 		log.Debug("Skipping adding artist because required fields are missing", artist)
-		return errors.New("failed to create artist due to empty fields")
+		return "", errors.New("failed to create artist due to empty fields")
 	}
 
-	_, err := interactor.ArtistRepo.Add(ctx, artist)
+	id, err := interactor.ArtistRepo.Add(ctx, artist)
 	if err != nil {
 		log.Errorf("Error while adding artist %v, %v\n", artist, err)
-		return err
+		return "", err
 	}
-	return nil
+	return id, nil
 }
 
-func (interactor *DatabaseRepository) DeleteArtist(ctx context.Context, artist data.Artist) error {
-	log.Debug("Request to delete artist", artist)
-	err := interactor.ArtistRepo.Delete(ctx, artist)
+func (interactor *DatabaseRepository) DeleteArtist(ctx context.Context, id string) error {
+	log.Debug("Request to delete artist", id)
+	err := interactor.ArtistRepo.Delete(ctx, id)
 	if err != nil {
-		log.Errorf("Error while deleting artist %v, %v\n", artist, err)
+		log.Errorf("Error while deleting artist %v, %v\n", id, err)
 		return err
 	}
 	return nil
@@ -104,59 +104,26 @@ func (interactor *DatabaseRepository) ListArtists(ctx context.Context) ([]data.A
 }
 
 // Requires that all the artists and the venue already exist
-func (interactor *DatabaseRepository) AddEvent(ctx context.Context, event data.Event) error {
+func (interactor *DatabaseRepository) AddEvent(ctx context.Context, event data.Event) (string, error) {
 	log.Debug("Request to add event", event)
 	if !event.Populated() {
 		log.Debug("Skipping adding event because required fields are missing", event)
-		return errors.New("failed to create event due to empty fields")
+		return "", errors.New("failed to create event due to empty fields")
 	}
 
-	_, err := interactor.EventRepo.Add(ctx, event)
+	id, err := interactor.EventRepo.Add(ctx, event)
 	if err != nil {
 		log.Errorf("Error while adding event %v, %v\n", event, err)
-		return err
+		return "", err
 	}
-	return nil
+	return id, nil
 }
 
-// Creates event and also venue and artists if needed
-func (interactor *DatabaseRepository) AddEventRecursive(ctx context.Context, event data.Event) error {
-	log.Debug("Request to recursively add event", event)
-	if !event.Populated() {
-		log.Debug("Skipping adding event because required fields are missing", event)
-		return errors.New("all fields are required")
-	}
-
-	if err := interactor.AddVenue(ctx, event.Venue); err != nil {
-		log.Errorf("Failed to add venue %v while recursively adding event, %v\n", event.Venue, err)
-		return err
-	}
-	if event.MainAct.Populated() {
-		if err := interactor.AddArtist(ctx, event.MainAct); err != nil {
-			log.Errorf("Failed to add artist %v while recursively adding event, %v\n", event.MainAct, err)
-			return err
-		}
-	}
-	for _, opener := range event.Openers {
-		if err := interactor.AddArtist(ctx, opener); err != nil {
-			log.Errorf("Failed to add artist %v while recursively adding event, %v\n", event.MainAct, err)
-			return err
-		}
-	}
-
-	_, err := interactor.EventRepo.Add(ctx, event)
+func (interactor *DatabaseRepository) DeleteEvent(ctx context.Context, id string) error {
+	log.Debug("Request to delete event", id)
+    err := interactor.EventRepo.Delete(ctx, id)
 	if err != nil {
-		log.Errorf("Error while recursively adding event %v, %v\n", event, err)
-		return err
-	}
-	return nil
-}
-
-func (interactor *DatabaseRepository) DeleteEvent(ctx context.Context, event data.Event) error {
-	log.Debug("Request to delete event", event)
-    err := interactor.EventRepo.Delete(ctx, event)
-	if err != nil {
-		log.Errorf("Error while deleting event %v, %v\n", event, err)
+		log.Errorf("Error while deleting event %v, %v\n", id, err)
 		return err
 	}
 	return nil

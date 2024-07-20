@@ -1,6 +1,6 @@
 package screens
 
-import "concert-manager/ui/textui/output"
+import "concert-manager/ui/output"
 
 type Template struct {
 	nextScreen             Screen

@@ -11,14 +11,14 @@ import (
 
 type Database interface {
 	ListEvents(context.Context) ([]data.Event, error)
-	AddEventRecursive(context.Context, data.Event) error
-	DeleteEvent(context.Context, data.Event) error
+	AddEvent(context.Context, data.Event) (string, error)
+	DeleteEvent(context.Context, string) error
 	ListArtists(context.Context) ([]data.Artist, error)
-	AddArtist(context.Context, data.Artist) error
-	DeleteArtist(context.Context, data.Artist) error
+	AddArtist(context.Context, data.Artist) (string, error)
+	DeleteArtist(context.Context, string) error
 	ListVenues(context.Context) ([]data.Venue, error)
-	AddVenue(context.Context, data.Venue) error
-	DeleteVenue(context.Context, data.Venue) error
+	AddVenue(context.Context, data.Venue) (string, error)
+	DeleteVenue(context.Context, string) error
 }
 
 type SavedEventCache struct {
@@ -75,41 +75,53 @@ func (c SavedEventCache) GetPassedSavedEvents() []data.Event {
 	return passedEvents
 }
 
-func (c *SavedEventCache) AddSavedEvent(event data.Event) error {
-	if slices.ContainsFunc(c.savedEvents, event.Equals) {
+func (c *SavedEventCache) AddSavedEvent(event data.Event) (*data.Event, error) {
+	existingIdx := slices.IndexFunc(c.savedEvents, event.Equals)
+	if existingIdx >= 0 {
 		log.Debugf("Skipping adding event %v because it already existed in the cache", event)
-		return nil
+		existing := util.CloneEvent(c.savedEvents[existingIdx])
+		return &existing, nil
 	}
 	if event.MainAct.Populated() {
-		if err := c.AddArtist(event.MainAct); err != nil {
-			return err
+		artist, err := c.AddArtist(event.MainAct)
+		if err != nil {
+			return nil, err
 		}
+		event.MainAct.Id = artist.Id
 	}
-	for _, opener := range event.Openers {
-		if err := c.AddArtist(opener); err != nil {
-			return err
+	for i, opener := range event.Openers {
+		artist, err := c.AddArtist(opener)
+		if err != nil {
+			return nil, err
 		}
+		event.Openers[i].Id = artist.Id
 	}
-	if err := c.AddVenue(event.Venue); err != nil {
-		return err
+	venue, err := c.AddVenue(event.Venue)
+	if err != nil {
+		return nil, err
+	}
+	event.Venue.Id = venue.Id
+
+	id, err := c.Database.AddEvent(context.Background(), event)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := c.Database.AddEventRecursive(context.Background(), event); err != nil {
-		return err
-	}
-
+	event.Id = id
 	c.savedEvents = append(c.savedEvents, util.CloneEvent(event))
-	return nil
+	return &event, nil
 }
 
-func (c *SavedEventCache) DeleteSavedEvent(event data.Event) error {
-	eventIdx := slices.IndexFunc(c.savedEvents, event.Equals)
+func (c *SavedEventCache) DeleteSavedEvent(id string) error {
+	eventIdx := slices.IndexFunc(c.savedEvents, func(e data.Event) bool {
+		return e.Id == id
+	})
 	if eventIdx == -1 {
-		log.Errorf("Unable to find event %v when deleting from cache", event)
+		log.Errorf("Unable to find event %v when deleting from cache", id)
 		return errors.New("event is not cached")
 	}
 
-	if err := c.Database.DeleteEvent(context.Background(), event); err != nil {
+	if err := c.Database.DeleteEvent(context.Background(), id); err != nil {
 		return err
 	}
 
@@ -121,28 +133,34 @@ func (c SavedEventCache) GetArtists() []data.Artist {
 	return slices.Clone(c.artists)
 }
 
-func (c *SavedEventCache) AddArtist(artist data.Artist) error {
-	if slices.Contains(c.artists, artist) {
+func (c *SavedEventCache) AddArtist(artist data.Artist) (*data.Artist, error) {
+	existingIdx := slices.IndexFunc(c.artists, artist.Equals)
+	if existingIdx >= 0 {
+		existing := util.CloneArtist(c.artists[existingIdx])
 		log.Debugf("Skipping adding artist %v because it already existed in the cache", artist)
-		return nil
+		return &existing, nil
 	}
 
-	if err := c.Database.AddArtist(context.Background(), artist); err != nil {
-		return err
+	id, err := c.Database.AddArtist(context.Background(), artist)
+	if err != nil {
+		return nil, err
 	}
 
+	artist.Id = id
 	c.artists = append(c.artists, util.CloneArtist(artist))
-	return nil
+	return &artist, nil
 }
 
-func (c *SavedEventCache) DeleteArtist(artist data.Artist) error {
-	artistIdx := slices.Index(c.artists, artist)
+func (c *SavedEventCache) DeleteArtist(id string) error {
+	artistIdx := slices.IndexFunc(c.artists, func(a data.Artist) bool {
+		return a.Id == id
+	})
 	if artistIdx == -1 {
-		log.Errorf("Unable to find artist %v when deleting from cache", artist)
+		log.Errorf("Unable to find artist %v when deleting from cache", id)
 		return errors.New("artist is not cached")
 	}
 
-	if err := c.Database.DeleteArtist(context.Background(), artist); err != nil {
+	if err := c.Database.DeleteArtist(context.Background(), id); err != nil {
 		return err
 	}
 
@@ -154,28 +172,34 @@ func (c SavedEventCache) GetVenues() []data.Venue {
 	return util.CloneVenues(c.venues)
 }
 
-func (c *SavedEventCache) AddVenue(venue data.Venue) error {
-	if slices.Contains(c.venues, venue) {
+func (c *SavedEventCache) AddVenue(venue data.Venue) (*data.Venue, error) {
+	existingIdx := slices.IndexFunc(c.venues, venue.Equals)
+	if existingIdx >= 0 {
+		existing := util.CloneVenue(c.venues[existingIdx])
 		log.Debugf("Skipping adding venue %v because it already existed in the cache", venue)
-		return nil
+		return &existing, nil
 	}
 
-	if err := c.Database.AddVenue(context.Background(), venue); err != nil {
-		return err
+	id, err := c.Database.AddVenue(context.Background(), venue)
+	if err != nil {
+		return nil, err
 	}
 
+	venue.Id = id
 	c.venues = append(c.venues, util.CloneVenue(venue))
-	return nil
+	return &venue, nil
 }
 
-func (c *SavedEventCache) DeleteVenue(venue data.Venue) error {
-	venueIdx := slices.Index(c.venues, venue)
+func (c *SavedEventCache) DeleteVenue(id string) error {
+	venueIdx := slices.IndexFunc(c.venues, func(v data.Venue) bool {
+		return v.Id == id
+	})
 	if venueIdx == -1 {
-		log.Errorf("Unable to find venue %v when deleting from cache", venue)
+		log.Errorf("Unable to find venue %v when deleting from cache", id)
 		return errors.New("venue is not cached")
 	}
 
-	if err := c.Database.DeleteVenue(context.Background(), venue); err != nil {
+	if err := c.Database.DeleteVenue(context.Background(), id); err != nil {
 		return err
 	}
 

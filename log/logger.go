@@ -53,7 +53,7 @@ func Initialize() error {
 	}
 
 	if unsetLogLevel {
-		Info("Unexpected or missing value for LOG_LEVEL environment variable, defaulting to INFO level")
+		Info("Unexpected or missing value for CM_LOG_LEVEL environment variable, defaulting to INFO level")
 	}
 	Info("Successfully initialized logger with level", logLevels[logLevel])
 	return nil

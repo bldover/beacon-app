@@ -3,7 +3,7 @@ package input
 import (
 	"bufio"
 	"concert-manager/log"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/output"
 	"os"
 	"strconv"
 )

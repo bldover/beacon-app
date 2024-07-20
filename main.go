@@ -11,6 +11,8 @@ import (
 	"concert-manager/server"
 	"concert-manager/spotify"
 	"concert-manager/ui"
+	"os"
+	"slices"
 )
 
 func main() {
@@ -49,7 +51,19 @@ func main() {
 	upcomingCache.Ranker = eventRanker
 
 	loader := &loader.Loader{Cache: savedCache}
-	go server.StartServer(loader)
 
-	ui.StartUI("", savedCache, upcomingCache)
+	server := server.Server{}
+	server.Loader = loader
+	server.SavedEventCache = savedCache
+	server.ArtistCache = savedCache
+	server.VenueCache = savedCache
+	server.UpcomingEventsCache = upcomingCache
+	server.RecommendationCache = upcomingCache
+
+	if slices.Contains(os.Args, "--tui") {
+		go server.StartServer()
+		ui.Start(savedCache, upcomingCache)
+	} else {
+		server.StartServer()
+	}
 }

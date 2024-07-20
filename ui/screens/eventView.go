@@ -3,8 +3,8 @@ package screens
 import (
 	"concert-manager/data"
 	"concert-manager/log"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 	"fmt"
 	"math"
@@ -14,7 +14,7 @@ import (
 
 type eventViewCache interface {
 	GetSavedEvents() []data.Event
-	DeleteSavedEvent(data.Event) error
+	DeleteSavedEvent(string) error
 }
 
 type SavedEventViewer struct {
@@ -110,7 +110,7 @@ func (v *SavedEventViewer) NextScreen(i int) Screen {
 			Next:        v,
 			Options:     v.events[startIdx : endIdx],
 			HandleSelect: func(e data.Event) {
-				if err := v.Cache.DeleteSavedEvent(e); err != nil {
+				if err := v.Cache.DeleteSavedEvent(e.Id); err != nil {
 					output.Displayf("Failed to delete event: %v\n", err)
 				}
 			},

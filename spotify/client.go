@@ -78,9 +78,12 @@ func (c *Client) getPage(httpMethod string, reqEntity RequestEntity, response an
 	return nil
 }
 
+
 type errorResponse struct {
-    Status int `json:"Status"`
-	Message string `json:"Message"`
+	Error struct {
+		Status int `json:"Status"`
+		Message string `json:"Message"`
+	}
 }
 
 func (c *Client) call(req *http.Request) (*http.Response, error) {
@@ -90,8 +93,13 @@ func (c *Client) call(req *http.Request) (*http.Response, error) {
 
 	for retries < 3 {
 		authToken, err := c.auth.getAuthToken()
-		req.Header.Set("Authorization", authToken)
+		if err != nil {
+			log.Errorf("unable to retrieve auth token: %v", err)
+			retries++
+			continue
+		}
 
+		req.Header.Set("Authorization", authToken)
 		startTs := time.Now()
 		resp, err := http.DefaultClient.Do(req)
 		log.Debugf("Request response time: %v ms\n", time.Since(startTs).Milliseconds())
@@ -117,7 +125,7 @@ func (c *Client) call(req *http.Request) (*http.Response, error) {
 		case http.StatusTooManyRequests:
 			delay := getDelay(resp)
 			if delay > (30 * time.Second) {
-				log.Errorf("Spotify API returned high retry delay of %d, try again later", delay.Seconds())
+				log.Errorf("Spotify API returned high retry delay of %v, try again later", delay.Seconds())
 				return nil, errors.New("exceeded rate limit and retry delay too high")
 			}
 			log.Debugf("Waiting %v seconds before retrying", delay.Seconds())

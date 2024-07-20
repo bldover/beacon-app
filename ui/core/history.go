@@ -2,7 +2,7 @@ package core
 
 import (
 	"concert-manager/log"
-	"concert-manager/ui/textui/screens"
+	"concert-manager/ui/screens"
 	"slices"
 	"strings"
 )

@@ -3,14 +3,14 @@ package screens
 import (
 	"concert-manager/data"
 	"concert-manager/log"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 )
 
 type passedEventCache interface {
 	GetPassedSavedEvents() []data.Event
-	AddSavedEvent(data.Event) error
-	DeleteSavedEvent(data.Event) error
+	AddSavedEvent(data.Event) (*data.Event, error)
+	DeleteSavedEvent(string) error
 }
 
 type PassedEventManager struct {
@@ -67,11 +67,11 @@ func (m *PassedEventManager) NextScreen(i int) Screen {
 		}
 
 		m.currentEvent.Purchased = true
-		if err := m.Cache.DeleteSavedEvent(m.currentEvent); err != nil {
+		if err := m.Cache.DeleteSavedEvent(m.currentEvent.Id); err != nil {
 			log.Error("Failed to delete passed event:", err)
 			output.Displayln("Failed to update event")
 		}
-		if err := m.Cache.AddSavedEvent(m.currentEvent); err != nil {
+		if _, err := m.Cache.AddSavedEvent(m.currentEvent); err != nil {
 			log.Error("Failed to add passed event after delete:", err)
 			output.Displayln("Failed to update event")
 		}
@@ -84,7 +84,7 @@ func (m *PassedEventManager) NextScreen(i int) Screen {
 		}
 
 		m.AddEventScreen.WithBeforeSaveAction(func() error {
-			if err := m.Cache.DeleteSavedEvent(m.currentEvent); err != nil {
+			if err := m.Cache.DeleteSavedEvent(m.currentEvent.Id); err != nil {
 				return err
 			}
 			m.passedEvents = m.passedEvents[:len(m.passedEvents)-1]
@@ -100,7 +100,7 @@ func (m *PassedEventManager) NextScreen(i int) Screen {
 			return m
 		}
 
-		if err := m.Cache.DeleteSavedEvent(m.currentEvent); err != nil {
+		if err := m.Cache.DeleteSavedEvent(m.currentEvent.Id); err != nil {
 			log.Error("Failed to delete passed event:", err)
 			output.Displayln("Failed to update event")
 		}

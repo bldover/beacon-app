@@ -1,61 +1,88 @@
 package server
 
 import (
+	"concert-manager/cache"
+	"concert-manager/data"
 	"concert-manager/log"
 	"context"
-	"fmt"
+	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 )
 
-const port = ":3001"
-const maxFileSizeBytes = 100000
+type Server struct {
+    Loader loader
+	SavedEventCache savedEventCache
+	ArtistCache artistCache
+	VenueCache venueCache
+	UpcomingEventsCache upcomingEventsCache
+	RecommendationCache recommendationCache
+}
 
-func StartServer(l Loader) {
-	http.Handle("/upload", &uploadHandler{l})
-	http.Handle("/test", &testHandler{})
+type loader interface {
+    Upload(context.Context, io.ReadCloser) (int, error)
+}
+
+type savedEventCache interface {
+    GetSavedEvents() []data.Event
+	GetPassedSavedEvents() []data.Event
+	AddSavedEvent(data.Event) (*data.Event, error)
+	DeleteSavedEvent(string) error
+}
+
+type artistCache interface {
+    GetArtists() []data.Artist
+	AddArtist(data.Artist) (*data.Artist, error)
+	DeleteArtist(string) error
+}
+
+type venueCache interface {
+    GetVenues() []data.Venue
+	AddVenue(data.Venue) (*data.Venue, error)
+	DeleteVenue(string) error
+}
+
+type upcomingEventsCache interface {
+    GetUpcomingEvents() []data.EventDetails
+	ChangeLocation(string, string)
+	GetLocation() cache.Location
+}
+
+type recommendationCache interface {
+    GetRecommendedEvents(cache.Threshold) []data.EventRank
+}
+
+const port = ":3001"
+
+func (s *Server) StartServer() {
+	http.HandleFunc("/v1/upload", s.handleRequest(s.handleUpload))
+	http.HandleFunc("/v1/events/upcoming", s.handleRequest(s.getUpcomingEvents))
+	http.HandleFunc("/v1/events/recommended", s.handleRequest(s.getRecommendations))
+	http.HandleFunc("/v1/events/saved", s.handleRequest(s.handleSavedEvents))
+	http.HandleFunc("/v1/venues", s.handleRequest(s.handleVenues))
+	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
 //	http.Handle("/spotify/callback", &spotify.SpotifyAuthHandler{})
+
 	log.Info("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(port, nil))
 }
 
-type Loader interface {
-    Upload(context.Context, io.ReadCloser) (int, error)
-}
+type handlerFunc func(http.ResponseWriter, *http.Request) (any, int, error)
 
-type uploadHandler struct {
-	loader Loader
-}
-
-func (handler *uploadHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
+func (s *Server) handleRequest(f handlerFunc) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := time.Now().Nanosecond()
+		log.Infof("Received request (%s) %s, assigned ID: %d", r.Method, r.URL, id)
+		startTs := time.Now()
+		body, status, err := f(w, r)
+		if err != nil {
+			log.Errorf("Error processing request ID %d: %v", id, err)
+			http.Error(w, err.Error(), status)
+		}
+		if body != nil {
+			json.NewEncoder(w).Encode(body)
+		}
+		log.Infof("Finished processing request ID %d in %v ms", id, time.Since(startTs).Milliseconds())
 	}
-
-	file, _, err := r.FormFile("file")
-	if err != nil {
-		errMsg := fmt.Sprintf("Error while parsing request file %v", err)
-		log.Error(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
-	}
-
-	log.Info("Received upload request")
-
-    rows, err := handler.loader.Upload(r.Context(), file)
-
-	if err != nil {
-		errMsg := fmt.Sprintf("Error occurred during upload processing: %v", err)
-		log.Error(errMsg)
-		http.Error(w, errMsg, http.StatusBadRequest)
-		return
-	}
-	successMsg := fmt.Sprintf("Successfully uploaded %d rows", rows)
-	log.Info("Finished processing upload request")
-	fmt.Fprintln(w, successMsg)
-}
-
-type testHandler struct {}
-
-func (h *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 }

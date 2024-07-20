@@ -2,8 +2,8 @@ package screens
 
 import (
 	"concert-manager/data"
-	"concert-manager/ui/textui/input"
-	"concert-manager/ui/textui/output"
+	"concert-manager/ui/input"
+	"concert-manager/ui/output"
 	"concert-manager/util"
 	"fmt"
 	"math"
@@ -12,7 +12,7 @@ import (
 )
 
 type eventSearchResultCache interface {
-	DeleteSavedEvent(data.Event) error
+	DeleteSavedEvent(string) error
 }
 
 type EventSearchResult struct {
@@ -101,7 +101,7 @@ func (s *EventSearchResult) NextScreen(i int) Screen {
 			Next:        s,
 			Options:     s.Events[startIdx : endIdx],
 			HandleSelect: func(e data.Event) {
-				if err := s.Cache.DeleteSavedEvent(e); err != nil {
+				if err := s.Cache.DeleteSavedEvent(e.Id); err != nil {
 					output.Displayf("Failed to delete event: %v\n", err)
 				}
 				s.Events = slices.DeleteFunc(s.Events, e.Equals)
