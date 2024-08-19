@@ -1,16 +1,6 @@
 package com.bldover.beacon.ui.components
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FiniteAnimationSpec
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -58,7 +48,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.bldover.beacon.ui.theme.BeaconTheme
@@ -67,6 +56,7 @@ import com.bldover.beacon.ui.theme.BeaconTheme
 @Composable
 fun BasicSearchBar (
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     hint: String = "Search",
     onSearch: (String) -> Unit = {},
     shape: Shape = SearchBarDefaults.dockedShape,
@@ -87,6 +77,7 @@ fun BasicSearchBar (
             active = false
             onSearch(it)
         },
+        enabled = enabled,
         active = active,
         onActiveChange = {active = it},
         modifier = modifier,

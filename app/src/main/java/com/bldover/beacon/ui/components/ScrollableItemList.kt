@@ -9,17 +9,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun <T> ScrollableItemCardList(
+fun <T> ScrollableItemList(
     items: List<T>,
     modifier: Modifier = Modifier,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(16.dp),
-    createItem: @Composable (T) -> Unit = { }
+    getItemKey: ((T) -> (String))? = null,
+    createItem: @Composable (T) -> Unit = {}
 ) {
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        verticalArrangement = verticalArrangement
+        verticalArrangement = verticalArrangement,
     ) {
-        this.items(items = items) { item: T ->
+        this.items(
+            items = items,
+            key = getItemKey?.let { getKey -> { item: T -> getKey(item) } }
+        ) { item: T ->
             createItem(item)
         }
     }

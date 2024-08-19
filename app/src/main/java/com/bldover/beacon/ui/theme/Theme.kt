@@ -7,7 +7,12 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.bldover.beacon.data.model.ColorScheme
+import com.bldover.beacon.ui.screens.utility.SettingsState
+import com.bldover.beacon.ui.screens.utility.UserSettingsViewModel
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -87,20 +92,38 @@ private val darkScheme = darkColorScheme(
 
 @Composable
 fun BeaconTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    userSettingsViewModel: UserSettingsViewModel = hiltViewModel(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-  val colorScheme = when {
-      dynamicColor && darkTheme -> dynamicDarkColorScheme(LocalContext.current)
-      dynamicColor && !darkTheme -> dynamicLightColorScheme(LocalContext.current)
-      darkTheme -> darkScheme
-      else -> lightScheme
-  }
+    var colorSchemeSetting = when (val settings = userSettingsViewModel.userSettings.collectAsState().value) {
+        is SettingsState.Loading -> {
+            ColorScheme.SYSTEM_DEFAULT
+        }
+        is SettingsState.Success -> {
+            settings.data.colorScheme
+        }
+    }
+    if (colorSchemeSetting == ColorScheme.SYSTEM_DEFAULT) {
+        colorSchemeSetting = when (isSystemInDarkTheme()) {
+            true -> ColorScheme.DARK_MODE
+            false -> ColorScheme.LIGHT_MODE
+        }
+    }
 
-  MaterialTheme(
-    colorScheme = colorScheme,
-    typography = BeaconTypography,
-    content = content
-  )
+    val colorScheme = when {
+        dynamicColor && colorSchemeSetting == ColorScheme.DARK_MODE -> dynamicDarkColorScheme(LocalContext.current)
+        dynamicColor && colorSchemeSetting == ColorScheme.LIGHT_MODE -> dynamicLightColorScheme(LocalContext.current)
+        colorSchemeSetting == ColorScheme.DARK_MODE -> darkScheme
+        colorSchemeSetting == ColorScheme.LIGHT_MODE -> lightScheme
+        else -> {
+            throw IllegalArgumentException("Impossible branch when finding color scheme")
+        }
+    }
+
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = BeaconTypography,
+        content = content
+    )
 }

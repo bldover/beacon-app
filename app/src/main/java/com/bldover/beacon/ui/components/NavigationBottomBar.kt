@@ -1,14 +1,14 @@
 package com.bldover.beacon.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.DateRange
-import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Icon
@@ -16,74 +16,79 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.tooling.preview.Preview
-import com.bldover.beacon.ActiveScreen
-import com.bldover.beacon.ui.theme.BeaconTheme
+import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.bldover.beacon.data.model.Screen
 
 @Composable
-fun NavigationBottomBar(
-    activeScreen: ActiveScreen,
-    changeScreen: (ActiveScreen) -> Unit
-) {
+fun NavigationBottomBar(navController: NavController) {
+    val activeScreen = Screen.fromOrDefault(navController.currentBackStackEntryAsState().value?.destination?.route)
     BottomAppBar {
         NavigationBar {
             NavigationItem(
-                navItemScreen = ActiveScreen.CONCERT_HISTORY,
-                activeScreen = activeScreen,
-                changeScreen = changeScreen,
-                selectedIcon = Icons.Filled.Favorite,
-                unselectedIcon = Icons.Outlined.FavoriteBorder
-            )
+                label = "Planner",
+                isSelected = Screen.CONCERT_PLANNER == activeScreen,
+                selectedIcon = Icons.Filled.Edit,
+                unselectedIcon = Icons.Outlined.Edit,
+            ) {
+                navigateAndPopAll(navController, Screen.CONCERT_PLANNER)
+            }
             NavigationItem(
-                navItemScreen = ActiveScreen.UPCOMING_EVENTS,
-                activeScreen = activeScreen,
-                changeScreen = changeScreen,
+                label = "Upcoming",
+                isSelected = Screen.UPCOMING_EVENTS == activeScreen,
                 selectedIcon = Icons.Filled.DateRange,
-                unselectedIcon = Icons.Outlined.DateRange
-            )
+                unselectedIcon = Icons.Outlined.DateRange,
+            ) {
+                navigateAndPopAll(navController, Screen.UPCOMING_EVENTS)
+            }
             NavigationItem(
-                navItemScreen = ActiveScreen.UTILITIES,
-                activeScreen = activeScreen,
-                changeScreen = changeScreen,
+                label = "History",
+                isSelected = Screen.CONCERT_HISTORY == activeScreen,
+                selectedIcon = Icons.Filled.Favorite,
+                unselectedIcon = Icons.Outlined.FavoriteBorder,
+            ) {
+                navigateAndPopAll(navController, Screen.CONCERT_HISTORY)
+            }
+            NavigationItem(
+                label = "Utilities",
+                isSelected = Screen.UTILITIES == activeScreen,
                 selectedIcon = Icons.Filled.Build,
                 unselectedIcon = Icons.Outlined.Build
-            )
+            ) {
+                navigateAndPopAll(navController, Screen.UTILITIES)
+            }
         }
+    }
+}
+
+fun navigateAndPopAll(
+    navController: NavController,
+    screen: Screen
+) {
+    navController.navigate(screen.name) {
+        popUpTo(navController.graph.startDestinationId)
+        launchSingleTop = true
     }
 }
 
 @Composable
 fun RowScope.NavigationItem(
-    navItemScreen: ActiveScreen,
-    activeScreen: ActiveScreen,
-    changeScreen: (ActiveScreen) -> Unit,
+    label: String,
+    isSelected: Boolean,
     selectedIcon: ImageVector,
-    unselectedIcon: ImageVector
+    unselectedIcon: ImageVector,
+    onClick: () -> Unit
 ) {
-    val isSelected = activeScreen == navItemScreen
     NavigationBarItem(
         selected = isSelected,
-        onClick = { changeScreen(navItemScreen) },
-        label = { Text(navItemScreen.shortDesc) },
+        onClick = { if (!isSelected) onClick() },
+        label = { Text(label) },
         icon = {
             Icon(
                 imageVector = if (isSelected) selectedIcon else unselectedIcon,
-                contentDescription = "${navItemScreen.title} Screen Switch"
+                contentDescription = "$label Screen Switch"
             )
         }
     )
-}
-
-@Preview
-@Composable
-fun NavigationBottomBarPreview(
-    activeScreen: ActiveScreen = ActiveScreen.CONCERT_HISTORY
-) {
-    BeaconTheme(darkTheme = true, dynamicColor = true) {
-        NavigationBottomBar(activeScreen) {}
-    }
 }

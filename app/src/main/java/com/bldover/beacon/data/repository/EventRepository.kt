@@ -1,0 +1,41 @@
+package com.bldover.beacon.data.repository
+
+import com.bldover.beacon.data.api.EventApi
+import com.bldover.beacon.data.model.Event
+import com.bldover.beacon.data.model.EventDetail
+import com.bldover.beacon.data.model.Recommendation
+import java.time.LocalDate
+
+interface EventRepository {
+    suspend fun getPastSavedEvents(): List<Event>
+    suspend fun getFutureSavedEvents(): List<Event>
+    suspend fun getUpcomingEvents(): List<EventDetail>
+    suspend fun getRecommendedEvents(threshold: Boolean): List<Recommendation>
+}
+
+class EventRepositoryImpl(private val eventApi: EventApi): EventRepository {
+
+    override suspend fun getPastSavedEvents(): List<Event> {
+        return eventApi.getSavedEvents()
+            .map { Event(it) }
+            .filter { LocalDate.now().isAfter(it.date) }
+            .toList()
+    }
+
+    override suspend fun getFutureSavedEvents(): List<Event> {
+        return eventApi.getSavedEvents()
+            .map { Event(it) }
+            .filter { LocalDate.now().isBefore(it.date) || LocalDate.now().isEqual(it.date) }
+            .toList()
+    }
+
+    override suspend fun getUpcomingEvents(): List<EventDetail> {
+        return eventApi.getUpcomingEvents()
+            .map { EventDetail(it) }
+            .toList()
+    }
+
+    override suspend fun getRecommendedEvents(threshold: Boolean): List<Recommendation> {
+        return eventApi.getRecommendations(threshold)
+    }
+}
