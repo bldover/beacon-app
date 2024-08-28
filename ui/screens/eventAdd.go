@@ -14,22 +14,22 @@ type eventAddCache interface {
 }
 
 type artistEditor interface {
-    Screen
+	Screen
 	SetArtist(*data.Artist)
 }
 
 type venueEditor interface {
-    Screen
+	Screen
 	SetVenue(*data.Venue)
 }
 
 type EventAdder struct {
-	newEvent      data.Event
-	dateType      dateType
-	ArtistEditor  artistEditor
-	VenueEditor   venueEditor
-	Cache         eventAddCache
-	actions       []string
+	newEvent         data.Event
+	dateType         dateType
+	ArtistEditor     artistEditor
+	VenueEditor      venueEditor
+	Cache            eventAddCache
+	actions          []string
 	beforeSaveAction extraAction
 }
 
@@ -71,7 +71,7 @@ func NewEventAddScreen() *EventAdder {
 }
 
 func (a *EventAdder) WithBeforeSaveAction(action extraAction) {
-    a.beforeSaveAction = action
+	a.beforeSaveAction = action
 }
 
 func (a EventAdder) Title() string {
@@ -110,12 +110,12 @@ func (a *EventAdder) NextScreen(i int) Screen {
 	case removeOpener:
 		selectScreen := &Selector[data.Artist]{
 			ScreenTitle: "Remove Opener",
-			Next: a,
-			Options: a.newEvent.Openers,
+			Next:        a,
+			Options:     a.newEvent.Openers,
 			HandleSelect: func(artist data.Artist) {
 				a.newEvent.Openers = slices.DeleteFunc(a.newEvent.Openers, artist.Equals)
 			},
-			Formatter: util.FormatArtist,
+			Formatter: util.FormatArtists,
 		}
 		return selectScreen
 	case editVenue:

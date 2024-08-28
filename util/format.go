@@ -9,12 +9,15 @@ import (
 	"strings"
 )
 
-func FormatArtist(artists []data.Artist) []string {
+func FormatArtist(artist data.Artist) string {
 	artistFmt := "%s - %s"
+    return fmt.Sprintf(artistFmt, artist.Name, artist.Genre)
+}
+
+func FormatArtists(artists []data.Artist) []string {
     formattedArtists := []string{}
 	for _, artist := range artists {
-		formattedArtist := fmt.Sprintf(artistFmt, artist.Name, artist.Genre)
-		formattedArtists = append(formattedArtists, formattedArtist)
+		formattedArtists = append(formattedArtists, FormatArtist(artist))
 	}
 	return formattedArtists
 }
@@ -24,12 +27,15 @@ func FormatArtistExpanded(artist data.Artist) string {
 	return fmt.Sprintf(artistFmt, artist.Name, artist.Genre)
 }
 
-func FormatVenue(venues []data.Venue) []string {
-	venueFmt := "%s - %s, %s"
+func FormatVenue(venue data.Venue) string {
+    venueFmt := "%s - %s, %s"
+	return fmt.Sprintf(venueFmt, venue.Name, venue.City, venue.State)
+}
+
+func FormatVenues(venues []data.Venue) []string {
     formattedVenues := []string{}
 	for _, venue := range venues {
-		formattedVenue := fmt.Sprintf(venueFmt, venue.Name, venue.City, venue.State)
-		formattedVenues = append(formattedVenues, formattedVenue)
+		formattedVenues = append(formattedVenues, FormatVenue(venue))
 	}
 	return formattedVenues
 }
@@ -110,38 +116,39 @@ func FormatEventsShort(events []data.Event) []string {
 
 func FormatEventExpanded(e data.Event) string {
 	eventFmt := "%s\n%s\n%s\n%s\n%s\n"
-	mainActFmt := "Main Act: %+v"
+	mainActFmt := "Main Act: %s"
 	mainActNaFmt := "Main Act: N/A"
-	openerFmt := "Openers: %s"
-	openerNaFmt := "Openers: N/A"
-	venueFmt := "Venue: %+v"
+	openerFmt := "Openers:  %s"
+	openerNaFmt := "Openers:  N/A"
+	venueFmt := "Venue: %s"
 	venueNaFmt := "Venue: N/A"
 	dateFmt := "Date: %s"
 	dateNaFmt := "Date: N/A"
 	purchasedFmt := "Purchased: %v"
 
 	mainAct := mainActNaFmt
-	if e.MainAct.Populated() {
-		mainAct = fmt.Sprintf(mainActFmt, e.MainAct)
+	if e.MainAct.Name != "" {
+		mainAct = fmt.Sprintf(mainActFmt, FormatArtist(e.MainAct))
 	}
 
 	openers := openerNaFmt
 	if len(e.Openers) == 1 {
-		opener := fmt.Sprintf("%+v", e.Openers[0])
+		opener := FormatArtist(e.Openers[0])
 		openers = fmt.Sprintf(openerFmt, opener)
 	} else if len(e.Openers) > 1 {
 		allOpeners := strings.Builder{}
-		allOpeners.WriteString(fmt.Sprintf("%+v", e.Openers[0]))
+		opener := FormatArtist(e.Openers[0])
+		allOpeners.WriteString(opener)
 		for _, op := range e.Openers[1:] {
-			allOpeners.WriteString("\n         ")
-			allOpeners.WriteString(fmt.Sprintf("%+v", op))
+			opener := FormatArtist(op)
+			allOpeners.WriteString("\n          " + opener)
 		}
 		openers = fmt.Sprintf(openerFmt, allOpeners.String())
 	}
 
 	venue := venueNaFmt
 	if e.Venue.Populated() {
-		venue = fmt.Sprintf(venueFmt, e.Venue)
+		venue = fmt.Sprintf(venueFmt, FormatVenueExpanded(e.Venue))
 	}
 
 	date := dateNaFmt

@@ -72,7 +72,17 @@ func (s *Server) handleSavedEvents(w http.ResponseWriter, r *http.Request) (any,
 	switch r.Method {
     case http.MethodGet:
 		events := s.SavedEventCache.GetSavedEvents()
-		return events, 0, nil
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			return events, 0, nil
+		}
+		for _, event := range events {
+			if event.Id == id {
+				return []data.Event{event}, 0, nil
+			}
+		}
+		errMsg := fmt.Sprintf("event with ID %s not found", id)
+		return nil, http.StatusNotFound, errors.New(errMsg)
 	case http.MethodPost:
 		var event data.Event
 		if err := json.NewDecoder(r.Body).Decode(&event); err != nil {

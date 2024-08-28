@@ -65,7 +65,7 @@ func (e *VenueEditor) NextScreen(i int) Screen {
 			HandleSelect: func(v data.Venue) {
 				*e.venue = v
 			},
-			Formatter: util.FormatVenue,
+			Formatter: util.FormatVenues,
 		}
 		return selectScreen
 	case setVenueName:

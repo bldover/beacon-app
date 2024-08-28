@@ -63,7 +63,7 @@ func (e *Editor) NextScreen(i int) Screen {
 			HandleSelect: func(v data.Artist) {
 				*e.artist = v
 			},
-			Formatter: util.FormatArtist,
+			Formatter: util.FormatArtists,
 		}
 		return selectScreen
 	case setArtistName:
