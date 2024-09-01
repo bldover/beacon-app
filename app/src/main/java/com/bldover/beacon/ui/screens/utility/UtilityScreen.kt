@@ -15,18 +15,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
+import com.bldover.beacon.ui.components.common.ScreenFrame
+import com.bldover.beacon.ui.components.common.TitleTopBar
 import timber.log.Timber
 
 @Composable
 fun UtilityScreen(navController: NavController) {
-    Timber.d("Composing utility screen")
-    LazyColumn(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+    Timber.d("composing UtilityScreen")
+    ScreenFrame(
+        topBar = { TitleTopBar(title = "Utilities") }
     ) {
-        item {
-            UtilityItem(text = "Settings") {
-                navController.navigate(Screen.USER_SETTINGS.name)
+        LazyColumn(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            item {
+                UtilityItem(text = "Settings") {
+                    navController.navigate(Screen.USER_SETTINGS.name)
+                }
             }
         }
     }

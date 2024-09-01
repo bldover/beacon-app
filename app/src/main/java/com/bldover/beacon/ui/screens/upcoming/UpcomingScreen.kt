@@ -1,57 +1,82 @@
 package com.bldover.beacon.ui.screens.upcoming
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.bldover.beacon.ui.components.BasicSearchBar
-import com.bldover.beacon.ui.components.EventDetailCard
-import com.bldover.beacon.ui.components.LoadErrorMessage
-import com.bldover.beacon.ui.components.LoadingSpinner
-import com.bldover.beacon.ui.components.ScrollableItemList
+import androidx.navigation.NavController
+import com.bldover.beacon.data.model.Screen
+import com.bldover.beacon.ui.components.common.BasicSearchBar
+import com.bldover.beacon.ui.components.common.LoadErrorMessage
+import com.bldover.beacon.ui.components.common.LoadingSpinner
+import com.bldover.beacon.ui.components.common.RefreshButton
+import com.bldover.beacon.ui.components.common.ScreenFrame
+import com.bldover.beacon.ui.components.common.ScrollableItemList
+import com.bldover.beacon.ui.components.common.TitleTopBar
+import timber.log.Timber
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpcomingScreen(
-    upcomingViewModel: UpcomingViewModel = hiltViewModel()
+    navController: NavController,
+    upcomingEventsViewModel: UpcomingEventsViewModel = hiltViewModel()
 ) {
-    val plannerState = upcomingViewModel.uiState.collectAsState()
+    Timber.d("composing UpcomingScreen")
+    ScreenFrame(
+        topBar = {
+            TitleTopBar(
+                title = Screen.UPCOMING_EVENTS.title,
+                trailingIcon = { RefreshButton { upcomingEventsViewModel.loadData() } }
+            )
+        }
+    ) {
+        UpcomingEventList(upcomingEventsViewModel)
+    }
+}
+
+@Composable
+fun UpcomingEventList(
+    upcomingEventsViewModel: UpcomingEventsViewModel
+) {
+    LaunchedEffect(true) {
+        upcomingEventsViewModel.resetFilter()
+    }
+    val upcomingState = upcomingEventsViewModel.upcomingEventsState.collectAsState()
     Scaffold(
         topBar = {
             BasicSearchBar(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = plannerState.value is UiState.Success
+                enabled = upcomingState.value is UpcomingEventsState.Success
             ) {
-                upcomingViewModel.handleEvent(UiEvent.ApplySearchFilter(it))
+                upcomingEventsViewModel.applyFilter(it)
             }
         }
     ) { innerPadding ->
         Column {
             Spacer(modifier = Modifier.height(16.dp))
-            when (plannerState.value) {
-                is UiState.Success -> {
+            when (upcomingState.value) {
+                is UpcomingEventsState.Success -> {
                     ScrollableItemList(
-                        items = (plannerState.value as UiState.Success).filtered,
+                        items = (upcomingState.value as UpcomingEventsState.Success).filtered,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        EventDetailCard(it)
+                        UpcomingEventCard(
+                            event = it,
+                            onClick = { /* TODO */ }
+                        )
                     }
                 }
-
-                is UiState.Error -> {
+                is UpcomingEventsState.Error -> {
                     LoadErrorMessage()
                 }
-
-                is UiState.Loading -> {
+                is UpcomingEventsState.Loading -> {
                     LoadingSpinner()
                 }
             }

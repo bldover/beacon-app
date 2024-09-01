@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 sealed class SettingsState {
@@ -31,15 +32,35 @@ class UserSettingsViewModel @Inject constructor(
             initialValue = SettingsState.Loading
         )
 
-    fun updateColorScheme(colorScheme: ColorScheme) {
+    fun updateColorScheme(
+        colorScheme: ColorScheme,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
-            userSettingsRepository.updateColorScheme(colorScheme)
+            try {
+                userSettingsRepository.updateColorScheme(colorScheme)
+                onSuccess()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to update color scheme $colorScheme")
+                onError("Error updating color scheme, try again later")
+            }
         }
     }
 
-    fun updateStartScreen(startScreen: Screen) {
+    fun updateStartScreen(
+        startScreen: Screen,
+        onSuccess: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
         viewModelScope.launch {
-            userSettingsRepository.updateStartScreen(startScreen.name)
+            try {
+                userSettingsRepository.updateStartScreen(startScreen.name)
+                onSuccess()
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to update start screen $startScreen")
+                onError("Error updating start screen, try again later")
+            }
         }
     }
 }

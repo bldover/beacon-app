@@ -1,16 +1,14 @@
 package com.bldover.beacon.data.model
 
+import com.bldover.beacon.data.util.dateFormatter
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
-private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("M/d/yyyy")
 
 data class Event(
-    val id: String,
-    val artists: List<Artist>,
-    val venue: Venue,
-    val date: LocalDate,
-    val purchased: Boolean
+    var id: String? = null,
+    var artists: List<Artist>,
+    var venue: Venue,
+    var date: LocalDate,
+    var purchased: Boolean
 ) {
     constructor(event: RawEvent) : this(
         id = event.id,
@@ -20,5 +18,17 @@ data class Event(
         purchased = event.purchased
     )
 
+    constructor(eventDetail: EventDetail) : this(
+        id = eventDetail.id,
+        artists = eventDetail.artists,
+        venue = eventDetail.venue,
+        date = eventDetail.date,
+        purchased = eventDetail.purchased
+    )
+
     fun hasMatch(term: String): Boolean = artists.any { it.name.contains(term, ignoreCase = true) }
+
+    fun isPopulated(): Boolean {
+        return artists.isNotEmpty() && artists.all { it.isPopulated() } && venue.isPopulated()
+    }
 }

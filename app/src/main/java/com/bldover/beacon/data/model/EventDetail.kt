@@ -1,9 +1,7 @@
 package com.bldover.beacon.data.model
 
+import com.bldover.beacon.data.util.dateFormatter
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-
-private val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("M/d/yyyy")
 
 data class EventDetail(
     val id: String,

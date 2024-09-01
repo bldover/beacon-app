@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.components
+package com.bldover.beacon.ui.components.common
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

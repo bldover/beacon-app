@@ -1,10 +1,10 @@
 package com.bldover.beacon.data.model
 
 data class Artist(
-    val id: String,
-    val name: String,
-    val genre: String,
-    val headliner: Boolean = false
+    var id: String? = null,
+    var name: String,
+    var genre: String,
+    var headliner: Boolean = false
 ) {
     constructor(artist: RawArtist, headliner: Boolean = false) : this(
         id = artist.id,
@@ -12,4 +12,12 @@ data class Artist(
         genre = artist.genre,
         headliner = headliner
     )
+
+    fun hasMatch(searchTerm: String): Boolean {
+        return name.contains(searchTerm, ignoreCase = true)
+    }
+
+    fun isPopulated(): Boolean {
+        return name.isNotEmpty() && genre.isNotEmpty()
+    }
 }

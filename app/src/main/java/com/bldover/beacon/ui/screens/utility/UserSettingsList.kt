@@ -26,14 +26,36 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import com.bldover.beacon.data.model.ColorScheme
 import com.bldover.beacon.data.model.Screen
-import com.bldover.beacon.ui.components.LoadingSpinner
+import com.bldover.beacon.ui.components.common.BackButton
+import com.bldover.beacon.ui.components.common.LoadingSpinner
+import com.bldover.beacon.ui.components.common.ScreenFrame
+import com.bldover.beacon.ui.components.common.TitleTopBar
+import timber.log.Timber
+
+@Composable
+fun UserSettingsScreen(
+    navController: NavController,
+    userSettingsViewModel: UserSettingsViewModel
+) {
+    Timber.d("composing UserSettingsScreen")
+    ScreenFrame(
+        topBar = {
+            TitleTopBar(
+                title = "Settings",
+                leadingIcon = { BackButton(navController) }
+            )
+        }
+    ) {
+        UserSettingsList(userSettingsViewModel)
+    }
+}
 
 @Composable
 fun UserSettingsList(
-    userSettingsViewModel: UserSettingsViewModel = hiltViewModel()
+    userSettingsViewModel: UserSettingsViewModel
 ) {
     when (val settings = userSettingsViewModel.userSettings.collectAsState().value) {
         is SettingsState.Loading -> {

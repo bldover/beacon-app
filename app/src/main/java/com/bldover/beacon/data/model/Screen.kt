@@ -1,14 +1,14 @@
 package com.bldover.beacon.data.model
 
-enum class Screen(val title: String, val subScreen: Boolean = false) {
+enum class Screen(val title: String) {
     CONCERT_PLANNER("Planner"),
-    PLANNER_DETAIL("Event Detail"),
     CONCERT_HISTORY("Concert History"),
-    HISTORY_DETAIL("Event Detail"),
     UPCOMING_EVENTS("Upcoming Events"),
-    UPCOMING_DETAIL("Event Detail"),
     UTILITIES("Utilities"),
-    USER_SETTINGS("User Settings", true);
+    USER_SETTINGS("User Settings"),
+    EDIT_EVENT("Edit Event"),
+    SELECT_VENUE("Select Venue"),
+    SELECT_ARTIST("Select Artist");
 
     companion object {
         fun fromTitle(title: String): Screen {

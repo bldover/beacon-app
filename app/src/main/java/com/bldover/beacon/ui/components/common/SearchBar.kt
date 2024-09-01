@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.components
+package com.bldover.beacon.ui.components.common
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -50,21 +50,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.bldover.beacon.ui.theme.BeaconTheme
+import timber.log.Timber
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BasicSearchBar (
+fun BasicSearchBar(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     hint: String = "Search",
     onSearch: (String) -> Unit = {},
     shape: Shape = SearchBarDefaults.dockedShape,
-    colors: SearchBarColors = SearchBarDefaults.colors(),
-    tonalElevation: Dp = SearchBarDefaults.TonalElevation,
-    shadowElevation: Dp = SearchBarDefaults.ShadowElevation,
     onQueryChange: (String) -> Unit,
 ) {
+    Timber.d("composing basic search bar")
     var query by remember { mutableStateOf("") }
     var active by remember { mutableStateOf(false) }
     SimpleSearchBar(
@@ -101,10 +99,7 @@ fun BasicSearchBar (
                 )
             }
         },
-        shape = shape,
-        colors = colors,
-        tonalElevation = tonalElevation,
-        shadowElevation = shadowElevation
+        shape = shape
     )
 }
 
@@ -136,6 +131,105 @@ private fun SimpleSearchBar(
         contentColor = contentColorFor(colors.containerColor),
         tonalElevation = tonalElevation,
         shadowElevation = shadowElevation,
+        modifier = modifier
+            .zIndex(1f)
+            .width(360.dp)
+    ) {
+        Column {
+            SimpleSearchBarInputField(
+                query = query,
+                onQueryChange = onQueryChange,
+                onSearch = onSearch,
+                active = active,
+                onActiveChange = onActiveChange,
+                enabled = enabled,
+                placeholder = placeholder,
+                leadingIcon = leadingIcon,
+                trailingIcon = trailingIcon,
+                colors = colors.inputFieldColors,
+                interactionSource = interactionSource,
+            )
+        }
+    }
+
+    val isFocused = interactionSource.collectIsFocusedAsState().value
+    val shouldClearFocus = !active && isFocused
+    LaunchedEffect(active) {
+        if (shouldClearFocus) focusManager.clearFocus()
+    }
+
+    BackHandler(enabled = active) {
+        onActiveChange(false)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun OutlinedSearchBar(
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    hint: String = "Search",
+    onSearch: (String) -> Unit = {},
+    onQueryChange: (String) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    var active by remember { mutableStateOf(false) }
+    SimpleOutlinedSearchBar(
+        query = query,
+        onQueryChange = {
+            query = it
+            onQueryChange(it)
+        },
+        onSearch = {
+            active = false
+            onSearch(it)
+        },
+        enabled = enabled,
+        active = active,
+        onActiveChange = {active = it},
+        placeholder = { Text(hint) },
+        leadingIcon = { Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = "Search Icon"
+        )},
+        trailingIcon = {
+            if (active) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Clear Search Icon",
+                    modifier = Modifier.clickable {
+                        if (query.isNotEmpty()) {
+                            query = ""
+                            onQueryChange("")
+                        }
+                        else active = false
+                    }
+                )
+            }
+        },
+        modifier = modifier
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SimpleOutlinedSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit,
+    active: Boolean,
+    onActiveChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    placeholder: @Composable (() -> Unit)? = null,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    colors: SearchBarColors = SearchBarDefaults.colors(),
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() }
+) {
+    val focusManager = LocalFocusManager.current
+
+    Box(
         modifier = modifier
             .zIndex(1f)
             .width(360.dp)
@@ -235,11 +329,8 @@ private fun SimpleSearchBarInputField(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun Preview() {
-    BeaconTheme {
-        BasicSearchBar{}
-    }
+    OutlinedSearchBar{}
 }

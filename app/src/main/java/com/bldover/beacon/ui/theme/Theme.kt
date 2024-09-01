@@ -115,10 +115,7 @@ fun BeaconTheme(
         dynamicColor && colorSchemeSetting == ColorScheme.DARK_MODE -> dynamicDarkColorScheme(LocalContext.current)
         dynamicColor && colorSchemeSetting == ColorScheme.LIGHT_MODE -> dynamicLightColorScheme(LocalContext.current)
         colorSchemeSetting == ColorScheme.DARK_MODE -> darkScheme
-        colorSchemeSetting == ColorScheme.LIGHT_MODE -> lightScheme
-        else -> {
-            throw IllegalArgumentException("Impossible branch when finding color scheme")
-        }
+        else -> lightScheme
     }
 
     MaterialTheme(

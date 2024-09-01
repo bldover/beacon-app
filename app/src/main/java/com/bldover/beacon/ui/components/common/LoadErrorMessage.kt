@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.components
+package com.bldover.beacon.ui.components.common
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
