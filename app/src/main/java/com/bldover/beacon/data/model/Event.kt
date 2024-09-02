@@ -8,14 +8,16 @@ data class Event(
     var artists: List<Artist>,
     var venue: Venue,
     var date: LocalDate,
-    var purchased: Boolean
+    var purchased: Boolean,
+    val ticketmasterId: String? = null
 ) {
     constructor(event: RawEvent) : this(
         id = event.id,
         artists = event.artists,
         venue = event.venue,
         date = LocalDate.parse(event.date, dateFormatter),
-        purchased = event.purchased
+        purchased = event.purchased,
+        ticketmasterId = event.tmId.ifBlank { null }
     )
 
     constructor(eventDetail: EventDetail) : this(
@@ -23,7 +25,8 @@ data class Event(
         artists = eventDetail.artists,
         venue = eventDetail.venue,
         date = eventDetail.date,
-        purchased = eventDetail.purchased
+        purchased = eventDetail.purchased,
+        ticketmasterId = eventDetail.ticketmasterId
     )
 
     fun hasMatch(term: String): Boolean = artists.any { it.name.contains(term, ignoreCase = true) }

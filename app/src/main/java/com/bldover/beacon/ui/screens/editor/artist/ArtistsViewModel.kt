@@ -76,37 +76,35 @@ class ArtistsViewModel @Inject constructor(
 
     fun addArtist(
         artist: Artist,
-        onSuccess: () -> Unit = {},
+        onSuccess: (Artist) -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
             try {
-                artistRepository.addArtist(artist)
+                val createdArtist = artistRepository.addArtist(artist)
+                onSuccess(createdArtist)
+                loadArtists()
             } catch (e: Exception) {
                 Timber.e(e,"Failed to add artist $artist")
                 onError("Error saving artist ${artist.name}, try again later")
-                return@launch
             }
-            onSuccess()
-            loadArtists()
         }
     }
 
     fun updateArtist(
         artist: Artist,
-        onSuccess: () -> Unit = {},
+        onSuccess: (Artist) -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
             try {
-                artistRepository.updateArtist(artist)
+                val createdArtist = artistRepository.updateArtist(artist)
+                onSuccess(createdArtist)
+                loadArtists()
             } catch (e: Exception) {
                 Timber.e(e,"Failed to update artist $artist")
                 onError("Error saving artist ${artist.name}, try again later")
-                return@launch
             }
-            onSuccess()
-            loadArtists()
         }
     }
 
@@ -118,13 +116,12 @@ class ArtistsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 artistRepository.deleteArtist(artist)
+                onSuccess()
+                loadArtists()
             } catch (e: Exception) {
                 Timber.e(e, "Failed to delete artist $artist")
                 onError("Error deleting artist ${artist.name}, try again later")
-                return@launch
             }
-            onSuccess()
-            loadArtists()
         }
     }
 }

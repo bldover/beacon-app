@@ -37,6 +37,7 @@ import timber.log.Timber
 fun VenueSelectorScreen(
     navController: NavController,
     venueSelectorViewModel: VenueSelectorViewModel,
+    venueCreatorViewModel: VenueCreatorViewModel,
     venuesViewModel: VenuesViewModel = hiltViewModel()
 ) {
     Timber.d("composing VenueSelectorScreen")
@@ -55,7 +56,16 @@ fun VenueSelectorScreen(
             venueState = venueState,
             navController = navController,
             onSearchVenues = venuesViewModel::applyFilter,
-            onVenueSelected = venueSelectorViewModel::selectVenue
+            onVenueSelected = venueSelectorViewModel::selectVenue,
+            onNewVenue = {
+                venueCreatorViewModel.launchCreator(
+                    navController = navController,
+                    onSave = {
+                        venueSelectorViewModel.selectVenue(it)
+                        navController.popBackStack()
+                    }
+                )
+            }
         )
     }
 }
@@ -65,7 +75,8 @@ private fun VenueSelectorContent(
     venueState: VenueState,
     navController: NavController,
     onSearchVenues: (String) -> Unit,
-    onVenueSelected: (Venue) -> Unit
+    onVenueSelected: (Venue) -> Unit,
+    onNewVenue: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -79,7 +90,7 @@ private fun VenueSelectorContent(
         Column(modifier = Modifier.padding(innerPadding)) {
             Spacer(modifier = Modifier.height(16.dp))
             when (venueState) {
-                is VenueState.Success -> VenueList(venueState.filtered, navController, onVenueSelected)
+                is VenueState.Success -> VenueList(venueState.filtered, navController, onVenueSelected, onNewVenue)
                 is VenueState.Error -> LoadErrorMessage()
                 is VenueState.Loading -> LoadingSpinner()
             }
@@ -91,11 +102,12 @@ private fun VenueSelectorContent(
 private fun VenueList(
     venues: List<Venue>,
     navController: NavController,
-    onVenueSelected: (Venue) -> Unit
+    onVenueSelected: (Venue) -> Unit,
+    onNewVenue: () -> Unit
 ) {
     ScrollableItemList(
         items = venues,
-        topAnchor = { NewVenueCard() },
+        topAnchor = { NewVenueCard(onNewVenue) },
         getItemKey = { it.id!! }
     ) { venue ->
         VenueCard(
@@ -109,9 +121,11 @@ private fun VenueList(
 }
 
 @Composable
-private fun NewVenueCard() {
+private fun NewVenueCard(
+    onClick: () -> Unit
+) {
     BasicCard(
-        modifier = Modifier.clickable { /* TODO: new venue */ }
+        modifier = Modifier.clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

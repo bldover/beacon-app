@@ -11,7 +11,6 @@ interface VenueApi {
 
     @GET("v1/venues")
     suspend fun getVenues(): List<Venue>
-
     @POST("v1/venues")
     suspend fun addVenue(@Body venue: Venue): Venue
 

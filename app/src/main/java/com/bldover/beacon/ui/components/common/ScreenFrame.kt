@@ -11,14 +11,10 @@ import timber.log.Timber
 @Composable
 fun ScreenFrame(
     topBar: @Composable () -> Unit = {},
-    snackbarHost: @Composable () -> Unit = {},
     content: @Composable () -> Unit
 ) {
     Timber.d("composing ScreenFrame")
-    Scaffold(
-        topBar = topBar,
-        snackbarHost = snackbarHost
-    ) { innerPadding ->
+    Scaffold(topBar = topBar) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp)) {
                 content()

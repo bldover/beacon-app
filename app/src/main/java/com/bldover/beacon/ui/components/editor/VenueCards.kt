@@ -7,10 +7,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Venue
 import com.bldover.beacon.ui.components.common.BasicCard
-import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
 import timber.log.Timber
 
 @Composable
@@ -37,15 +35,11 @@ fun VenueCard(
 @Composable
 fun VenueEditCard(
     venue: Venue,
-    navController: NavController,
-    onChange: (Venue) -> Unit,
-    venueSelectorViewModel: VenueSelectorViewModel
+    onClick: () -> Unit = {}
 ) {
     Timber.d("composing VenueEditCard : $venue")
     BasicCard(
-        modifier = Modifier.clickable {
-            venueSelectorViewModel.launchSelector(navController) { onChange(it) }
-        }
+        modifier = Modifier.clickable { onClick() }
     ) {
         SummaryLine(label = "Venue") {
             Text(

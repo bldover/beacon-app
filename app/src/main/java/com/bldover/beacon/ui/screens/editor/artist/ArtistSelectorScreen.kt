@@ -37,6 +37,7 @@ import timber.log.Timber
 fun ArtistSelectorScreen(
     navController: NavController,
     artistSelectorViewModel: ArtistSelectorViewModel,
+    artistCreatorViewModel: ArtistCreatorViewModel,
     artistsViewModel: ArtistsViewModel = hiltViewModel()
 ) {
     Timber.d("composing ArtistSelectorScreen")
@@ -55,7 +56,16 @@ fun ArtistSelectorScreen(
             artistState = artistState,
             navController = navController,
             onSearchArtists = artistsViewModel::applyFilter,
-            onArtistSelected = artistSelectorViewModel::selectArtist
+            onArtistSelected = artistSelectorViewModel::selectArtist,
+            onNewArtist = {
+                artistCreatorViewModel.launchCreator(
+                    navController = navController,
+                    onSave = {
+                        artistSelectorViewModel.selectArtist(it)
+                        navController.popBackStack()
+                    }
+                )
+            }
         )
     }
 }
@@ -65,7 +75,8 @@ private fun ArtistSelectorContent(
     artistState: ArtistState,
     navController: NavController,
     onSearchArtists: (String) -> Unit,
-    onArtistSelected: (Artist) -> Unit
+    onArtistSelected: (Artist) -> Unit,
+    onNewArtist: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -79,7 +90,7 @@ private fun ArtistSelectorContent(
         Column(modifier = Modifier.padding(innerPadding)) {
             Spacer(modifier = Modifier.height(16.dp))
             when (artistState) {
-                is ArtistState.Success -> ArtistList(artistState.filtered, navController, onArtistSelected)
+                is ArtistState.Success -> ArtistList(artistState.filtered, navController, onArtistSelected, onNewArtist)
                 is ArtistState.Error -> LoadErrorMessage()
                 is ArtistState.Loading -> LoadingSpinner()
             }
@@ -91,11 +102,12 @@ private fun ArtistSelectorContent(
 private fun ArtistList(
     artists: List<Artist>,
     navController: NavController,
-    onArtistSelected: (Artist) -> Unit
+    onArtistSelected: (Artist) -> Unit,
+    onNewArtist: () -> Unit
 ) {
     ScrollableItemList(
         items = artists,
-        topAnchor = { NewArtistCard() },
+        topAnchor = { NewArtistCard(onNewArtist) },
         getItemKey = { it.id!! }
     ) { artist ->
         ArtistDetailsCard(
@@ -109,9 +121,11 @@ private fun ArtistList(
 }
 
 @Composable
-private fun NewArtistCard() {
+private fun NewArtistCard(
+    onNewArtist: () -> Unit
+) {
     BasicCard(
-        modifier = Modifier.clickable { /* TODO: new artist */ }
+        modifier = Modifier.clickable { onNewArtist() }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

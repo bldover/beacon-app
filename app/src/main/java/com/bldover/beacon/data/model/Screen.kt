@@ -8,7 +8,9 @@ enum class Screen(val title: String) {
     USER_SETTINGS("User Settings"),
     EDIT_EVENT("Edit Event"),
     SELECT_VENUE("Select Venue"),
-    SELECT_ARTIST("Select Artist");
+    SELECT_ARTIST("Select Artist"),
+    CREATE_VENUE("Create Venue"),
+    CREATE_ARTIST("Create Artist");
 
     companion object {
         fun fromTitle(title: String): Screen {

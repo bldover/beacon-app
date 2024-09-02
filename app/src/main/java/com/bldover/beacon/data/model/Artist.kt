@@ -7,7 +7,7 @@ data class Artist(
     var headliner: Boolean = false
 ) {
     constructor(artist: RawArtist, headliner: Boolean = false) : this(
-        id = artist.id,
+        id = artist.id.ifBlank { null },
         name = artist.name,
         genre = artist.genre,
         headliner = headliner

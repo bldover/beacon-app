@@ -10,7 +10,8 @@ data class EventDetail(
     val venue: Venue,
     val date: LocalDate,
     val purchased: Boolean,
-    val price: Float?
+    val price: Float?,
+    val ticketmasterId: String? = null
 ) {
     constructor(event: RawEventDetail) : this(
         id = event.event.id,
@@ -19,8 +20,20 @@ data class EventDetail(
         venue = event.event.venue,
         date = LocalDate.parse(event.event.date, dateFormatter),
         purchased = event.event.purchased,
-        price = event.price.toFloatOrNull()
+        price = event.price.toFloatOrNull(),
+        ticketmasterId = event.event.tmId.ifBlank { null }
     )
+
+    fun asEvent(): Event {
+        return Event(
+            id = id,
+            artists = artists,
+            venue = venue,
+            date = date,
+            purchased = purchased,
+            ticketmasterId = ticketmasterId
+        )
+    }
 
     fun hasMatch(term: String): Boolean = artists.any { it.name.contains(term, ignoreCase = true) }
 

@@ -14,9 +14,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.bldover.beacon.data.model.Event
 import com.bldover.beacon.data.model.Screen
+import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.AddButton
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
@@ -26,13 +27,15 @@ import com.bldover.beacon.ui.components.common.SavedEventCard
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.ScrollableItemList
 import com.bldover.beacon.ui.components.common.TitleTopBar
+import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
 import timber.log.Timber
-import java.util.UUID
 
 @Composable
 fun HistoryScreen(
     navController: NavController,
-    savedEventsViewModel: SavedEventsViewModel = hiltViewModel()
+    snackbarState: SnackbarState,
+    savedEventsViewModel: SavedEventsViewModel,
+    eventEditorViewModel: EventEditorViewModel
 ) {
     Timber.d("composing HistoryScreen")
     ScreenFrame(
@@ -42,7 +45,9 @@ fun HistoryScreen(
                 trailingIcon = {
                     TopBarIcons(
                         navController = navController,
-                        savedEventsViewModel = savedEventsViewModel
+                        snackbarState = snackbarState,
+                        savedEventsViewModel = savedEventsViewModel,
+                        eventEditorViewModel = eventEditorViewModel
                     )
                 }
             )
@@ -51,7 +56,9 @@ fun HistoryScreen(
         SavedEventsList(
             history = true,
             navController = navController,
-            savedEventsViewModel = savedEventsViewModel
+            snackbarState = snackbarState,
+            savedEventsViewModel = savedEventsViewModel,
+            eventEditorViewModel = eventEditorViewModel
         )
     }
 }
@@ -59,7 +66,9 @@ fun HistoryScreen(
 @Composable
 fun PlannerScreen(
     navController: NavController,
-    savedEventsViewModel: SavedEventsViewModel = hiltViewModel()
+    snackbarState: SnackbarState,
+    savedEventsViewModel: SavedEventsViewModel,
+    eventEditorViewModel: EventEditorViewModel
 ) {
     Timber.d("composing PlannerScreen")
     ScreenFrame(
@@ -69,7 +78,9 @@ fun PlannerScreen(
                 trailingIcon = {
                     TopBarIcons(
                         navController = navController,
-                        savedEventsViewModel = savedEventsViewModel
+                        snackbarState = snackbarState,
+                        savedEventsViewModel = savedEventsViewModel,
+                        eventEditorViewModel = eventEditorViewModel
                     )
                 }
             )
@@ -78,7 +89,9 @@ fun PlannerScreen(
         SavedEventsList(
             history = false,
             navController = navController,
-            savedEventsViewModel = savedEventsViewModel
+            snackbarState = snackbarState,
+            savedEventsViewModel = savedEventsViewModel,
+            eventEditorViewModel = eventEditorViewModel
         )
     }
 }
@@ -86,12 +99,25 @@ fun PlannerScreen(
 @Composable
 fun TopBarIcons(
     navController: NavController,
-    savedEventsViewModel: SavedEventsViewModel
+    snackbarState: SnackbarState,
+    savedEventsViewModel: SavedEventsViewModel,
+    eventEditorViewModel: EventEditorViewModel
 ) {
     Row {
         AddButton {
-            val uuid = UUID.randomUUID().toString()
-            navController.navigate("${Screen.EDIT_EVENT.name}/$uuid/ ")
+            eventEditorViewModel.launchEditor(
+                navController = navController,
+                onSave = {
+                    savedEventsViewModel.addEvent(
+                        it,
+                        onSuccess = {
+                            navController.popBackStack()
+                            snackbarState.showSnackbar("Event saved")
+                        },
+                        onError = { msg -> snackbarState.showSnackbar(msg) }
+                    )
+                }
+            )
         }
         Spacer(modifier = Modifier.padding(2.dp))
         RefreshButton { savedEventsViewModel.loadData() }
@@ -102,17 +128,16 @@ fun TopBarIcons(
 fun SavedEventsList(
     history: Boolean,
     navController: NavController,
-    savedEventsViewModel: SavedEventsViewModel
+    snackbarState: SnackbarState,
+    savedEventsViewModel: SavedEventsViewModel,
+    eventEditorViewModel: EventEditorViewModel
 ) {
     LaunchedEffect(history) {
         if (history) savedEventsViewModel.resetPastEventFilter() else savedEventsViewModel.resetFutureEventFilter()
     }
-
     val eventsState = remember(history) {
         if (history) savedEventsViewModel.pastEventsState else savedEventsViewModel.futureEventsState
     }.collectAsState()
-
-    Timber.d("composing SavedEventsList : history=$history")
 
     Scaffold(
         topBar = {
@@ -129,15 +154,35 @@ fun SavedEventsList(
             )
         }
     ) { innerPadding ->
-        Timber.d("composing SavedEventsList - content")
         Box(modifier = Modifier.padding(innerPadding)) {
             SavedEventsListContent(
                 eventsState = eventsState.value,
-                onEventClick = remember(navController) {
-                    { eventId ->
-                        val uuid = UUID.randomUUID().toString()
-                        navController.navigate("${Screen.EDIT_EVENT.name}/$uuid/$eventId")
-                    }
+                highlightPurchased = !history,
+                onEventClick = {
+                    eventEditorViewModel.launchEditor(
+                        navController = navController,
+                        eventId = it,
+                        onSave = { event: Event ->
+                            savedEventsViewModel.updateEvent(
+                                event = event,
+                                onSuccess = {
+                                    navController.popBackStack()
+                                    snackbarState.showSnackbar("Event saved")
+                                },
+                                onError = { msg -> snackbarState.showSnackbar(msg) }
+                            )
+                        },
+                        onDelete = { event: Event ->
+                            savedEventsViewModel.deleteEvent(
+                                event = event,
+                                onSuccess = {
+                                        navController.popBackStack()
+                                        snackbarState.showSnackbar("Event deleted")
+                                },
+                                onError = { msg -> snackbarState.showSnackbar(msg) }
+                            )
+                        }
+                    )
                 }
             )
         }
@@ -147,29 +192,28 @@ fun SavedEventsList(
 @Composable
 private fun SavedEventsListContent(
     eventsState: SavedEventsState,
+    highlightPurchased: Boolean,
     onEventClick: (String) -> Unit
 ) {
     Column {
         Spacer(modifier = Modifier.height(16.dp))
         when (eventsState) {
             is SavedEventsState.Success -> {
-                Timber.d("composing SavedEventsList - content - success")
                 ScrollableItemList(
                     items = eventsState.filtered,
                     getItemKey = { it.id!! }
                 ) { event ->
                     SavedEventCard(
                         event = event,
+                        highlighted = highlightPurchased && event.purchased,
                         onClick = { onEventClick(event.id!!) }
                     )
                 }
             }
             is SavedEventsState.Error -> {
-                Timber.d("composing SavedEventsList - content - error")
                 LoadErrorMessage()
             }
             is SavedEventsState.Loading -> {
-                Timber.d("composing SavedEventsList - content - loading")
                 LoadingSpinner()
             }
         }

@@ -11,9 +11,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.bldover.beacon.data.model.Event
 import com.bldover.beacon.data.model.Screen
+import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
 import com.bldover.beacon.ui.components.common.LoadingSpinner
@@ -21,12 +22,18 @@ import com.bldover.beacon.ui.components.common.RefreshButton
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.ScrollableItemList
 import com.bldover.beacon.ui.components.common.TitleTopBar
+import com.bldover.beacon.ui.components.common.UpcomingEventCard
+import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
+import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import timber.log.Timber
 
 @Composable
 fun UpcomingScreen(
     navController: NavController,
-    upcomingEventsViewModel: UpcomingEventsViewModel = hiltViewModel()
+    snackbarState: SnackbarState,
+    eventEditorViewModel: EventEditorViewModel,
+    savedEventsViewModel: SavedEventsViewModel,
+    upcomingEventsViewModel: UpcomingEventsViewModel
 ) {
     Timber.d("composing UpcomingScreen")
     ScreenFrame(
@@ -37,12 +44,22 @@ fun UpcomingScreen(
             )
         }
     ) {
-        UpcomingEventList(upcomingEventsViewModel)
+        UpcomingEventList(
+            navController = navController,
+            snackbarState = snackbarState,
+            eventEditorViewModel = eventEditorViewModel,
+            savedEventsViewModel = savedEventsViewModel,
+            upcomingEventsViewModel = upcomingEventsViewModel
+        )
     }
 }
 
 @Composable
 fun UpcomingEventList(
+    navController: NavController,
+    snackbarState: SnackbarState,
+    eventEditorViewModel: EventEditorViewModel,
+    savedEventsViewModel: SavedEventsViewModel,
     upcomingEventsViewModel: UpcomingEventsViewModel
 ) {
     LaunchedEffect(true) {
@@ -67,9 +84,26 @@ fun UpcomingEventList(
                         items = (upcomingState.value as UpcomingEventsState.Success).filtered,
                         modifier = Modifier.padding(innerPadding)
                     ) {
+                        val isSaved = savedEventsViewModel.isSaved(it.asEvent())
                         UpcomingEventCard(
                             event = it,
-                            onClick = { /* TODO */ }
+                            highlighted = isSaved,
+                            onClick = {
+                                eventEditorViewModel.launchEditor(
+                                    navController = navController,
+                                    event = it.asEvent(),
+                                    onSave = { event: Event ->
+                                        savedEventsViewModel.addEvent(
+                                            event = event,
+                                            onSuccess = {
+                                                navController.popBackStack()
+                                                snackbarState.showSnackbar("Event saved")
+                                            },
+                                            onError = { msg -> snackbarState.showSnackbar(msg) }
+                                        )
+                                    }
+                                )
+                            }
                         )
                     }
                 }
