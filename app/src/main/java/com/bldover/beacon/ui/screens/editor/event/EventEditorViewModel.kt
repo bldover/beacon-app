@@ -7,8 +7,11 @@ import com.bldover.beacon.data.model.Artist
 import com.bldover.beacon.data.model.Event
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.repository.ArtistRepository
 import com.bldover.beacon.data.repository.EventRepository
+import com.bldover.beacon.data.repository.VenueRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,7 +28,9 @@ sealed class EventEditorState {
 
 @HiltViewModel
 class EventEditorViewModel @Inject constructor(
-    private val eventRepository: EventRepository
+    private val eventRepository: EventRepository,
+    private val artistRepository: ArtistRepository,
+    private val venueRepository: VenueRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventEditorState>(EventEditorState.Loading)
@@ -65,7 +70,15 @@ class EventEditorViewModel @Inject constructor(
         event: Event,
         onSave: (Event) -> Unit
     ) {
-        _uiState.value = EventEditorState.Success(event)
+        viewModelScope.launch {
+            val deferredArtists = async { artistRepository.getArtists() }
+            val deferredVenue = async { venueRepository.getVenues() }
+            val savedArtists = deferredArtists.await()
+            val savedVenues = deferredVenue.await()
+            event.artists = replaceArtistsWithSaved(event.artists, savedArtists)
+            event.venue = replaceVenueWithSaved(event.venue, savedVenues)
+            _uiState.value = EventEditorState.Success(event)
+        }
         this.onSave = onSave
         this.onDelete = {}
         this.showDelete = false
@@ -87,13 +100,33 @@ class EventEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = EventEditorState.Loading
             try {
-                val event = eventRepository.getEvent(eventId)
+                val eventReq = async { eventRepository.getEvent(eventId) }
+                val deferredArtists = async { artistRepository.getArtists() }
+                val deferredVenues = async { venueRepository.getVenues() }
+                val event = eventReq.await()
+                val savedArtists = deferredArtists.await()
+                val savedVenues = deferredVenues.await()
+                event.artists = replaceArtistsWithSaved(event.artists, savedArtists)
+                event.venue = replaceVenueWithSaved(event.venue, savedVenues)
                 _uiState.value = EventEditorState.Success(event.copy())
             } catch (e: Exception) {
                 Timber.e(e,"Failed to load event $eventId")
                 _uiState.value = EventEditorState.Error("Failed to load event")
             }
         }
+    }
+
+    private fun replaceArtistsWithSaved(artists: List<Artist>, savedArtists: List<Artist>): List<Artist> {
+        return artists.map { artist ->
+            val saved = savedArtists.find { it.name == artist.name }
+            saved?.let {
+                it.headliner = artist.headliner
+                it
+            } ?: artist }
+    }
+
+    private fun replaceVenueWithSaved(venue: Venue, savedVenues: List<Venue>): Venue {
+        return savedVenues.find { it.name == venue.name && it.city == venue.city} ?: venue
     }
 
     fun updateHeadliner(headliner: Artist?) {

@@ -6,6 +6,13 @@ data class Venue(
     var city: String,
     var state: String
 ) {
+    constructor(venue: RawVenue) : this(
+        id = venue.id.ifBlank { null },
+        name = venue.name,
+        city = venue.city,
+        state = venue.state
+    )
+
     fun hasMatch(searchTerm: String): Boolean {
         return name.contains(searchTerm, ignoreCase = true)
     }

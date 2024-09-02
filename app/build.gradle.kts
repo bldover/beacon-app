@@ -10,7 +10,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.bldover.beacon"
+        applicationId = "com.bldover.beacon.dev"
         minSdk = 34
         targetSdk = 34
         versionCode = 1

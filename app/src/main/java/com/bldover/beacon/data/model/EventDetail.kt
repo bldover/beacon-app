@@ -17,7 +17,7 @@ data class EventDetail(
         id = event.event.id,
         name = event.name,
         artists = event.event.artists,
-        venue = event.event.venue,
+        venue = Venue(event.event.venue),
         date = LocalDate.parse(event.event.date, dateFormatter),
         purchased = event.event.purchased,
         price = event.price.toFloatOrNull(),

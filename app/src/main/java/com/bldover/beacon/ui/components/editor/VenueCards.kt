@@ -1,5 +1,6 @@
 package com.bldover.beacon.ui.components.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -7,6 +8,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import com.bldover.beacon.data.model.Venue
 import com.bldover.beacon.ui.components.common.BasicCard
 import timber.log.Timber
@@ -39,7 +41,8 @@ fun VenueEditCard(
 ) {
     Timber.d("composing VenueEditCard : $venue")
     BasicCard(
-        modifier = Modifier.clickable { onClick() }
+        modifier = Modifier.clickable { onClick() },
+        border = if (venue.id != null) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null
     ) {
         SummaryLine(label = "Venue") {
             Text(

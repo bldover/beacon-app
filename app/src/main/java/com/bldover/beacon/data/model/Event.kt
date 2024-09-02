@@ -14,7 +14,7 @@ data class Event(
     constructor(event: RawEvent) : this(
         id = event.id,
         artists = event.artists,
-        venue = event.venue,
+        venue = Venue(event.venue),
         date = LocalDate.parse(event.date, dateFormatter),
         purchased = event.purchased,
         ticketmasterId = event.tmId.ifBlank { null }

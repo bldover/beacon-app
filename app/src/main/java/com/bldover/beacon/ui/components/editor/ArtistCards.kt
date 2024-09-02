@@ -1,22 +1,33 @@
 package com.bldover.beacon.ui.components.editor
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Artist
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.BasicOutlinedCard
 import com.bldover.beacon.ui.components.common.DismissableCard
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
+
+@Composable
+fun accentOutlinedCardColors(): CardColors {
+    return CardDefaults.outlinedCardColors(
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+    )
+}
 
 @Composable
 fun ArtistDetailsCard(
@@ -64,11 +75,17 @@ fun SwipableArtistEditCard(
             }
         }
     ) {
-        DismissableCard(onDismiss = { onSwipe(artist) }) {
+        DismissableCard(
+            onDismiss = { onSwipe(artist) },
+            border = if (artist.id != null) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null,
+        ) {
             SummaryLine(label = artistType.label) {
                 Text(
-                    text = artist.name,
-                    textAlign = TextAlign.End
+                    text = artist.name
+                )
+                Text(
+                    text = artist.genre,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
         }

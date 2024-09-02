@@ -68,15 +68,17 @@ fun UpcomingEventCard(
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            val artistsName = if (event.artists.isNotEmpty()) {
-                event.artists.joinToString { it.name }
-            } else {
-                event.name
-            }
+            val artists = event.artists.joinToString { it.name }
             Text(
-                text = artistsName,
+                text = artists,
                 style = MaterialTheme.typography.bodyLarge
             )
+            if (event.name.isNotBlank() && event.name != event.artists.first().name) {
+                Text(
+                    text = event.name,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
             Text(
                 text = event.date.format(DateTimeFormatter.ISO_DATE),
                 style = MaterialTheme.typography.bodySmall

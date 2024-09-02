@@ -6,7 +6,7 @@ data class RawEvent(
     val id: String,
     val mainAct: RawArtist?,
     val openers: List<RawArtist>,
-    val venue: Venue,
+    val venue: RawVenue,
     val date: String,
     val purchased: Boolean,
     val tmId: String
@@ -15,7 +15,7 @@ data class RawEvent(
         id = event.id ?: "",
         mainAct = event.artists.find { it.headliner }?.let { RawArtist(it) },
         openers = event.artists.filter { !it.headliner }.map { RawArtist(it) },
-        venue = event.venue,
+        venue = RawVenue(event.venue),
         date = event.date.format(dateFormatter),
         purchased = event.purchased,
         tmId = event.ticketmasterId ?: ""
@@ -25,7 +25,7 @@ data class RawEvent(
         id = eventDetail.id,
         mainAct = eventDetail.artists.find { it.headliner }?.let { RawArtist(it) },
         openers = eventDetail.artists.filter { !it.headliner }.map { RawArtist(it) },
-        venue = eventDetail.venue,
+        venue = RawVenue(eventDetail.venue),
         date = eventDetail.date.format(dateFormatter),
         purchased = eventDetail.purchased,
         tmId = eventDetail.ticketmasterId ?: ""

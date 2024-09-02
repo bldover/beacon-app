@@ -1,6 +1,7 @@
 package com.bldover.beacon.ui.components.common
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -24,10 +25,12 @@ import androidx.compose.ui.unit.dp
 fun BasicCard(
     modifier: Modifier = Modifier,
     colors: CardColors = CardDefaults.cardColors(),
+    border: BorderStroke? = null,
     content: @Composable () -> Unit
 ) {
     Card(
         colors = colors,
+        border = border
     ) {
         Column(
             modifier = modifier
@@ -89,6 +92,8 @@ fun ExpandableCard(
 fun DismissableCard(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
+    colors: CardColors = CardDefaults.cardColors(),
+    border: BorderStroke? = null,
     content: @Composable () -> Unit
 ) {
     val dismissState = rememberSwipeToDismissBoxState(
@@ -105,6 +110,8 @@ fun DismissableCard(
     ) {
         BasicCard(
             modifier = modifier,
+            colors = colors,
+            border = border,
             content = content
         )
     }
