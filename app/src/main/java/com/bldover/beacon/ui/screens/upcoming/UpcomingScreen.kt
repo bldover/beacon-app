@@ -18,6 +18,7 @@ import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
 import com.bldover.beacon.ui.components.common.LoadingSpinner
+import com.bldover.beacon.ui.components.common.RecommendationSelectionBar
 import com.bldover.beacon.ui.components.common.RefreshButton
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.ScrollableItemList
@@ -68,11 +69,17 @@ fun UpcomingEventList(
     val upcomingState = upcomingEventsViewModel.upcomingEventsState.collectAsState()
     Scaffold(
         topBar = {
-            BasicSearchBar(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = upcomingState.value is UpcomingEventsState.Success
-            ) {
-                upcomingEventsViewModel.applyFilter(it)
+            Column {
+                BasicSearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = upcomingState.value is UpcomingEventsState.Success
+                ) {
+                    upcomingEventsViewModel.applyFilter(it)
+                }
+                RecommendationSelectionBar(
+                    state = upcomingEventsViewModel.filterState.collectAsState().value,
+                    onChange = { upcomingEventsViewModel.changeRecommendationThreshold(it) }
+                )
             }
         }
     ) { innerPadding ->
@@ -84,10 +91,9 @@ fun UpcomingEventList(
                         items = (upcomingState.value as UpcomingEventsState.Success).filtered,
                         modifier = Modifier.padding(innerPadding)
                     ) {
-                        val isSaved = savedEventsViewModel.isSaved(it.asEvent())
                         UpcomingEventCard(
                             event = it,
-                            highlighted = isSaved,
+                            accented = savedEventsViewModel.isSaved(it.asEvent()),
                             onClick = {
                                 eventEditorViewModel.launchEditor(
                                     navController = navController,

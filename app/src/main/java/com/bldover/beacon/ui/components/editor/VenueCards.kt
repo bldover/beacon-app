@@ -7,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bldover.beacon.data.model.Venue
 import com.bldover.beacon.ui.components.common.BasicCard
@@ -46,8 +45,11 @@ fun VenueEditCard(
     ) {
         SummaryLine(label = "Venue") {
             Text(
-                text = venue.name,
-                textAlign = TextAlign.End
+                text = venue.name
+            )
+            Text(
+                text = "${venue.city}, ${venue.state}",
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

@@ -19,11 +19,11 @@ class ArtistCreatorViewModel @Inject constructor() : ViewModel() {
 
     fun launchCreator(
         navController: NavController,
+        artist: Artist? = null,
         onSave: (Artist) -> Unit,
-        name: String = "",
     ) {
         this.onSave = onSave
-        _artistState.value = Artist(name = name, genre = "")
+        _artistState.value = artist?.copy() ?: Artist(name = "", genre = "")
         navController.navigate(Screen.CREATE_ARTIST.name)
     }
 

@@ -11,7 +11,9 @@ data class EventDetail(
     val date: LocalDate,
     val purchased: Boolean,
     val price: Float?,
-    val ticketmasterId: String? = null
+    val ticketmasterId: String? = null,
+    val rank: Float? = null,
+    val artistRanks: List<ArtistRank>? = null
 ) {
     constructor(event: RawEventDetail) : this(
         id = event.event.id,
@@ -22,6 +24,19 @@ data class EventDetail(
         purchased = event.event.purchased,
         price = event.price.toFloatOrNull(),
         ticketmasterId = event.event.tmId.ifBlank { null }
+    )
+
+    constructor(event: RawEventRank) : this(
+        id = event.event.event.id,
+        name = event.event.name,
+        artists = event.event.event.artists,
+        venue = Venue(event.event.event.venue),
+        date = LocalDate.parse(event.event.event.date, dateFormatter),
+        purchased = event.event.event.purchased,
+        price = event.event.price.toFloatOrNull(),
+        ticketmasterId = event.event.event.tmId.ifBlank { null },
+        rank = event.rank,
+        artistRanks = event.artistRanks.map { ArtistRank(it) }
     )
 
     fun asEvent(): Event {

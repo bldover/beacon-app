@@ -4,7 +4,7 @@ import com.bldover.beacon.data.api.EventApi
 import com.bldover.beacon.data.model.Event
 import com.bldover.beacon.data.model.EventDetail
 import com.bldover.beacon.data.model.RawEvent
-import com.bldover.beacon.data.model.Recommendation
+import com.bldover.beacon.data.model.RecommendationThreshold
 import java.time.LocalDate
 
 interface EventRepository {
@@ -15,7 +15,7 @@ interface EventRepository {
     suspend fun updateEvent(event: Event)
     suspend fun deleteEvent(event: Event)
     suspend fun getUpcomingEvents(): List<EventDetail>
-    suspend fun getRecommendedEvents(threshold: Boolean): List<Recommendation>
+    suspend fun getRecommendedEvents(threshold: RecommendationThreshold): List<EventDetail>
 }
 
 class EventRepositoryImpl(private val eventApi: EventApi): EventRepository {
@@ -57,7 +57,10 @@ class EventRepositoryImpl(private val eventApi: EventApi): EventRepository {
             .toList()
     }
 
-    override suspend fun getRecommendedEvents(threshold: Boolean): List<Recommendation> {
+    override suspend fun getRecommendedEvents(threshold: RecommendationThreshold): List<EventDetail> {
         return eventApi.getRecommendations(threshold)
+            .map { EventDetail(it) }
+            .filter { LocalDate.now().isBefore(it.date) || LocalDate.now().isEqual(it.date) }
+            .toList()
     }
 }

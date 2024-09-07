@@ -18,7 +18,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -150,23 +149,20 @@ fun DropdownOptions(
     onOptionSelected: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedIndex by remember { mutableIntStateOf(options.indexOf(selectedOption)) }
-
     Box {
         Text(
-            text = options[selectedIndex],
+            text = selectedOption,
             modifier = Modifier.clickable { expanded = true }
         )
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
-            options.forEachIndexed { index, item ->
+            options.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item) },
                     onClick = {
                         expanded = false
-                        selectedIndex = index
                         onOptionSelected(item)
                     }
                 )

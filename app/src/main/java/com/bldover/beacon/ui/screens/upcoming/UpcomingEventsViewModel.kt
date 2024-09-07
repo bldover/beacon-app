@@ -2,8 +2,8 @@ package com.bldover.beacon.ui.screens.upcoming
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.Event
 import com.bldover.beacon.data.model.EventDetail
+import com.bldover.beacon.data.model.RecommendationThreshold
 import com.bldover.beacon.data.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,16 +30,22 @@ class UpcomingEventsViewModel @Inject constructor(
     private val _upcomingEventsState = MutableStateFlow<UpcomingEventsState>(UpcomingEventsState.Loading)
     val upcomingEventsState: StateFlow<UpcomingEventsState> = _upcomingEventsState.asStateFlow()
 
+    private val _filterState = MutableStateFlow(RecommendationThreshold.NONE)
+    val filterState: StateFlow<RecommendationThreshold> = _filterState.asStateFlow()
+
     init {
         loadData()
     }
 
     fun loadData() {
-        Timber.i("Loading planned events")
+        Timber.i("Loading planned events for threshold $_filterState.value")
         viewModelScope.launch {
             _upcomingEventsState.value = UpcomingEventsState.Loading
             try {
-                val events = eventRepository.getUpcomingEvents()
+                val events = when (_filterState.value) {
+                    RecommendationThreshold.NONE -> eventRepository.getUpcomingEvents()
+                    else -> eventRepository.getRecommendedEvents(_filterState.value)
+                }
                 Timber.i("Loaded ${events.size} planned events")
                 _upcomingEventsState.value = UpcomingEventsState.Success(events, events)
             } catch (e: Exception) {
@@ -81,21 +87,9 @@ class UpcomingEventsViewModel @Inject constructor(
         Timber.i("Applied upcoming event filter - success")
     }
 
-    fun saveEvent(
-        event: EventDetail,
-        onSuccess: () -> Unit = {},
-        onError: (String) -> Unit = {}
-    ) {
-        viewModelScope.launch {
-            Timber.i("Saving event $event")
-            try {
-                eventRepository.saveEvent(Event(event))
-                Timber.i("Saved event $event")
-                onSuccess()
-            } catch (e: Exception) {
-                Timber.e(e,"Failed to save event $event")
-                onError("Error saving event ${event.name}, try again later")
-            }
-        }
+    fun changeRecommendationThreshold(threshold: RecommendationThreshold) {
+        Timber.i("Changing upcoming event recommendation threshold to $threshold")
+        _filterState.value = threshold
+        loadData()
     }
 }

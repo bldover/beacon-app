@@ -29,6 +29,7 @@ import com.bldover.beacon.ui.components.editor.PurchasedSwitch
 import com.bldover.beacon.ui.components.editor.SaveCancelButtons
 import com.bldover.beacon.ui.components.editor.SwipableArtistEditCard
 import com.bldover.beacon.ui.components.editor.VenueEditCard
+import com.bldover.beacon.ui.screens.editor.artist.ArtistCreatorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
 import timber.log.Timber
@@ -39,6 +40,7 @@ fun EventEditorScreen(
     navController: NavController,
     snackbarState: SnackbarState,
     artistSelectorViewModel: ArtistSelectorViewModel,
+    artistCreatorViewModel: ArtistCreatorViewModel,
     venueSelectorViewModel: VenueSelectorViewModel,
     eventEditorViewModel: EventEditorViewModel
 ) {
@@ -66,10 +68,14 @@ fun EventEditorScreen(
                             SwipableArtistEditCard(
                                 artist = headliner,
                                 artistType = ArtistType.HEADLINER,
-                                onSelect = eventEditorViewModel::updateHeadliner,
                                 onSwipe = { eventEditorViewModel.updateHeadliner(null) },
-                                navController = navController,
-                                artistSelectorViewModel = artistSelectorViewModel
+                                onSelect = {
+                                    artistCreatorViewModel.launchCreator(
+                                        navController = navController,
+                                        artist = headliner,
+                                        onSave = { eventEditorViewModel.updateHeadliner(it) }
+                                    )
+                                }
                             )
                         } else {
                             AddArtistCard(
@@ -89,8 +95,15 @@ fun EventEditorScreen(
                             artist = opener,
                             artistType = ArtistType.OPENER,
                             onSwipe = eventEditorViewModel::removeOpener,
-                            navController = navController,
-                            artistSelectorViewModel = artistSelectorViewModel
+                            onSelect = {
+                                artistCreatorViewModel.launchCreator(
+                                    navController = navController,
+                                    artist = opener,
+                                    onSave = { newOpener ->
+                                        eventEditorViewModel.updateOpener(opener, newOpener)
+                                    }
+                                )
+                            }
                         )
                     }
                     item {

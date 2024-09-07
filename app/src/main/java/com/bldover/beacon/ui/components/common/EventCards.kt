@@ -1,12 +1,12 @@
 package com.bldover.beacon.ui.components.common
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,14 +29,14 @@ fun accentCardColors(): CardColors {
 @Composable
 fun SavedEventCard(
     event: Event,
-    highlighted: Boolean,
+    accented: Boolean,
     onClick: () -> Unit = {}
 ) {
     BasicCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = if (highlighted) accentCardColors() else CardDefaults.cardColors()
+        border = if (accented) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null
     ) {
         Text(
             text = event.artists.joinToString { it.name },
@@ -56,27 +56,34 @@ fun SavedEventCard(
 @Composable
 fun UpcomingEventCard(
     event: EventDetail,
-    highlighted: Boolean,
+    accented: Boolean,
     onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = if (highlighted) accentCardColors() else CardDefaults.cardColors()
+        border = if (accented) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            val artists = event.artists.joinToString { it.name }
-            Text(
-                text = artists,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            if (event.name.isNotBlank() && event.name != event.artists.first().name) {
+            if (event.artists.isNotEmpty()) {
+                val artists = event.artists.joinToString { it.name }
+                Text(
+                    text = artists,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                if (event.name.isNotBlank() && event.name != event.artists.first().name) {
+                    Text(
+                        text = event.name,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            } else {
                 Text(
                     text = event.name,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
             Text(
@@ -98,6 +105,30 @@ fun UpcomingEventCard(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            if (event.rank != null) {
+                Text(
+                    text = "Rank: ${event.rank}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            event.artistRanks
+                ?.asSequence()
+                ?.mapNotNull { it.relatedArtists }
+                ?.flatten()
+                ?.distinct()
+                ?.filterNot { relatedArtist ->
+                    event.artists
+                        .map { it.name }
+                        .any { relatedArtist.equals(it, ignoreCase = true) }
+                }
+                ?.joinToString()
+                ?.takeIf { it.isNotBlank() }
+                ?.let {
+                    Text(
+                        text = "Related Artists: $it",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
         }
     }
 }

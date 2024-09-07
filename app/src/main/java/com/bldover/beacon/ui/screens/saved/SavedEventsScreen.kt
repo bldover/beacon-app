@@ -1,25 +1,26 @@
 package com.bldover.beacon.ui.screens.saved
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.bldover.beacon.data.model.Artist
 import com.bldover.beacon.data.model.Event
+import com.bldover.beacon.data.model.EventOrdering
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
+import com.bldover.beacon.data.model.Venue
 import com.bldover.beacon.ui.components.common.AddButton
 import com.bldover.beacon.ui.components.common.BasicSearchBar
+import com.bldover.beacon.ui.components.common.EventSearchUtilityBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
 import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.RefreshButton
@@ -29,6 +30,7 @@ import com.bldover.beacon.ui.components.common.ScrollableItemList
 import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
 import timber.log.Timber
+import java.time.LocalDate
 
 @Composable
 fun HistoryScreen(
@@ -54,11 +56,20 @@ fun HistoryScreen(
         }
     ) {
         SavedEventsList(
-            history = true,
-            navController = navController,
-            snackbarState = snackbarState,
-            savedEventsViewModel = savedEventsViewModel,
-            eventEditorViewModel = eventEditorViewModel
+            eventsState = savedEventsViewModel.pastEventsState.collectAsState().value,
+            filterState = savedEventsViewModel.pastEventOrdering.collectAsState().value,
+            accentPurchased = false,
+            onSearchChange = { savedEventsViewModel.filterPastEvents(it) },
+            onFilterChange = { savedEventsViewModel.sortPastEvents(it) },
+            onEventClick = {
+                launchEventEditor(
+                    eventId = it,
+                    eventEditorViewModel = eventEditorViewModel,
+                    savedEventsViewModel = savedEventsViewModel,
+                    navController = navController,
+                    snackbarState = snackbarState
+                )
+            }
         )
     }
 }
@@ -87,13 +98,55 @@ fun PlannerScreen(
         }
     ) {
         SavedEventsList(
-            history = false,
-            navController = navController,
-            snackbarState = snackbarState,
-            savedEventsViewModel = savedEventsViewModel,
-            eventEditorViewModel = eventEditorViewModel
+            eventsState = savedEventsViewModel.futureEventsState.collectAsState().value,
+            filterState = savedEventsViewModel.futureEventOrdering.collectAsState().value,
+            accentPurchased = true,
+            onSearchChange = { savedEventsViewModel.filterFutureEvents(it) },
+            onFilterChange = { savedEventsViewModel.sortFutureEvents(it) },
+            onEventClick = {
+                launchEventEditor(
+                    eventId = it,
+                    eventEditorViewModel = eventEditorViewModel,
+                    savedEventsViewModel = savedEventsViewModel,
+                    navController = navController,
+                    snackbarState = snackbarState
+                )
+            }
         )
     }
+}
+
+private fun launchEventEditor(
+    eventId: String,
+    eventEditorViewModel: EventEditorViewModel,
+    savedEventsViewModel: SavedEventsViewModel,
+    navController: NavController,
+    snackbarState: SnackbarState
+) {
+    eventEditorViewModel.launchEditor(
+        navController = navController,
+        eventId = eventId,
+        onSave = { event: Event ->
+            savedEventsViewModel.updateEvent(
+                event = event,
+                onSuccess = {
+                    navController.popBackStack()
+                    snackbarState.showSnackbar("Event saved")
+                },
+                onError = { msg -> snackbarState.showSnackbar(msg) }
+            )
+        },
+        onDelete = { event: Event ->
+            savedEventsViewModel.deleteEvent(
+                event = event,
+                onSuccess = {
+                    navController.popBackStack()
+                    snackbarState.showSnackbar("Event deleted")
+                },
+                onError = { msg -> snackbarState.showSnackbar(msg) }
+            )
+        }
+    )
 }
 
 @Composable
@@ -126,96 +179,70 @@ fun TopBarIcons(
 
 @Composable
 fun SavedEventsList(
-    history: Boolean,
-    navController: NavController,
-    snackbarState: SnackbarState,
-    savedEventsViewModel: SavedEventsViewModel,
-    eventEditorViewModel: EventEditorViewModel
+    eventsState: SavedEventsState,
+    filterState: EventOrdering,
+    accentPurchased: Boolean,
+    onSearchChange: (String) -> Unit,
+    onFilterChange: (EventOrdering) -> Unit,
+    onEventClick: (String) -> Unit
 ) {
-    LaunchedEffect(history) {
-        if (history) savedEventsViewModel.resetPastEventFilter() else savedEventsViewModel.resetFutureEventFilter()
-    }
-    val eventsState = remember(history) {
-        if (history) savedEventsViewModel.pastEventsState else savedEventsViewModel.futureEventsState
-    }.collectAsState()
-
     Scaffold(
         topBar = {
-            val isEnabled = eventsState.value is SavedEventsState.Success
-            BasicSearchBar(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isEnabled,
-                onQueryChange = remember(history) {
-                    { query ->
-                        if (history) savedEventsViewModel.filterPastEvents(query)
-                        else savedEventsViewModel.filterFutureEvents(query)
-                    }
-                }
-            )
+            Column {
+                BasicSearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = eventsState is SavedEventsState.Success,
+                    onQueryChange = onSearchChange
+                )
+                EventSearchUtilityBar(
+                    state = filterState,
+                    onChange = onFilterChange
+                )
+            }
         }
     ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            SavedEventsListContent(
-                eventsState = eventsState.value,
-                highlightPurchased = !history,
-                onEventClick = {
-                    eventEditorViewModel.launchEditor(
-                        navController = navController,
-                        eventId = it,
-                        onSave = { event: Event ->
-                            savedEventsViewModel.updateEvent(
-                                event = event,
-                                onSuccess = {
-                                    navController.popBackStack()
-                                    snackbarState.showSnackbar("Event saved")
-                                },
-                                onError = { msg -> snackbarState.showSnackbar(msg) }
-                            )
-                        },
-                        onDelete = { event: Event ->
-                            savedEventsViewModel.deleteEvent(
-                                event = event,
-                                onSuccess = {
-                                        navController.popBackStack()
-                                        snackbarState.showSnackbar("Event deleted")
-                                },
-                                onError = { msg -> snackbarState.showSnackbar(msg) }
-                            )
-                        }
-                    )
+        Column(modifier = Modifier.padding(innerPadding)) {
+            Spacer(modifier = Modifier.padding(8.dp))
+            when (eventsState) {
+                is SavedEventsState.Success -> {
+                    ScrollableItemList(
+                        items = eventsState.filtered
+                    ) { event ->
+                        SavedEventCard(
+                            event = event,
+                            accented = accentPurchased && event.purchased,
+                            onClick = { onEventClick(event.id!!) }
+                        )
+                    }
                 }
-            )
+                is SavedEventsState.Error -> { LoadErrorMessage() }
+                is SavedEventsState.Loading -> { LoadingSpinner() }
+            }
         }
     }
 }
 
+@Preview
 @Composable
-private fun SavedEventsListContent(
-    eventsState: SavedEventsState,
-    highlightPurchased: Boolean,
-    onEventClick: (String) -> Unit
-) {
-    Column {
-        Spacer(modifier = Modifier.height(16.dp))
-        when (eventsState) {
-            is SavedEventsState.Success -> {
-                ScrollableItemList(
-                    items = eventsState.filtered,
-                    getItemKey = { it.id!! }
-                ) { event ->
-                    SavedEventCard(
-                        event = event,
-                        highlighted = highlightPurchased && event.purchased,
-                        onClick = { onEventClick(event.id!!) }
-                    )
-                }
-            }
-            is SavedEventsState.Error -> {
-                LoadErrorMessage()
-            }
-            is SavedEventsState.Loading -> {
-                LoadingSpinner()
-            }
-        }
-    }
+fun SavedEventsListPreview() {
+    val events = listOf(
+        Event(
+            id = "1",
+            artists = listOf(Artist("123", "Test Artist", "Test Genre")),
+            venue = Venue("123", "Test Venue", "Test City", "Test State"),
+            date = LocalDate.now(),
+            purchased = false
+        )
+    )
+    SavedEventsList(
+        eventsState = SavedEventsState.Success(
+            allEvents = events,
+            filtered = events
+        ),
+        filterState = EventOrdering(),
+        accentPurchased = false,
+        onSearchChange = {},
+        onFilterChange = {},
+        onEventClick = {}
+    )
 }

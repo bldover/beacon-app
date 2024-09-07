@@ -23,8 +23,8 @@ fun <T> ScrollableItemList(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = verticalArrangement,
     ) {
-        this.item { topAnchor?.invoke() }
-        this.items(
+        topAnchor?.let { item { it.invoke() } }
+        items(
             items = items,
             key = getItemKey?.let { getKey -> { item: T -> getKey(item) } }
         ) { item: T ->

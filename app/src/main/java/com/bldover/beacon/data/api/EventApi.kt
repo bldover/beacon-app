@@ -2,7 +2,8 @@ package com.bldover.beacon.data.api
 
 import com.bldover.beacon.data.model.RawEvent
 import com.bldover.beacon.data.model.RawEventDetail
-import com.bldover.beacon.data.model.Recommendation
+import com.bldover.beacon.data.model.RawEventRank
+import com.bldover.beacon.data.model.RecommendationThreshold
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -27,5 +28,5 @@ interface EventApi {
     suspend fun getUpcomingEvents(): List<RawEventDetail>
 
     @GET("v1/events/recommended")
-    suspend fun getRecommendations(@Query("threshold") threshold: Boolean): List<Recommendation>
+    suspend fun getRecommendations(@Query("threshold") threshold: RecommendationThreshold): List<RawEventRank>
 }

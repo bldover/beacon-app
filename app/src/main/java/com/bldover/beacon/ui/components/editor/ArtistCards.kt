@@ -22,14 +22,6 @@ import com.bldover.beacon.ui.components.common.DismissableCard
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 
 @Composable
-fun accentOutlinedCardColors(): CardColors {
-    return CardDefaults.outlinedCardColors(
-        containerColor = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    )
-}
-
-@Composable
 fun ArtistDetailsCard(
     artist: Artist,
     onClick: () -> Unit = {}
@@ -60,19 +52,13 @@ fun SwipableArtistEditCard(
     artist: Artist,
     artistType: ArtistType,
     onSwipe: (Artist) -> Unit,
-    onSelect: ((Artist) -> Unit)? = null,
-    navController: NavController,
-    artistSelectorViewModel: ArtistSelectorViewModel,
+    onSelect: (() -> Unit)? = null,
 ) {
     Box(
         modifier = if (onSelect == null) {
             Modifier
         } else {
-            Modifier.clickable {
-                artistSelectorViewModel.launchSelector(navController) {
-                    onSelect(it)
-                }
-            }
+            Modifier.clickable(onClick = onSelect)
         }
     ) {
         DismissableCard(

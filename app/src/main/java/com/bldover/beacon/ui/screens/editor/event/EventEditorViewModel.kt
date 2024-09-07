@@ -118,7 +118,7 @@ class EventEditorViewModel @Inject constructor(
 
     private fun replaceArtistsWithSaved(artists: List<Artist>, savedArtists: List<Artist>): List<Artist> {
         return artists.map { artist ->
-            val saved = savedArtists.find { it.name == artist.name }
+            val saved = savedArtists.find { it.name.equals(artist.name, ignoreCase = true) }
             saved?.let {
                 it.headliner = artist.headliner
                 it
@@ -126,7 +126,8 @@ class EventEditorViewModel @Inject constructor(
     }
 
     private fun replaceVenueWithSaved(venue: Venue, savedVenues: List<Venue>): Venue {
-        return savedVenues.find { it.name == venue.name && it.city == venue.city} ?: venue
+        return savedVenues.find { it.name.equals(venue.name, ignoreCase = true)
+                && it.city.equals(venue.city, ignoreCase = true)} ?: venue
     }
 
     fun updateHeadliner(headliner: Artist?) {
@@ -163,6 +164,28 @@ class EventEditorViewModel @Inject constructor(
         Timber.d("Adding opener - new artists $artists")
         _uiState.value = EventEditorState.Success(state.event.copy(artists = artists))
         Timber.i("Adding opener - success")
+    }
+
+    fun updateOpener(opener: Artist, newOpener: Artist) {
+        Timber.i("Updating opener $opener to $newOpener")
+        if (_uiState.value !is EventEditorState.Success) {
+            Timber.d("Updating openers - not in success state")
+            return
+        }
+        val state = (_uiState.value as EventEditorState.Success)
+        Timber.d("Updating opener - previous artists ${state.event.artists}")
+        val artists = state.event.artists.toMutableList().apply {
+            val i = indexOf(opener)
+            if (i == -1) {
+                Timber.w("Updating opener - opener $opener not found")
+                return
+            }
+            removeAt(i)
+            add(i, newOpener)
+        }
+        Timber.d("Updating opener - new artists $artists")
+        _uiState.value = EventEditorState.Success(state.event.copy(artists = artists))
+        Timber.i("Updating opener - success")
     }
 
     fun removeOpener(opener: Artist) {

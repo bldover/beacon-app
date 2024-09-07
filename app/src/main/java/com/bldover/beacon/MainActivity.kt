@@ -137,6 +137,7 @@ fun BeaconApp(
                             navController = navController,
                             snackbarState = snackbarState,
                             artistSelectorViewModel = artistSelectorViewModel,
+                            artistCreatorViewModel = artistCreatorViewModel,
                             venueSelectorViewModel = venueSelectorViewModel,
                             eventEditorViewModel = eventEditorViewModel
                         )
