@@ -5,35 +5,36 @@ type (
 		Name  string `json:"name"`
 		City  string `json:"city"`
 		State string `json:"state"`
-		Id string `json:"id"`
+		Id    string `json:"id"`
 	}
 	Artist struct {
 		Name  string `json:"name"`
 		Genre string `json:"genre"`
-		Id string `json:"id"`
+		Id    string `json:"id"`
 	}
 	Event struct {
-		MainAct   Artist `json:"mainAct"`
+		MainAct   Artist   `json:"mainAct"`
 		Openers   []Artist `json:"openers"`
-		Venue     Venue `json:"venue"`
-		Date      string `json:"date"`
-		Purchased bool `json:"purchased"`
-		Id string `json:"id"`
+		Venue     Venue    `json:"venue"`
+		Date      string   `json:"date"`
+		Purchased bool     `json:"purchased"`
+		Id        string   `json:"id"`
+		TmId      string   `json:"tmId"`
 	}
 	EventDetails struct {
 		Name       string `json:"name"`
 		EventGenre string `json:"genre"`
 		Price      string `json:"price"`
-		Event      Event `json:"event"`
+		Event      Event  `json:"event"`
 	}
 	EventRank struct {
-		Event EventDetails `json:"event"`
+		Event       EventDetails `json:"event"`
 		ArtistRanks []ArtistRank `json:"artistRanks"`
-		Rank float64 `json:"rank"`
+		Rank        float64      `json:"rank"`
 	}
-    ArtistRank struct {
-		Artist Artist `json:"artist"`
-		Rank float64 `json:"rank"`
+	ArtistRank struct {
+		Artist  Artist   `json:"artist"`
+		Rank    float64  `json:"rank"`
 		Related []string `json:"related"`
 	}
 )
@@ -69,7 +70,7 @@ func (a Artist) Equals(o Artist) bool {
 }
 
 func (v Venue) Equals(o Venue) bool {
-    return v.Name == o.Name && v.City == o.City && v.State == o.State
+	return v.Name == o.Name && v.City == o.City && v.State == o.State
 }
 
 func allNotEmpty(fields ...string) bool {

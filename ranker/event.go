@@ -9,8 +9,6 @@ type EventRanker struct {
 	ArtistRanker ArtistRanker
 }
 
-const genreWeight = 0.1
-
 func (r *EventRanker) Rank(event data.EventDetails) data.EventRank {
 	eventRank := data.EventRank{Event: event, ArtistRanks: []data.ArtistRank{}}
 	artistRanking := r.ArtistRanker.Rank(event.Event.MainAct)
@@ -115,9 +113,11 @@ var genreRanks = map[string]float64{
 	"World":                        0.5,
 }
 
+const genreWeight = 0.1
+
 func RankGenre(genre string) float64 {
 	if rank, exists := genreRanks[genre]; exists {
-		return rank
+		return rank * genreWeight
 	}
 	return 0
 }

@@ -23,6 +23,7 @@ type tmResponse struct {
 
 type tmEventResponse struct {
 	EventName string `json:"name"`
+	Id        string `json:"id"`
 	Dates     struct {
 		Start struct {
 			Date string `json:"localDate"`

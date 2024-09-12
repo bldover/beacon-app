@@ -29,24 +29,30 @@ type savedEventCache interface {
 	GetPassedSavedEvents() []data.Event
 	AddSavedEvent(data.Event) (*data.Event, error)
 	DeleteSavedEvent(string) error
+	RefreshSavedEvents() error
 }
 
 type artistCache interface {
     GetArtists() []data.Artist
 	AddArtist(data.Artist) (*data.Artist, error)
+	UpdateArtist(string, data.Artist) error
 	DeleteArtist(string) error
+	RefreshArtists() error
 }
 
 type venueCache interface {
     GetVenues() []data.Venue
 	AddVenue(data.Venue) (*data.Venue, error)
+	UpdateVenue(string, data.Venue) error
 	DeleteVenue(string) error
+	RefreshVenues() error
 }
 
 type upcomingEventsCache interface {
     GetUpcomingEvents() []data.EventDetails
 	ChangeLocation(string, string)
 	GetLocation() cache.Location
+	RefreshUpcomingEvents() error
 }
 
 type recommendationCache interface {
@@ -55,13 +61,21 @@ type recommendationCache interface {
 
 const port = ":3001"
 
+// TODO: Use (or write?) a better HTTP library to clean up the server routing and handlers
 func (s *Server) StartServer() {
 	http.HandleFunc("/v1/upload", s.handleRequest(s.handleUpload))
 	http.HandleFunc("/v1/events/upcoming", s.handleRequest(s.getUpcomingEvents))
+	http.HandleFunc("/v1/events/upcoming/refresh", s.handleRequest(s.refreshUpcomingEvents))
 	http.HandleFunc("/v1/events/recommended", s.handleRequest(s.getRecommendations))
 	http.HandleFunc("/v1/events/saved", s.handleRequest(s.handleSavedEvents))
+	http.HandleFunc("/v1/events/saved/", s.handleRequest(s.handleSavedEvents))
+	http.HandleFunc("/v1/events/saved/refresh", s.handleRequest(s.refreshSavedEvents))
 	http.HandleFunc("/v1/venues", s.handleRequest(s.handleVenues))
+	http.HandleFunc("/v1/venues/", s.handleRequest(s.handleVenues))
+	http.HandleFunc("/v1/venues/refresh", s.handleRequest(s.refreshVenues))
 	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
+	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
+	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))
 //	http.Handle("/spotify/callback", &spotify.SpotifyAuthHandler{})
 
 	log.Info("Starting server on port", port)

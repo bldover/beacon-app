@@ -2,10 +2,12 @@ package server
 
 import (
 	"concert-manager/data"
+	"concert-manager/log"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func (s *Server) handleVenues(w http.ResponseWriter, r *http.Request) (any, int, error) {
@@ -24,10 +26,33 @@ func (s *Server) handleVenues(w http.ResponseWriter, r *http.Request) (any, int,
 			return nil, http.StatusInternalServerError, errors.New(errMsg)
 		}
 		return savedVenue, 0, nil
+	case http.MethodPut:
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) != 4 {
+			return nil, http.StatusBadRequest, errors.New("missing venue ID in path")
+		}
+		id := pathParts[3]
+		if len(id) == 0 {
+			return nil, http.StatusBadRequest, errors.New("missing venue ID in path")
+		}
+		var venue data.Venue
+		if err := json.NewDecoder(r.Body).Decode(&venue); err != nil {
+			return nil, http.StatusBadRequest, errors.New("invalid body")
+		}
+		err := s.VenueCache.UpdateVenue(id, venue)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to update venue: %v", err)
+			return nil, http.StatusInternalServerError, errors.New(errMsg)
+		}
+		return nil, 0, nil
 	case http.MethodDelete:
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			return nil, http.StatusMethodNotAllowed, errors.New("missing id request parameter")
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) != 4 {
+			return nil, http.StatusBadRequest, errors.New("missing venue ID in path")
+		}
+		id := pathParts[3]
+		if len(id) == 0 {
+			return nil, http.StatusBadRequest, errors.New("missing venue ID in path")
 		}
 		if err := s.VenueCache.DeleteVenue(id); err != nil {
 			errMsg := fmt.Sprintf("failed to delete venue: %v", err)
@@ -54,10 +79,33 @@ func (s *Server) handleArtists(w http.ResponseWriter, r *http.Request) (any, int
 			return nil, http.StatusInternalServerError, errors.New(errMsg)
 		}
 		return savedArtist, 0, nil
+	case http.MethodPut:
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) != 4 {
+			return nil, http.StatusBadRequest, errors.New("missing artist ID in path")
+		}
+		id := pathParts[3]
+		if len(id) == 0 {
+			return nil, http.StatusBadRequest, errors.New("missing artist ID in path")
+		}
+		var artist data.Artist
+		if err := json.NewDecoder(r.Body).Decode(&artist); err != nil {
+			return nil, http.StatusBadRequest, errors.New("invalid body")
+		}
+		err := s.ArtistCache.UpdateArtist(id, artist)
+		if err != nil {
+			errMsg := fmt.Sprintf("failed to update artist: %v", err)
+			return nil, http.StatusInternalServerError, errors.New(errMsg)
+		}
+		return nil, 0, nil
 	case http.MethodDelete:
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			return nil, http.StatusBadRequest, errors.New("missing id request parameter")
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) != 4 {
+			return nil, http.StatusBadRequest, errors.New("missing artist ID in path")
+		}
+		id := pathParts[3]
+		if len(id) == 0 {
+			return nil, http.StatusBadRequest, errors.New("missing artist ID in path")
 		}
 		if err := s.ArtistCache.DeleteArtist(id); err != nil {
 			errMsg := fmt.Sprintf("failed to delete artist: %v", err)
@@ -95,17 +143,60 @@ func (s *Server) handleSavedEvents(w http.ResponseWriter, r *http.Request) (any,
 		}
 		return savedEvent, 0, nil
 	case http.MethodDelete:
-		id := r.URL.Query().Get("id")
-		if id == "" {
-			return nil, http.StatusBadRequest, errors.New("missing id request parameter")
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) != 5 {
+			return nil, http.StatusBadRequest, errors.New("missing event ID in path")
+		}
+		id := pathParts[4]
+		if len(id) == 0 {
+			return nil, http.StatusBadRequest, errors.New("missing event ID in path")
 		}
 		if err := s.SavedEventCache.DeleteSavedEvent(id); err != nil {
-			errMsg := fmt.Sprintf("Failed to delete event: %v", err)
+			errMsg := fmt.Sprintf("failed to delete event: %v", err)
 			return nil, http.StatusInternalServerError, errors.New(errMsg)
 		}
 		return nil, 0, nil
 	}
 	return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+}
+
+func (s *Server) refreshSavedEvents(w http.ResponseWriter, r *http.Request) (any, int, error) {
+    if r.Method != http.MethodPost {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	err := s.SavedEventCache.RefreshSavedEvents()
+	if err != nil {
+		log.Errorf("Failed to refresh saved events %v", err)
+		return nil, http.StatusInternalServerError, errors.New("failed to refresh saved event cache")
+	}
+	return nil, 0, nil
+}
+
+func (s *Server) refreshArtists(w http.ResponseWriter, r *http.Request) (any, int, error) {
+    if r.Method != http.MethodPost {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	err := s.ArtistCache.RefreshArtists()
+	if err != nil {
+		log.Errorf("Failed to refresh artists %v", err)
+		return nil, http.StatusInternalServerError, errors.New("failed to refresh artists cache")
+	}
+	return nil, 0, nil
+}
+
+func (s *Server) refreshVenues(w http.ResponseWriter, r *http.Request) (any, int, error) {
+    if r.Method != http.MethodPost {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	err := s.VenueCache.RefreshVenues()
+	if err != nil {
+		log.Errorf("Failed to refresh venues %v", err)
+		return nil, http.StatusInternalServerError, errors.New("failed to refresh venues cache")
+	}
+	return nil, 0, nil
 }
 
 func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) (any, int, error) {

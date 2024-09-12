@@ -46,6 +46,25 @@ func (repo *ArtistRepo) Add(ctx context.Context, artist Artist) (string, error) 
 	return docRef.ID, nil
 }
 
+func (repo *ArtistRepo) Update(ctx context.Context, id string, artist Artist) error {
+    log.Debug("Attempting to update artist", id, artist)
+	docId := repo.Connection.Client.Collection(artistCollection).Doc(id)
+	artistDoc, err := docId.Get(ctx)
+	if err != nil {
+		log.Errorf("Failed to find existing artist while updating %+v, %v", id, err)
+		return err
+	}
+
+	artistEntity := ArtistEntity{artist.Name, artist.Genre}
+	_, err = artistDoc.Ref.Set(ctx, artistEntity)
+	if err != nil {
+		log.Errorf("Failed to update artist %+v to %v, %v", id, artist, err)
+		return err
+	}
+	log.Info("Successfully updated artist", id)
+	return nil
+}
+
 func (repo *ArtistRepo) Delete(ctx context.Context, id string) error {
 	log.Debug("Attempting to delete artist", id)
 	docId := repo.Connection.Client.Collection(artistCollection).Doc(id)
@@ -54,7 +73,11 @@ func (repo *ArtistRepo) Delete(ctx context.Context, id string) error {
 		log.Errorf("Failed to find existing artist while deleting %+v, %v", id, err)
 		return err
 	}
-	artistDoc.Ref.Delete(ctx)
+	_, err = artistDoc.Ref.Delete(ctx)
+	if err != nil {
+		log.Error("Failed to delete artist", id, err)
+		return err
+	}
 	log.Infof("Successfully deleted artist %+v", id)
 	return nil
 }

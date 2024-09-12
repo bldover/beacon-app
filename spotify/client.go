@@ -35,17 +35,30 @@ type RankedArtist struct {
 
 type Client struct {
 	auth *authentication
+	threadInitDelay time.Duration
+	retryStrategy RetryStrategy
+}
+
+const defaultBackoffIncrement = 50 * time.Millisecond
+
+type RetryStrategy struct {
+	delay time.Duration
+	backoff time.Duration
+	increment time.Duration
+	lock *sync.Mutex
 }
 
 func NewClient() *Client {
 	log.Info("Initializing Spotify client")
-    client := &Client{newAuthentication()}
+	retryStrategy := RetryStrategy{0, 0, defaultBackoffIncrement, &sync.Mutex{}}
+    client := &Client{newAuthentication(), defaultThreadInitDelay, retryStrategy}
 	log.Info("Successfully initialized Spotify client")
 	return client
 }
 
 const baseUrl = "https://api.spotify.com/v1"
 const limit = 50
+const defaultThreadInitDelay = 50 * time.Millisecond
 
 type RequestEntity struct {
     requestUrl string
@@ -78,7 +91,6 @@ func (c *Client) getPage(httpMethod string, reqEntity RequestEntity, response an
 	return nil
 }
 
-
 type errorResponse struct {
 	Error struct {
 		Status int `json:"Status"`
@@ -92,6 +104,15 @@ func (c *Client) call(req *http.Request) (*http.Response, error) {
 	log.Debugf("Spotify request without auth%+v", req)
 
 	for retries < 3 {
+		c.retryStrategy.lock.Lock()
+		delay := c.retryStrategy.delay + c.retryStrategy.backoff
+		c.retryStrategy.backoff += c.retryStrategy.increment
+		c.retryStrategy.lock.Unlock()
+		if delay > 0 {
+			log.Debugf("Waiting %v seconds before request", delay.Seconds())
+			time.Sleep(delay)
+		}
+
 		authToken, err := c.auth.getAuthToken()
 		if err != nil {
 			log.Errorf("unable to retrieve auth token: %v", err)
@@ -109,6 +130,10 @@ func (c *Client) call(req *http.Request) (*http.Response, error) {
 
 		log.Debugf("For URL %s, received response: %+v", req.URL, resp)
 		if resp.StatusCode == http.StatusOK {
+			c.retryStrategy.lock.Lock()
+			c.retryStrategy.backoff -= c.retryStrategy.increment * time.Duration(retries + 1)
+			log.Debugf("Success request, new backoff %f seconds", c.retryStrategy.backoff.Seconds())
+			c.retryStrategy.lock.Unlock()
 			return resp, nil
 		}
 
@@ -128,11 +153,13 @@ func (c *Client) call(req *http.Request) (*http.Response, error) {
 				log.Errorf("Spotify API returned high retry delay of %v, try again later", delay.Seconds())
 				return nil, errors.New("exceeded rate limit and retry delay too high")
 			}
-			log.Debugf("Waiting %v seconds before retrying", delay.Seconds())
-			time.Sleep(delay)
+
+			c.retryStrategy.lock.Lock()
+			c.retryStrategy.delay = delay
+			c.retryStrategy.lock.Unlock()
+			log.Debugf("TooManyRequests; delay=%f, backoff=%f, attempt: %d", delay.Seconds(), c.retryStrategy.backoff.Seconds(), retries)
 		default:
-			log.Debug("Unexpected error, waiting 100 ms and retrying; attempt:", retries)
-			time.Sleep(100 * time.Millisecond)
+			log.Debug("Unexpected error; attempt:", retries)
 		}
 		retries++
 	}
@@ -210,9 +237,6 @@ func (c *Client) GetSavedTracks() ([]Track, error) {
 			tracks = append(tracks, savedTrackBatch...)
 			mu.Unlock()
 		}(i * limit)
-		// For whatever reason, we get 500 errors only for this endpoint when sending all the
-		// requests with no delay. The retry handles it, but it's faster to avoid it altogether
-		time.Sleep(10 * time.Millisecond)
 	}
 
 	wg.Wait()

@@ -40,7 +40,7 @@ func main() {
 
 	savedCache := &cache.SavedEventCache{}
 	savedCache.Database = interactor
-	savedCache.Sync()
+	savedCache.LoadCaches()
 
 	eventFinder := finder.NewEventFinder()
 	artistRanker := ranker.ArtistRanker{MusicSvc: spotify.NewClient()}

@@ -28,6 +28,7 @@ type EventEntity struct {
 	VenueRef   *firestore.DocumentRef
 	Date       time.Time
 	Purchased  bool
+	TmId       string
 }
 
 type Event = data.Event
@@ -79,7 +80,7 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 		return "", err
 	}
 
-	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, util.Timestamp(event.Date), event.Purchased}
+	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, util.Timestamp(event.Date), event.Purchased, event.TmId}
 	events := repo.Connection.Client.Collection(eventCollection)
 	docRef, _, err := events.Add(ctx, eventEntity)
 	if err != nil {
@@ -98,7 +99,11 @@ func (repo *EventRepo) Delete(ctx context.Context, id string) error {
 		log.Errorf("Failed to find existing event while removing %+v", id)
 		return err
 	}
-	eventDoc.Ref.Delete(ctx)
+	_, err = eventDoc.Ref.Delete(ctx)
+	if err != nil {
+		log.Error("Failed to delete event", id, err)
+		return err
+	}
 	log.Infof("Successfully deleted event %+v", id)
 	return nil
 }
@@ -177,15 +182,19 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 				openers = append(openers, (*artists)[openerRef.(*firestore.DocumentRef).ID])
 			}
 		}
+		tmId := ""
+		if id, ok := eventData["TmId"].(string); ok {
+			tmId = id
+		}
 		event := Event{
 			MainAct:   mainAct,
 			Openers:   openers,
 			Venue:     venue,
 			Date:      util.Date(eventData["Date"].(time.Time)),
 			Purchased: eventData["Purchased"].(bool),
+			TmId:      tmId,
 			Id:        e.Ref.ID,
 		}
-
 		events = append(events, event)
 	}
 

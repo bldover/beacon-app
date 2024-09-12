@@ -6,6 +6,7 @@ import (
 	"concert-manager/spotify"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,8 @@ type ArtistRanker struct {
 	MusicSvc musicService
 	ranks map[string]rankData
 	lastRefresh time.Time
+	refreshing bool
+	refreshMutex sync.Mutex
 }
 
 type musicService interface {
@@ -50,17 +53,10 @@ func (r *ArtistRanker) Rank(artist data.Artist) data.ArtistRank {
 		return artistRank
 	}
 
-	if time.Since(r.lastRefresh) > rankTTL {
-		log.Info("Refreshing artist ranks")
-		err := r.RefreshRanks()
-		if err != nil {
-			log.Error("Failed to refresh artist ranks", err)
-			// if there's a rate limit from Spotify, avoid repeatedly refreshing
-			r.lastRefresh = time.Now()
-		} else {
-			log.Info("Successfully refreshed artist ranks")
-			r.lastRefresh = time.Now()
-		}
+	if r.lastRefresh.IsZero() {
+		r.DoRefresh()
+	} else if time.Since(r.lastRefresh) > rankTTL {
+		go r.DoRefresh()
 	}
 
 	if rankData, ok := r.ranks[toKey(artist.Name)]; ok {
@@ -71,6 +67,30 @@ func (r *ArtistRanker) Rank(artist data.Artist) data.ArtistRank {
 
 	log.Debugf("Ranked artist %v\n", artistRank)
  	return artistRank
+}
+
+func (r *ArtistRanker) DoRefresh() {
+	r.refreshMutex.Lock()
+	if r.refreshing {
+		r.refreshMutex.Unlock()
+		return
+	}
+	r.refreshing = true
+	r.refreshMutex.Unlock()
+
+    log.Info("Refreshing artist ranks")
+	err := r.RefreshRanks()
+	if err != nil {
+		log.Error("Failed to refresh artist ranks", err)
+		// if there's a rate limit from Spotify, avoid repeatedly refreshing
+	} else {
+		log.Info("Successfully refreshed artist ranks")
+	}
+
+	r.lastRefresh = time.Now().Round(0)
+	r.refreshMutex.Lock()
+	r.refreshing = false
+	r.refreshMutex.Unlock()
 }
 
 func (r *ArtistRanker) RefreshRanks() error {

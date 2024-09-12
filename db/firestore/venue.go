@@ -47,6 +47,24 @@ func (repo *VenueRepo) Add(ctx context.Context, venue Venue) (string, error) {
 	return docRef.ID, nil
 }
 
+func (repo *VenueRepo) Update(ctx context.Context, id string, venue Venue) error {
+    log.Debug("Attempting to update venue", id, venue)
+	docId := repo.Connection.Client.Collection(venueCollection).Doc(id)
+	venueDoc, err := docId.Get(ctx)
+	if err != nil {
+		log.Errorf("Failed to find existing venue while updating %+v, %v", id, err)
+		return err
+	}
+	venueEntity := VenueEntity{venue.Name, venue.City, venue.State}
+	_, err = venueDoc.Ref.Set(ctx, venueEntity)
+	if err != nil {
+		log.Errorf("Failed to update venue %+v to %v, %v", id, venue, err)
+		return err
+	}
+	log.Info("Successfully updated venue", id)
+	return nil
+}
+
 func (repo *VenueRepo) Delete(ctx context.Context, id string) error {
 	log.Debug("Attemping to delete venue", id)
 	docId := repo.Connection.Client.Collection(venueCollection).Doc(id)
@@ -55,7 +73,11 @@ func (repo *VenueRepo) Delete(ctx context.Context, id string) error {
 		log.Errorf("Failed to find existing venue while deleting %+v, %v", id, err)
 		return err
 	}
-	venueDoc.Ref.Delete(ctx)
+	_, err = venueDoc.Ref.Delete(ctx)
+	if err != nil {
+		log.Error("Failed to delete venue", id, err)
+		return err
+	}
 	log.Infof("Successfully deleted venue %+v", id)
 	return nil
 }
@@ -68,7 +90,7 @@ func (repo *VenueRepo) Exists(ctx context.Context, venue Venue) (bool, error) {
 		return false, nil
 	}
 	if err != nil {
-		log.Errorf("Error while checkinf existence of venue %v, %v", venue, err)
+		log.Errorf("Error while checking existence of venue %v, %v", venue, err)
 		return false, err
 	}
 	log.Debugf("Found venue %v with document ID %v", venue, doc.Ref.ID)

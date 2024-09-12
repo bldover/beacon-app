@@ -273,6 +273,7 @@ func parseEventDetails(event *tmEventResponse) (*data.EventDetails, error) {
 			Openers: openers,
 			Venue:   venue,
 			Date:    util.Date(date),
+			TmId:    event.Id,
 		},
 	}
 

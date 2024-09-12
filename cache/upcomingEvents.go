@@ -41,8 +41,6 @@ const (
 	defaultStateCode = "GA"
 )
 
-var	upcomingEventTTL, _ = time.ParseDuration("24h")
-
 func NewUpcomingEventCache() *UpcomingEventCache {
 	cache := UpcomingEventCache{}
 	cache.Location = Location{City: defaultCity, StateCode: defaultStateCode}
@@ -51,25 +49,42 @@ func NewUpcomingEventCache() *UpcomingEventCache {
 	return &cache
 }
 
-func (c UpcomingEventCache) GetUpcomingEvents() []data.EventDetails {
+var	upcomingEventTTL, _ = time.ParseDuration("24h")
+
+func (c *UpcomingEventCache) GetUpcomingEvents() []data.EventDetails {
 	key := c.Location.key()
-	if d, ok := c.upcomingEvents[key]; !ok || isExpired(d.lastLoaded, upcomingEventTTL) {
-		c.LoadUpcomingEvents()
+	if d, ok := c.upcomingEvents[key]; !ok {
+		c.doRefresh()
+	} else if isExpired(d.lastLoaded, upcomingEventTTL) {
+		go c.doRefresh()
 	}
 	return util.CloneEventDetails(c.upcomingEvents[key].events)
 }
 
-func (c *UpcomingEventCache) LoadUpcomingEvents() {
+func (c *UpcomingEventCache) doRefresh() {
+    err := c.RefreshUpcomingEvents()
+	if err != nil {
+		log.Error("Failed to refresh upcoming events", err)
+	}
+}
+
+func (c *UpcomingEventCache) RefreshUpcomingEvents() error {
+	log.Info("Refreshing upcoming events")
 	loc := c.Location
+	key := c.Location.key()
 	request := finder.FindEventRequest{City: loc.City, State: loc.StateCode}
 	events, err := c.Finder.FindAllEvents(request)
 	if err != nil {
-		log.Errorf("Error while loading events for %s, %s: %v", loc.City, loc.StateCode, err)
-		return
+		if _, ok := c.upcomingEvents[key]; !ok {
+			eventData := upcomingEventsData{events: []data.EventDetails{}, lastLoaded: time.Time{}}
+			c.upcomingEvents[key] = eventData
+		}
+		return err
 	}
-	key := c.Location.key()
-	eventData := upcomingEventsData{events: events, lastLoaded: time.Now()}
+
+	eventData := upcomingEventsData{events: events, lastLoaded: time.Now().Round(0)}
 	c.upcomingEvents[key] = eventData
+	return nil
 }
 
 func (c *UpcomingEventCache) Invalidate() {
@@ -124,10 +139,12 @@ func (t Threshold) Level() string {
 	}
 }
 
-func (c UpcomingEventCache) GetRecommendedEvents(threshold Threshold) []data.EventRank {
+func (c *UpcomingEventCache) GetRecommendedEvents(threshold Threshold) []data.EventRank {
 	key := c.Location.key()
-	if _, ok := c.eventRanks[key]; !ok {
+	if d, ok := c.eventRanks[key]; !ok {
 		c.LoadRecommendations()
+	} else if isExpired(d.lastLoaded, upcomingEventTTL) {
+		go c.LoadRecommendations()
 	}
 
 	var events []data.EventRank
@@ -153,5 +170,7 @@ func (c *UpcomingEventCache) LoadRecommendations() {
 }
 
 func isExpired(lastLoad time.Time, ttl time.Duration) bool {
-	return time.Since(lastLoad) > ttl
+	elapsedTime := time.Since(lastLoad)
+	log.Debugf("Upcoming lastLoaded: %v, now: %v, elapsed: %v, ttl: %v", lastLoad, time.Now(), elapsedTime, ttl)
+	return elapsedTime > ttl
 }

@@ -41,3 +41,16 @@ func (s *Server) getUpcomingEvents(w http.ResponseWriter, r *http.Request) (any,
 	events := s.UpcomingEventsCache.GetUpcomingEvents()
 	return events, 0, nil
 }
+
+func (s *Server) refreshUpcomingEvents(w http.ResponseWriter, r *http.Request) (any, int, error) {
+    if r.Method != http.MethodPost {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	err := s.UpcomingEventsCache.RefreshUpcomingEvents()
+	if err != nil {
+		log.Errorf("Failed to refresh upcoming events %v", err)
+		return nil, http.StatusInternalServerError, errors.New("failed to refresh upcoming event cache")
+	}
+	return nil, 0, nil
+}
