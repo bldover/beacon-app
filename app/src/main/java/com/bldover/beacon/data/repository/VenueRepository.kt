@@ -21,8 +21,8 @@ class VenueRepositoryImpl(private val venueApi: VenueApi) : VenueRepository {
     }
 
     override suspend fun updateVenue(venue: Venue): Venue {
-        venueApi.deleteVenue(venue.id!!)
-        return venueApi.addVenue(venue)
+        venueApi.updateVenue(venue.id!!, venue)
+        return venue
     }
 
     override suspend fun deleteVenue(venue: Venue) {

@@ -4,12 +4,18 @@ data class Artist(
     var id: String? = null,
     var name: String,
     var genre: String,
+    var genreSet: Boolean = true,
     var headliner: Boolean = false
 ) {
-    constructor(artist: RawArtist, headliner: Boolean = false) : this(
+    constructor(
+        artist: RawArtist,
+        headliner: Boolean = false,
+        genreSet: Boolean = true
+    ) : this(
         id = artist.id.ifBlank { null },
         name = artist.name,
         genre = artist.genre,
+        genreSet = genreSet,
         headliner = headliner
     )
 
@@ -18,6 +24,6 @@ data class Artist(
     }
 
     fun isPopulated(): Boolean {
-        return name.isNotEmpty() && genre.isNotEmpty()
+        return name.isNotEmpty() && (genre.isNotEmpty() || !genreSet)
     }
 }

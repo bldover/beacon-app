@@ -27,7 +27,7 @@ import com.bldover.beacon.ui.components.editor.DateEditCard
 import com.bldover.beacon.ui.components.editor.DeleteButton
 import com.bldover.beacon.ui.components.editor.PurchasedSwitch
 import com.bldover.beacon.ui.components.editor.SaveCancelButtons
-import com.bldover.beacon.ui.components.editor.SwipableArtistEditCard
+import com.bldover.beacon.ui.components.editor.SwipeableArtistEditCard
 import com.bldover.beacon.ui.components.editor.VenueEditCard
 import com.bldover.beacon.ui.screens.editor.artist.ArtistCreatorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
@@ -65,7 +65,7 @@ fun EventEditorScreen(
                     val headliner = event.artists.find { it.headliner }
                     item(key = headliner?.id ?: "") {
                         if (headliner != null) {
-                            SwipableArtistEditCard(
+                            SwipeableArtistEditCard(
                                 artist = headliner,
                                 artistType = ArtistType.HEADLINER,
                                 onSwipe = { eventEditorViewModel.updateHeadliner(null) },
@@ -91,7 +91,7 @@ fun EventEditorScreen(
                         items = openers,
                         key = { it.id ?: it.name }
                     ) { opener ->
-                        SwipableArtistEditCard(
+                        SwipeableArtistEditCard(
                             artist = opener,
                             artistType = ArtistType.OPENER,
                             onSwipe = eventEditorViewModel::removeOpener,

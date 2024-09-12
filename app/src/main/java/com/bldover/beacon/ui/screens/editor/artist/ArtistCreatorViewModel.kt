@@ -12,7 +12,7 @@ import javax.inject.Inject
 @HiltViewModel
 class ArtistCreatorViewModel @Inject constructor() : ViewModel() {
 
-    private val _artistState = MutableStateFlow(Artist(name = "", genre = ""))
+    private val _artistState = MutableStateFlow(Artist(name = "", genre = "", genreSet = false))
     val artistState = _artistState.asStateFlow()
 
     private var onSave: (Artist) -> Unit = {}
@@ -23,7 +23,8 @@ class ArtistCreatorViewModel @Inject constructor() : ViewModel() {
         onSave: (Artist) -> Unit,
     ) {
         this.onSave = onSave
-        _artistState.value = artist?.copy() ?: Artist(name = "", genre = "")
+        _artistState.value = artist?.copy() ?: Artist(name = "", genre = "", genreSet = false)
+        if (!_artistState.value.genreSet) _artistState.value.genre = ""
         navController.navigate(Screen.CREATE_ARTIST.name)
     }
 
@@ -36,6 +37,7 @@ class ArtistCreatorViewModel @Inject constructor() : ViewModel() {
     }
 
     fun onSave() {
+        if (_artistState.value.genre.isBlank()) _artistState.value.genre = "" else _artistState.value.genreSet = true
         onSave(_artistState.value)
     }
 }

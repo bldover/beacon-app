@@ -75,8 +75,9 @@ class EventEditorViewModel @Inject constructor(
             val deferredVenue = async { venueRepository.getVenues() }
             val savedArtists = deferredArtists.await()
             val savedVenues = deferredVenue.await()
-            event.artists = replaceArtistsWithSaved(event.artists, savedArtists)
-            event.venue = replaceVenueWithSaved(event.venue, savedVenues)
+            event.artists.onEach{ it.genreSet = false }
+            event.artists = preprocessArtists(event.artists, savedArtists)
+            event.venue = preprocessVenues(event.venue, savedVenues)
             _uiState.value = EventEditorState.Success(event)
         }
         this.onSave = onSave
@@ -106,8 +107,8 @@ class EventEditorViewModel @Inject constructor(
                 val event = eventReq.await()
                 val savedArtists = deferredArtists.await()
                 val savedVenues = deferredVenues.await()
-                event.artists = replaceArtistsWithSaved(event.artists, savedArtists)
-                event.venue = replaceVenueWithSaved(event.venue, savedVenues)
+                event.artists = preprocessArtists(event.artists, savedArtists)
+                event.venue = preprocessVenues(event.venue, savedVenues)
                 _uiState.value = EventEditorState.Success(event.copy())
             } catch (e: Exception) {
                 Timber.e(e,"Failed to load event $eventId")
@@ -116,16 +117,17 @@ class EventEditorViewModel @Inject constructor(
         }
     }
 
-    private fun replaceArtistsWithSaved(artists: List<Artist>, savedArtists: List<Artist>): List<Artist> {
+    private fun preprocessArtists(artists: List<Artist>, savedArtists: List<Artist>): List<Artist> {
         return artists.map { artist ->
             val saved = savedArtists.find { it.name.equals(artist.name, ignoreCase = true) }
             saved?.let {
                 it.headliner = artist.headliner
                 it
-            } ?: artist }
+            } ?: artist
+        }
     }
 
-    private fun replaceVenueWithSaved(venue: Venue, savedVenues: List<Venue>): Venue {
+    private fun preprocessVenues(venue: Venue, savedVenues: List<Venue>): Venue {
         return savedVenues.find { it.name.equals(venue.name, ignoreCase = true)
                 && it.city.equals(venue.city, ignoreCase = true)} ?: venue
     }
@@ -241,10 +243,13 @@ class EventEditorViewModel @Inject constructor(
     }
 
     fun onSave() {
-        onSave((_uiState.value as EventEditorState.Success).event)
+        val event = (_uiState.value as EventEditorState.Success).event
+        event.artists.forEach { if (!it.genreSet) it.genre = "" }
+        onSave(event)
     }
 
     fun onDelete() {
-        onDelete((_uiState.value as EventEditorState.Success).event)
+        val event = (_uiState.value as EventEditorState.Success).event
+        onDelete(event)
     }
 }

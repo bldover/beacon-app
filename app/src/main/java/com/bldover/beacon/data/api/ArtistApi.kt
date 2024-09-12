@@ -5,7 +5,8 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
-import retrofit2.http.Query
+import retrofit2.http.PUT
+import retrofit2.http.Path
 
 interface ArtistApi {
 
@@ -15,6 +16,9 @@ interface ArtistApi {
     @POST("v1/artists")
     suspend fun addArtist(@Body artist: Artist): Artist
 
-    @DELETE("v1/artists")
-    suspend fun deleteArtist(@Query("id") id: String)
+    @PUT("v1/artists/{id}")
+    suspend fun updateArtist(@Path("id") id: String, @Body artist: Artist)
+
+    @DELETE("v1/artists/{id}")
+    suspend fun deleteArtist(@Path("id") id: String)
 }

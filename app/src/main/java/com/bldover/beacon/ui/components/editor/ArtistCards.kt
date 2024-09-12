@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material3.CardColors
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -48,7 +46,7 @@ enum class ArtistType(val label: String) {
 }
 
 @Composable
-fun SwipableArtistEditCard(
+fun SwipeableArtistEditCard(
     artist: Artist,
     artistType: ArtistType,
     onSwipe: (Artist) -> Unit,
@@ -71,7 +69,8 @@ fun SwipableArtistEditCard(
                 )
                 Text(
                     text = artist.genre,
-                    style = MaterialTheme.typography.bodySmall
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (artist.genreSet) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
                 )
             }
         }

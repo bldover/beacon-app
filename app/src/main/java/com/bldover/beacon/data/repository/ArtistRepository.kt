@@ -15,7 +15,7 @@ class ArtistRepositoryImpl(private val artistApi: ArtistApi) : ArtistRepository 
 
     override suspend fun getArtists(): List<Artist> {
         Timber.i("Call to getArtists()")
-        return artistApi.getArtists()
+        return artistApi.getArtists().onEach { it.genreSet = true }
     }
 
     override suspend fun addArtist(artist: Artist): Artist {
@@ -23,8 +23,8 @@ class ArtistRepositoryImpl(private val artistApi: ArtistApi) : ArtistRepository 
     }
 
     override suspend fun updateArtist(artist: Artist): Artist {
-        artistApi.deleteArtist(artist.id!!)
-        return artistApi.addArtist(artist)
+        artistApi.updateArtist(artist.id!!, artist)
+        return artist
     }
 
     override suspend fun deleteArtist(artist: Artist) {
