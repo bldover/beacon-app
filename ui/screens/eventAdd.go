@@ -113,7 +113,7 @@ func (a *EventAdder) NextScreen(i int) Screen {
 			Next:        a,
 			Options:     a.newEvent.Openers,
 			HandleSelect: func(artist data.Artist) {
-				a.newEvent.Openers = slices.DeleteFunc(a.newEvent.Openers, artist.Equals)
+				a.newEvent.Openers = slices.DeleteFunc(a.newEvent.Openers, artist.EqualsFields)
 			},
 			Formatter: util.FormatArtists,
 		}

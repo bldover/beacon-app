@@ -212,6 +212,18 @@ func (c *SavedEventCache) UpdateArtist(id string, artist data.Artist) error {
 
 	artist.Id = id
 	c.artists = slices.Replace(c.artists, artistIdx, artistIdx+1, artist)
+
+	for i, event := range c.savedEvents {
+		if event.MainAct.Id == id {
+			c.savedEvents[i].MainAct = artist
+		}
+		for j, opener := range event.Openers {
+			if opener.Id == id {
+				c.savedEvents[i].Openers[j] = artist
+			}
+		}
+	}
+
 	log.Debug("Updated artist in cache", artist)
 	return nil
 }
@@ -277,6 +289,13 @@ func (c *SavedEventCache) UpdateVenue(id string, venue data.Venue) error {
 
 	venue.Id = id
 	c.venues = slices.Replace(c.venues, venueIdx, venueIdx+1, venue)
+
+	for i, event := range c.savedEvents {
+		if event.Venue.Id == id {
+			c.savedEvents[i].Venue = venue
+		}
+	}
+
 	log.Debug("Updated venue in cache", venue)
 	return nil
 }

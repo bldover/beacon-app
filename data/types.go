@@ -66,6 +66,10 @@ func (e Event) Equals(o Event) bool {
 }
 
 func (a Artist) Equals(o Artist) bool {
+	return a.Id == o.Id
+}
+
+func (a Artist) EqualsFields(o Artist) bool {
 	return a.Name == o.Name && a.Genre == o.Genre
 }
 
