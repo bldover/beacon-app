@@ -54,6 +54,7 @@ class EventRepositoryImpl(private val eventApi: EventApi): EventRepository {
     override suspend fun getUpcomingEvents(): List<EventDetail> {
         return eventApi.getUpcomingEvents()
             .map { EventDetail(it) }
+            .filter { LocalDate.now().isBefore(it.date) || LocalDate.now().isEqual(it.date) }
             .toList()
     }
 

@@ -18,14 +18,14 @@ import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.components.editor.SaveCancelButtons
 
 @Composable
-fun VenueCreatorScreen(
+fun VenueEditorScreen(
     navController: NavController,
-    venueCreatorViewModel: VenueCreatorViewModel
+    venueEditorViewModel: VenueEditorViewModel
 ) {
     ScreenFrame(
         topBar = {
             TitleTopBar(
-                title = "New Venue",
+                title = "Edit Venue",
                 leadingIcon = { BackButton(navController = navController) }
             )
         }
@@ -34,22 +34,22 @@ fun VenueCreatorScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val venue by venueCreatorViewModel.venueState.collectAsState()
+            val venue by venueEditorViewModel.venueState.collectAsState()
             TextField(
                 value = venue.name,
-                onValueChange = venueCreatorViewModel::updateName,
+                onValueChange = venueEditorViewModel::updateName,
                 label = { Text("Name") },
                 modifier = Modifier.fillMaxWidth()
             )
             TextField(
                 value = venue.city,
-                onValueChange = venueCreatorViewModel::updateCity,
+                onValueChange = venueEditorViewModel::updateCity,
                 label = { Text("City") },
                 modifier = Modifier.fillMaxWidth()
             )
             TextField(
                 value = venue.state,
-                onValueChange = venueCreatorViewModel::updateState,
+                onValueChange = venueEditorViewModel::updateState,
                 label = { Text("State") },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -59,8 +59,7 @@ fun VenueCreatorScreen(
             ) {
                 SaveCancelButtons(
                     onSave = {
-                        venueCreatorViewModel.onSave()
-                        navController.popBackStack()
+                        venueEditorViewModel.onSave()
                     },
                     onCancel = { navController.popBackStack() }
                 )

@@ -3,11 +3,12 @@ plugins {
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.kapt)
     alias(libs.plugins.dagger.hilt.android)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.bldover.beacon"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.bldover.beacon.dev"
@@ -89,6 +90,11 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     kapt(libs.hilt.android.compiler)
     kapt(libs.androidx.hilt.compiler)
+}
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 kapt {

@@ -18,14 +18,14 @@ import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.components.editor.SaveCancelButtons
 
 @Composable
-fun ArtistCreatorScreen(
+fun ArtistEditorScreen(
     navController: NavController,
-    artistCreatorViewModel: ArtistCreatorViewModel
+    artistEditorViewModel: ArtistEditorViewModel
 ) {
     ScreenFrame(
         topBar = {
             TitleTopBar(
-                title = "New Artist",
+                title = "Edit Artist",
                 leadingIcon = { BackButton(navController = navController) }
             )
         }
@@ -34,16 +34,16 @@ fun ArtistCreatorScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            val artist by artistCreatorViewModel.artistState.collectAsState()
+            val artist by artistEditorViewModel.artistState.collectAsState()
             TextField(
                 value = artist.name,
-                onValueChange = artistCreatorViewModel::updateName,
+                onValueChange = artistEditorViewModel::updateName,
                 label = { Text("Name") },
                 modifier = Modifier.fillMaxWidth()
             )
             TextField(
                 value = artist.genre,
-                onValueChange = artistCreatorViewModel::updateGenre,
+                onValueChange = artistEditorViewModel::updateGenre,
                 label = { Text("Genre") },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -53,8 +53,7 @@ fun ArtistCreatorScreen(
             ) {
                 SaveCancelButtons(
                     onSave = {
-                        artistCreatorViewModel.onSave()
-                        navController.popBackStack()
+                        artistEditorViewModel.onSave()
                     },
                     onCancel = { navController.popBackStack() }
                 )

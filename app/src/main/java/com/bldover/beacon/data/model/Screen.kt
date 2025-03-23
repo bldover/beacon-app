@@ -7,10 +7,12 @@ enum class Screen(val title: String) {
     UTILITIES("Utilities"),
     USER_SETTINGS("User Settings"),
     EDIT_EVENT("Edit Event"),
+    EDIT_VENUE("Edit Venue"),
+    EDIT_ARTIST("Edit Artist"),
     SELECT_VENUE("Select Venue"),
     SELECT_ARTIST("Select Artist"),
-    CREATE_VENUE("Create Venue"),
-    CREATE_ARTIST("Create Artist");
+    MANAGE_VENUES("Manage Venues"),
+    MANAGE_ARTISTS("Manage Artists");
 
     companion object {
         fun fromTitle(title: String): Screen {

@@ -10,14 +10,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
 @HiltViewModel
-class ArtistCreatorViewModel @Inject constructor() : ViewModel() {
+class ArtistEditorViewModel @Inject constructor() : ViewModel() {
 
     private val _artistState = MutableStateFlow(Artist(name = "", genre = "", genreSet = false))
     val artistState = _artistState.asStateFlow()
 
     private var onSave: (Artist) -> Unit = {}
 
-    fun launchCreator(
+    fun launchEditor(
         navController: NavController,
         artist: Artist? = null,
         onSave: (Artist) -> Unit,
@@ -25,7 +25,7 @@ class ArtistCreatorViewModel @Inject constructor() : ViewModel() {
         this.onSave = onSave
         _artistState.value = artist?.copy() ?: Artist(name = "", genre = "", genreSet = false)
         if (!_artistState.value.genreSet) _artistState.value.genre = ""
-        navController.navigate(Screen.CREATE_ARTIST.name)
+        navController.navigate(Screen.EDIT_ARTIST.name)
     }
 
     fun updateName(name: String) {

@@ -29,7 +29,7 @@ import com.bldover.beacon.ui.components.editor.PurchasedSwitch
 import com.bldover.beacon.ui.components.editor.SaveCancelButtons
 import com.bldover.beacon.ui.components.editor.SwipeableArtistEditCard
 import com.bldover.beacon.ui.components.editor.VenueEditCard
-import com.bldover.beacon.ui.screens.editor.artist.ArtistCreatorViewModel
+import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
 import timber.log.Timber
@@ -40,7 +40,7 @@ fun EventEditorScreen(
     navController: NavController,
     snackbarState: SnackbarState,
     artistSelectorViewModel: ArtistSelectorViewModel,
-    artistCreatorViewModel: ArtistCreatorViewModel,
+    artistEditorViewModel: ArtistEditorViewModel,
     venueSelectorViewModel: VenueSelectorViewModel,
     eventEditorViewModel: EventEditorViewModel
 ) {
@@ -70,7 +70,7 @@ fun EventEditorScreen(
                                 artistType = ArtistType.HEADLINER,
                                 onSwipe = { eventEditorViewModel.updateHeadliner(null) },
                                 onSelect = {
-                                    artistCreatorViewModel.launchCreator(
+                                    artistEditorViewModel.launchEditor(
                                         navController = navController,
                                         artist = headliner,
                                         onSave = { eventEditorViewModel.updateHeadliner(it) }
@@ -96,7 +96,7 @@ fun EventEditorScreen(
                             artistType = ArtistType.OPENER,
                             onSwipe = eventEditorViewModel::removeOpener,
                             onSelect = {
-                                artistCreatorViewModel.launchCreator(
+                                artistEditorViewModel.launchEditor(
                                     navController = navController,
                                     artist = opener,
                                     onSave = { newOpener ->
@@ -131,7 +131,7 @@ fun EventEditorScreen(
                         )
                     }
                     item {
-                        val futureEvent = event.date.isAfter(LocalDate.now())
+                        val futureEvent = !event.date.isBefore(LocalDate.now())
                         PurchasedSwitch(
                             checked = !futureEvent || event.purchased,
                             enabled = futureEvent,

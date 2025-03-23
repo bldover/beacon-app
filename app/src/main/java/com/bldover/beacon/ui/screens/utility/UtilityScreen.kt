@@ -30,8 +30,18 @@ fun UtilityScreen(navController: NavController) {
             verticalArrangement = Arrangement.Top
         ) {
             item {
-                UtilityItem(text = "Settings") {
+                UtilityItem(text = "User Settings") {
                     navController.navigate(Screen.USER_SETTINGS.name)
+                }
+            }
+            item {
+                UtilityItem(text = "Manage Artists") {
+                    navController.navigate(Screen.MANAGE_ARTISTS.name)
+                }
+            }
+            item {
+                UtilityItem(text = "Manage Venues") {
+                    navController.navigate(Screen.MANAGE_VENUES.name)
                 }
             }
         }

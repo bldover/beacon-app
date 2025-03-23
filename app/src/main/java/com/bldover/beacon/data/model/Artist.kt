@@ -15,7 +15,7 @@ data class Artist(
         id = artist.id.ifBlank { null },
         name = artist.name,
         genre = artist.genre,
-        genreSet = genreSet,
+        genreSet = !(artist.genre.isBlank() || artist.genre == GENRE_UNSPECIFIED),
         headliner = headliner
     )
 
@@ -27,3 +27,5 @@ data class Artist(
         return name.isNotEmpty() && (genre.isNotEmpty() || !genreSet)
     }
 }
+
+const val GENRE_UNSPECIFIED = "Unspecified"

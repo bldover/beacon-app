@@ -10,21 +10,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import javax.inject.Inject
 
 @HiltViewModel
-class VenueCreatorViewModel @Inject constructor() : ViewModel() {
+class VenueEditorViewModel @Inject constructor() : ViewModel() {
 
     private val _venueState = MutableStateFlow(Venue(name = "", city = "", state = ""))
     val venueState = _venueState.asStateFlow()
 
     private var onSave: (Venue) -> Unit = {}
 
-    fun launchCreator(
+    fun launchEditor(
         navController: NavController,
+        venue: Venue? = null,
         onSave: (Venue) -> Unit,
-        name: String = ""
     ) {
         this.onSave = onSave
-        _venueState.value = Venue(name = name, city = "Atlanta", state = "Georgia")
-        navController.navigate(Screen.CREATE_VENUE.name)
+        _venueState.value = venue?.copy() ?: Venue(name = "", city = "", state = "")
+        navController.navigate(Screen.EDIT_VENUE.name)
     }
 
     fun updateName(name: String) {

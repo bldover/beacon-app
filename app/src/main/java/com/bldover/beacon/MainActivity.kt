@@ -23,14 +23,14 @@ import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.NavigationBottomBar
-import com.bldover.beacon.ui.screens.editor.artist.ArtistCreatorScreen
-import com.bldover.beacon.ui.screens.editor.artist.ArtistCreatorViewModel
+import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorScreen
+import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorScreen
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 import com.bldover.beacon.ui.screens.editor.event.EventEditorScreen
 import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
-import com.bldover.beacon.ui.screens.editor.venue.VenueCreatorScreen
-import com.bldover.beacon.ui.screens.editor.venue.VenueCreatorViewModel
+import com.bldover.beacon.ui.screens.editor.venue.VenueEditorScreen
+import com.bldover.beacon.ui.screens.editor.venue.VenueEditorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
 import com.bldover.beacon.ui.screens.saved.HistoryScreen
@@ -38,6 +38,8 @@ import com.bldover.beacon.ui.screens.saved.PlannerScreen
 import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingScreen
+import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
+import com.bldover.beacon.ui.screens.utility.ManageVenuesScreen
 import com.bldover.beacon.ui.screens.utility.SettingsState
 import com.bldover.beacon.ui.screens.utility.UserSettingsScreen
 import com.bldover.beacon.ui.screens.utility.UserSettingsViewModel
@@ -67,8 +69,8 @@ fun BeaconApp(
     artistSelectorViewModel: ArtistSelectorViewModel = hiltViewModel(),
     venueSelectorViewModel: VenueSelectorViewModel = hiltViewModel(),
     eventEditorViewModel: EventEditorViewModel = hiltViewModel(),
-    artistCreatorViewModel: ArtistCreatorViewModel = hiltViewModel(),
-    venueCreatorViewModel: VenueCreatorViewModel = hiltViewModel()
+    artistEditorViewModel: ArtistEditorViewModel = hiltViewModel(),
+    venueEditorViewModel: VenueEditorViewModel = hiltViewModel()
 ) {
     Timber.d("composing BeaconApp")
     val navController = rememberNavController()
@@ -137,7 +139,7 @@ fun BeaconApp(
                             navController = navController,
                             snackbarState = snackbarState,
                             artistSelectorViewModel = artistSelectorViewModel,
-                            artistCreatorViewModel = artistCreatorViewModel,
+                            artistEditorViewModel = artistEditorViewModel,
                             venueSelectorViewModel = venueSelectorViewModel,
                             eventEditorViewModel = eventEditorViewModel
                         )
@@ -146,26 +148,40 @@ fun BeaconApp(
                         VenueSelectorScreen(
                             navController = navController,
                             venueSelectorViewModel = venueSelectorViewModel,
-                            venueCreatorViewModel = venueCreatorViewModel
+                            venueEditorViewModel = venueEditorViewModel
                         )
                     }
                     composable(Screen.SELECT_ARTIST.name) {
                         ArtistSelectorScreen(
                             navController = navController,
                             artistSelectorViewModel = artistSelectorViewModel,
-                            artistCreatorViewModel = artistCreatorViewModel
+                            artistEditorViewModel = artistEditorViewModel
                         )
                     }
-                    composable(Screen.CREATE_ARTIST.name) {
-                        ArtistCreatorScreen(
+                    composable(Screen.EDIT_ARTIST.name) {
+                        ArtistEditorScreen(
                             navController = navController,
-                            artistCreatorViewModel = artistCreatorViewModel
+                            artistEditorViewModel = artistEditorViewModel
                         )
                     }
-                    composable(Screen.CREATE_VENUE.name) {
-                        VenueCreatorScreen(
+                    composable(Screen.EDIT_VENUE.name) {
+                        VenueEditorScreen(
                             navController = navController,
-                            venueCreatorViewModel = venueCreatorViewModel
+                            venueEditorViewModel = venueEditorViewModel
+                        )
+                    }
+                    composable(Screen.MANAGE_VENUES.name) {
+                        ManageVenuesScreen(
+                            navController = navController,
+                            snackbarState = snackbarState,
+                            venueEditorViewModel = venueEditorViewModel
+                        )
+                    }
+                    composable(Screen.MANAGE_ARTISTS.name) {
+                        ManageArtistsScreen(
+                            navController = navController,
+                            snackbarState = snackbarState,
+                            artistEditorViewModel = artistEditorViewModel
                         )
                     }
                 }

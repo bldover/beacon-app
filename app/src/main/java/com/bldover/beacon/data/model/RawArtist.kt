@@ -8,6 +8,6 @@ data class RawArtist(
     constructor(artist: Artist) : this(
         id = artist.id ?: "",
         name = artist.name,
-        genre = if (artist.genreSet) artist.genre else "Unspecified"
+        genre = if (artist.genreSet) artist.genre else GENRE_UNSPECIFIED
     )
 }
