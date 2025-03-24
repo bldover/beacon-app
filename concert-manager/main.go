@@ -1,6 +1,8 @@
 package main
 
 import (
+	"concert-manager/api/lastfm"
+	"concert-manager/api/spotify"
 	"concert-manager/cache"
 	"concert-manager/db"
 	"concert-manager/db/firestore"
@@ -9,7 +11,6 @@ import (
 	"concert-manager/log"
 	"concert-manager/ranker"
 	"concert-manager/server"
-	"concert-manager/spotify"
 	"concert-manager/ui"
 	"os"
 	"slices"
@@ -43,7 +44,10 @@ func main() {
 	savedCache.LoadCaches()
 
 	eventFinder := finder.NewEventFinder()
-	artistRanker := ranker.ArtistRanker{MusicSvc: spotify.NewClient()}
+	artistRanker := &ranker.ArtistRanker{
+		MusicSvc: spotify.NewClient(),
+		AnalyticsSvc: lastfm.NewClient(),
+	}
 	eventRanker := &ranker.EventRanker{ArtistRanker: artistRanker}
 
 	upcomingCache := cache.NewUpcomingEventCache()

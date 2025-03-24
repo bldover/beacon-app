@@ -1,6 +1,7 @@
 package spotify
 
 import (
+	"concert-manager/api"
 	"concert-manager/log"
 	"encoding/json"
 	"errors"
@@ -12,25 +13,15 @@ import (
 	"time"
 )
 
-type Track struct {
+type trackJson struct {
 	Id string `json:"id"`
 	Title string `json:"name"`
-    Artists []Artist `json:"artists"`
+    Artists []artistJson `json:"artists"`
 }
 
-type RankedTrack struct {
-	Track Track
-	Rank float64
-}
-
-type Artist struct {
+type artistJson struct {
     Id string `json:"id"`
 	Name string `json:"name"`
-}
-
-type RankedArtist struct {
-	Artist Artist
-	Rank float64
 }
 
 type Client struct {
@@ -58,11 +49,11 @@ func NewClient() *Client {
 
 const baseUrl = "https://api.spotify.com/v1"
 const limit = 50
-const defaultThreadInitDelay = 50 * time.Millisecond
+const defaultThreadInitDelay = 100 * time.Millisecond
 
 type RequestEntity struct {
     requestUrl string
-	pathParams map[string]any
+	queryParams map[string]any
 }
 
 func (c *Client) getPage(httpMethod string, reqEntity RequestEntity, response any) error {
@@ -72,7 +63,7 @@ func (c *Client) getPage(httpMethod string, reqEntity RequestEntity, response an
 	}
 
 	params := url.Values{}
-	for name, value := range reqEntity.pathParams {
+	for name, value := range reqEntity.queryParams {
 		params.Set(name, fmt.Sprintf("%v", value))
 	}
 	req.URL.RawQuery = params.Encode()
@@ -176,37 +167,70 @@ func getDelay(resp *http.Response) time.Duration {
 	return (time.Duration(delay) + 1) * time.Second
 }
 
-type SavedTrack struct {
-    Track Track `json:"track"`
+func toTrack(rawTrack trackJson, offset int) api.Track {
+    return api.Track{
+		TmId: rawTrack.Id,
+		Title: rawTrack.Title,
+		Artists: toArtists(rawTrack.Artists, 0),
+		Offset: offset,
+	}
 }
 
-type SavedTrackResponse struct {
+func toTracks(rawTracks []trackJson, offset int) []api.Track {
+	tracks := []api.Track{}
+	for _, rawTrack := range rawTracks {
+		tracks = append(tracks, toTrack(rawTrack, offset))
+	}
+	return tracks
+}
+
+func toArtist(rawArtist artistJson, offset int) api.Artist {
+    return api.Artist{
+		TmId: rawArtist.Id,
+		Name: rawArtist.Name,
+		Offset: offset,
+	}
+}
+
+func toArtists(rawArtists []artistJson, offset int) []api.Artist {
+	artists := []api.Artist{}
+	for _, rawArtist := range rawArtists {
+		artists = append(artists, toArtist(rawArtist, offset))
+	}
+	return artists
+}
+
+type savedTrackJson struct {
+    Track trackJson `json:"track"`
+}
+
+type savedTrackResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
-	SavedTracks []SavedTrack `json:"items"`
+	SavedTracks []savedTrackJson `json:"items"`
 }
 const savedTracksPath = "/me/tracks"
 
-func (c *Client) GetSavedTracks() ([]Track, error) {
+func (c *Client) GetSavedTracks() ([]api.Track, error) {
 	log.Info("Request to get saved Spotify tracks")
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
-	tracks := []Track{}
+	tracks := []api.Track{}
 	savedTracksUrl := baseUrl + savedTracksPath
 
 	// First request to get the total number of tracks
-	pathParams := map[string]any{}
-	pathParams["limit"] = limit
-	request := RequestEntity{savedTracksUrl, pathParams}
-	response := &SavedTrackResponse{}
+	queryParams := map[string]any{}
+	queryParams["limit"] = limit
+	request := RequestEntity{savedTracksUrl, queryParams}
+	response := &savedTrackResponse{}
 	err := c.getPage(http.MethodGet, request, response)
 	if err != nil {
 		return tracks, err
 	}
 
-	savedTrackBatch := []Track{}
-	for _, track := range response.SavedTracks {
-		savedTrackBatch = append(savedTrackBatch, track.Track)
+	savedTrackBatch := []api.Track{}
+	for _, savedTrack := range response.SavedTracks {
+		savedTrackBatch = append(savedTrackBatch, toTrack(savedTrack.Track, 0))
 	}
 	tracks = append(tracks, savedTrackBatch...)
 
@@ -218,20 +242,20 @@ func (c *Client) GetSavedTracks() ([]Track, error) {
 		wg.Add(1)
 		go func(offset int) {
 			defer wg.Done()
-			pathParams := map[string]any{}
-			pathParams["limit"] = limit
-			pathParams["offset"] = offset
-			request := RequestEntity{savedTracksUrl, pathParams}
-			response := &SavedTrackResponse{}
+			queryParams := map[string]any{}
+			queryParams["limit"] = limit
+			queryParams["offset"] = offset
+			request := RequestEntity{savedTracksUrl, queryParams}
+			response := &savedTrackResponse{}
 			err := c.getPage(http.MethodGet, request, response)
 			if err != nil {
 				log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
 				return
 			}
 
-			savedTrackBatch := []Track{}
-			for _, track := range response.SavedTracks {
-				savedTrackBatch = append(savedTrackBatch, track.Track)
+			savedTrackBatch := []api.Track{}
+			for _, savedTrack := range response.SavedTracks {
+				savedTrackBatch = append(savedTrackBatch, toTrack(savedTrack.Track, i))
 			}
 			mu.Lock()
 			tracks = append(tracks, savedTrackBatch...)
@@ -247,14 +271,15 @@ func (c *Client) GetSavedTracks() ([]Track, error) {
 		return tracks, errors.New(errMsg)
 	}
 	log.Infof("Found %v saved tracks", retrievedCount)
+
 	return tracks, nil
 }
 
-type TopTrackResponse struct {
+type topTrackResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
 	Offset int `json:"offset"`
-	TopTracks []Track `json:"items"`
+	TopTracks []trackJson `json:"items"`
 }
 
 const topTracksPath = "/me/top/tracks"
@@ -264,28 +289,27 @@ const LongTerm = "long_term"
 const MediumTerm = "medium_term"
 const ShortTerm = "short_term"
 
-func (c *Client) GetTopTracks(timeRange TimeRange) ([]RankedTrack, error) {
+func (c *Client) GetTopTracks(timeRange TimeRange) ([]api.Track, error) {
 	log.Info("Request to get top Spotify tracks with range:", timeRange)
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
-	tracks := []RankedTrack{}
+	tracks := []api.Track{}
 	topTracksUrl := baseUrl + topTracksPath
 
 	// First request to get the total number of tracks
-	pathParams := map[string]any{}
-	pathParams["limit"] = limit
-	pathParams["time_range"] = timeRange
-	request := RequestEntity{topTracksUrl, pathParams}
-	response := &TopTrackResponse{}
+	queryParams := map[string]any{}
+	queryParams["limit"] = limit
+	queryParams["time_range"] = timeRange
+	request := RequestEntity{topTracksUrl, queryParams}
+	response := &topTrackResponse{}
 	err := c.getPage(http.MethodGet, request, response)
 	if err != nil {
 		return tracks, err
 	}
 
-	rankedTrackBatch := []RankedTrack{}
-	for _, track := range response.TopTracks {
-		rankedArtist := RankedTrack{Track: track, Rank: 0}
-		rankedTrackBatch = append(rankedTrackBatch, rankedArtist)
+	rankedTrackBatch := []api.Track{}
+	for _, trackJson := range response.TopTracks {
+		rankedTrackBatch = append(rankedTrackBatch, toTrack(trackJson, 0))
 	}
 	tracks = append(tracks, rankedTrackBatch...)
 
@@ -297,22 +321,21 @@ func (c *Client) GetTopTracks(timeRange TimeRange) ([]RankedTrack, error) {
 		wg.Add(1)
 		go func(offset int) {
 			defer wg.Done()
-			pathParams := map[string]any{}
-			pathParams["limit"] = limit
-			pathParams["time_range"] = timeRange
-			pathParams["offset"] = offset
-			request := RequestEntity{topTracksUrl, pathParams}
-			response := &TopTrackResponse{}
+			queryParams := map[string]any{}
+			queryParams["limit"] = limit
+			queryParams["time_range"] = timeRange
+			queryParams["offset"] = offset
+			request := RequestEntity{topTracksUrl, queryParams}
+			response := &topTrackResponse{}
 			err := c.getPage(http.MethodGet, request, response)
 			if err != nil {
 				log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
 				return
 			}
 
-			rankedTrackBatch := []RankedTrack{}
-			for _, track := range response.TopTracks {
-				rankedArtist := RankedTrack{Track: track, Rank: float64(offset / total)}
-				rankedTrackBatch = append(rankedTrackBatch, rankedArtist)
+			rankedTrackBatch := []api.Track{}
+			for _, trackJson := range response.TopTracks {
+				rankedTrackBatch = append(rankedTrackBatch, toTrack(trackJson, offset))
 			}
 			mu.Lock()
 			tracks = append(tracks, rankedTrackBatch...)
@@ -331,37 +354,36 @@ func (c *Client) GetTopTracks(timeRange TimeRange) ([]RankedTrack, error) {
 	return tracks, nil
 }
 
-type TopArtistResponse struct {
+type topArtistResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
 	Offset int `json:"offset"`
-	TopArtists []Artist `json:"items"`
+	TopArtists []artistJson `json:"items"`
 }
 
 const topArtistsPath = "/me/top/artists"
 
-func (c *Client) GetTopArtists(timeRange TimeRange) ([]RankedArtist, error) {
+func (c *Client) GetTopArtists(timeRange TimeRange) ([]api.Artist, error) {
 	log.Info("Request to get top Spotify artists with range:", timeRange)
 	var wg sync.WaitGroup
 	mu := &sync.Mutex{}
-	artists := []RankedArtist{}
+	artists := []api.Artist{}
 	topArtistsUrl := baseUrl + topArtistsPath
 
 	// First request to get the total number of artists
-	pathParams := map[string]any{}
-	pathParams["limit"] = limit
-	pathParams["time_range"] = timeRange
-	request := RequestEntity{topArtistsUrl, pathParams}
-	response := &TopArtistResponse{}
+	queryParams := map[string]any{}
+	queryParams["limit"] = limit
+	queryParams["time_range"] = timeRange
+	request := RequestEntity{topArtistsUrl, queryParams}
+	response := &topArtistResponse{}
 	err := c.getPage(http.MethodGet, request, response)
 	if err != nil {
 		return artists, err
 	}
 
-	rankedArtistBatch := []RankedArtist{}
-	for _, artist := range response.TopArtists {
-		rankedArtist := RankedArtist{Artist: artist, Rank: 0}
-		rankedArtistBatch = append(rankedArtistBatch, rankedArtist)
+	rankedArtistBatch := []api.Artist{}
+	for _, artistJson := range response.TopArtists {
+		rankedArtistBatch = append(rankedArtistBatch, toArtist(artistJson, 0))
 	}
 	artists = append(artists, rankedArtistBatch...)
 
@@ -373,22 +395,21 @@ func (c *Client) GetTopArtists(timeRange TimeRange) ([]RankedArtist, error) {
 		wg.Add(1)
 		go func(offset int) {
 			defer wg.Done()
-			pathParams := map[string]any{}
-			pathParams["limit"] = limit
-			pathParams["time_range"] = timeRange
-			pathParams["offset"] = offset
-			request := RequestEntity{topArtistsUrl, pathParams}
-			response := &TopArtistResponse{}
+			queryParams := map[string]any{}
+			queryParams["limit"] = limit
+			queryParams["time_range"] = timeRange
+			queryParams["offset"] = offset
+			request := RequestEntity{topArtistsUrl, queryParams}
+			response := &topArtistResponse{}
 			err := c.getPage(http.MethodGet, request, response)
 			if err != nil {
 				log.Errorf("Error fetching artists at offset %d: %v", offset, err)
 				return
 			}
 
-			rankedArtistBatch := []RankedArtist{}
-			for _, artist := range response.TopArtists {
-				rankedArtist := RankedArtist{Artist: artist, Rank: float64(offset / total)}
-				rankedArtistBatch = append(rankedArtistBatch, rankedArtist)
+			rankedArtistBatch := []api.Artist{}
+			for _, artistJson := range response.TopArtists {
+				rankedArtistBatch = append(rankedArtistBatch, toArtist(artistJson, offset))
 			}
 			mu.Lock()
 			artists = append(artists, rankedArtistBatch...)
@@ -407,62 +428,6 @@ func (c *Client) GetTopArtists(timeRange TimeRange) ([]RankedArtist, error) {
 	return artists, nil
 }
 
-type RelatedArtistResponse struct {
-    Artists []Artist `json:"artists"`
-}
-
-const relatedArtistPath = "/artists/%s/related-artists"
-
-func (c *Client) GetRelatedArtists(artist Artist) ([]Artist, error) {
-	log.Info("Request to get related Spotify artists to artist:", artist)
-	url := fmt.Sprintf(baseUrl + relatedArtistPath, artist.Id)
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := c.call(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var relatedArtistResp RelatedArtistResponse
-	if err := json.NewDecoder(resp.Body).Decode(&relatedArtistResp); err != nil {
-		errMsg := fmt.Sprintf("failed to parse response: %v", err)
-		return nil, errors.New(errMsg)
-	}
-	log.Infof("Found related artists %v for requested artist %s", relatedArtistResp.Artists, artist.Name)
-    return relatedArtistResp.Artists, nil
-}
-
-func (c *Client) GetRelatedArtistsBatch(artists []Artist) (map[Artist][]Artist, error) {
-	log.Infof("Retrieved batch related artist request for %v artists", len(artists))
-	var wg sync.WaitGroup
-	mu := &sync.Mutex{}
-	relatedMap := map[Artist][]Artist{}
-	for _, artist := range artists {
-		wg.Add(1)
-		go func(a Artist) {
-			defer wg.Done()
-			related, err := c.GetRelatedArtists(a)
-			if err != nil {
-				log.Errorf("Failed to retrieve related artists for %v: %v", a, err)
-				return
-			}
-			mu.Lock()
-			relatedMap[a] = related
-			mu.Unlock()
-		}(artist)
-	}
-
-	wg.Wait()
-	successCount := len(relatedMap)
-	if successCount < len(artists) {
-		// artists may still be valid for any successful batches; let the caller decide to use it or not
-		errMsg := fmt.Sprintf("failed to retrieve some related artists, found %d/%d", successCount, len(artists))
-		return relatedMap, errors.New(errMsg)
-	}
-	log.Info("Finished batch related artist request")
-	return relatedMap, nil
+type relatedArtistResponse struct {
+    Artists []artistJson `json:"artists"`
 }

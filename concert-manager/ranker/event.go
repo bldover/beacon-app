@@ -6,7 +6,7 @@ import (
 )
 
 type EventRanker struct {
-	ArtistRanker ArtistRanker
+	ArtistRanker *ArtistRanker
 }
 
 func (r *EventRanker) Rank(event data.EventDetails) data.EventRank {

@@ -141,3 +141,7 @@ func Display(v ...any) {
 func Displayf(format string, v ...any) {
 	displayLog.Printf(format, v...)
 }
+
+func IsDebug() bool {
+    return debugLog != nil
+}
