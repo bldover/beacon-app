@@ -1,6 +1,6 @@
 package com.bldover.beacon.data.api
 
-import com.bldover.beacon.data.model.RawArtist
+import com.bldover.beacon.data.model.artist.RawArtist
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET

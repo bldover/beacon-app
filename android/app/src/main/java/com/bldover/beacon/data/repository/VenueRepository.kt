@@ -1,7 +1,7 @@
 package com.bldover.beacon.data.repository
 
 import com.bldover.beacon.data.api.VenueApi
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.venue.Venue
 
 interface VenueRepository {
     suspend fun getVenues(): List<Venue>

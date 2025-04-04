@@ -12,8 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.bldover.beacon.data.model.Event
-import com.bldover.beacon.data.model.EventDetail
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventDetail
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -94,12 +94,7 @@ fun UpcomingEventCard(
                 text = event.venue.name,
                 style = MaterialTheme.typography.bodySmall
             )
-            if (event.purchased) {
-                Text(
-                    text = "Going!",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            } else if (event.price != null) {
+            if (event.price != null) {
                 Text(
                     text = "Price: $${event.formattedPrice}",
                     style = MaterialTheme.typography.bodySmall

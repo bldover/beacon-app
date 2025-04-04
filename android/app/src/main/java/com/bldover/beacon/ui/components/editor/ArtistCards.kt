@@ -13,7 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bldover.beacon.data.model.Artist
+import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.BasicOutlinedCard
 import com.bldover.beacon.ui.components.common.DismissableCard

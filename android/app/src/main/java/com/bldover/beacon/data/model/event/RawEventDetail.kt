@@ -1,4 +1,4 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.event
 
 data class RawEventDetail(
     val event: RawEvent,

@@ -38,7 +38,9 @@ fun ManageArtistsScreen(
     ) {
         SearchableArtistsList(
             artistState = artistState,
+            orderingState = artistsViewModel.ordering.collectAsState().value,
             onSearchArtists = artistsViewModel::applyFilter,
+            onOrderingChange = artistsViewModel::applyOrdering,
             onArtistSelected = {
                 artistEditorViewModel.launchEditor(
                     navController = navController,

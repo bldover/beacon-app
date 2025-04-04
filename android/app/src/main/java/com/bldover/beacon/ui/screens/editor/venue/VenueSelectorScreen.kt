@@ -32,7 +32,9 @@ fun VenueSelectorScreen(
     ) {
         SearchableVenuesList(
             venueState = venueState,
+            orderingState = venuesViewModel.ordering.collectAsState().value,
             onSearchVenues = venuesViewModel::applyFilter,
+            onOrderingChange = venuesViewModel::applyOrdering,
             onVenueSelected = {
                 venueSelectorViewModel.selectVenue(it)
                 navController.popBackStack()

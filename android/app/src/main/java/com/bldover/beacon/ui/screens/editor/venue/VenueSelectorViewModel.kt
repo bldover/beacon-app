@@ -3,7 +3,7 @@ package com.bldover.beacon.ui.screens.editor.venue
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.venue.Venue
 import dagger.hilt.android.lifecycle.HiltViewModel
 import timber.log.Timber
 import javax.inject.Inject

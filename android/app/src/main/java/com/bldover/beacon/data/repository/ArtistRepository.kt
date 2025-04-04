@@ -1,8 +1,8 @@
 package com.bldover.beacon.data.repository
 
 import com.bldover.beacon.data.api.ArtistApi
-import com.bldover.beacon.data.model.Artist
-import com.bldover.beacon.data.model.RawArtist
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.RawArtist
 import timber.log.Timber
 
 interface ArtistRepository {

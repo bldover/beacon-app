@@ -2,7 +2,10 @@ package com.bldover.beacon.ui.screens.editor.artist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.Artist
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.ArtistOrdering
+import com.bldover.beacon.data.model.ordering.Direction
+import com.bldover.beacon.data.model.ordering.OrderField
 import com.bldover.beacon.data.repository.ArtistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,8 @@ class ArtistsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<ArtistState>(ArtistState.Loading)
     val uiState: StateFlow<ArtistState> = _uiState.asStateFlow()
+    private val _ordering = MutableStateFlow(ArtistOrdering(OrderField.NAME, Direction.ASCENDING))
+    val ordering: StateFlow<ArtistOrdering> = _ordering.asStateFlow()
 
     init {
         loadArtists()
@@ -41,6 +46,7 @@ class ArtistsViewModel @Inject constructor(
                 val artists = artistRepository.getArtists().sortedBy(Artist::name)
                 _uiState.value = ArtistState.Success(artists, artists)
                 Timber.i("Loaded ${artists.size} artists")
+                applyOrdering(_ordering.value)
             } catch (e: Exception) {
                 Timber.e(e,"Failed to load artists")
                 _uiState.value = ArtistState.Error(e.message ?: "unknown error")
@@ -71,6 +77,24 @@ class ArtistsViewModel @Inject constructor(
                 )
             }
             else -> return
+        }
+    }
+
+    fun applyOrdering(ordering: ArtistOrdering) {
+        Timber.i("Sorting artists events by $ordering")
+        when (_uiState.value) {
+            is ArtistState.Success -> {
+                val state = (_uiState.value as ArtistState.Success)
+                _uiState.value = ArtistState.Success(
+                    state.artists.sortedWith(Comparator(ordering::compare)),
+                    state.filtered.sortedWith(Comparator(ordering::compare))
+                )
+                _ordering.value = ordering
+            }
+            else -> {
+                Timber.w("Sorting artists by $ordering - not in success state")
+                return
+            }
         }
     }
 

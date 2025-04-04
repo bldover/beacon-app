@@ -2,7 +2,7 @@ package com.bldover.beacon.ui.screens.upcoming
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.EventDetail
+import com.bldover.beacon.data.model.event.EventDetail
 import com.bldover.beacon.data.model.RecommendationThreshold
 import com.bldover.beacon.data.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

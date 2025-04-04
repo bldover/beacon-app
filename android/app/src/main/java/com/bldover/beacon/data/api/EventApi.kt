@@ -1,8 +1,8 @@
 package com.bldover.beacon.data.api
 
-import com.bldover.beacon.data.model.RawEvent
-import com.bldover.beacon.data.model.RawEventDetail
-import com.bldover.beacon.data.model.RawEventRank
+import com.bldover.beacon.data.model.event.RawEvent
+import com.bldover.beacon.data.model.event.RawEventDetail
+import com.bldover.beacon.data.model.event.RawEventRank
 import com.bldover.beacon.data.model.RecommendationThreshold
 import retrofit2.http.Body
 import retrofit2.http.DELETE

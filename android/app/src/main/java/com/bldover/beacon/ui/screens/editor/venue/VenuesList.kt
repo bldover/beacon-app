@@ -16,28 +16,38 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.model.venue.VenueOrdering
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
 import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.ScrollableItemList
+import com.bldover.beacon.ui.components.common.VenueSearchUtilityBar
 import com.bldover.beacon.ui.components.editor.VenueCard
 
 @Composable
 fun SearchableVenuesList(
     venueState: VenueState,
+    orderingState: VenueOrdering,
     onSearchVenues: (String) -> Unit,
+    onOrderingChange: (VenueOrdering) -> Unit,
     onVenueSelected: (Venue) -> Unit,
     onNewVenue: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            BasicSearchBar(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = venueState is VenueState.Success,
-                onQueryChange = onSearchVenues
-            )
+            Column {
+                BasicSearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = venueState is VenueState.Success,
+                    onQueryChange = onSearchVenues
+                )
+                VenueSearchUtilityBar(
+                    state = orderingState,
+                    onChange = onOrderingChange
+                )
+            }
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {

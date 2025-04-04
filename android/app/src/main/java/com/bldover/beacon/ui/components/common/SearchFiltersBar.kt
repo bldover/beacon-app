@@ -27,39 +27,45 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bldover.beacon.data.model.EventOrdering
-import com.bldover.beacon.data.model.Order
-import com.bldover.beacon.data.model.OrderType
+import com.bldover.beacon.data.model.event.EventOrdering
+import com.bldover.beacon.data.model.ordering.Direction
+import com.bldover.beacon.data.model.ordering.OrderField
 import com.bldover.beacon.data.model.RecommendationThreshold
+import com.bldover.beacon.data.model.artist.ArtistOrdering
+import com.bldover.beacon.data.model.ordering.Ordering
+import com.bldover.beacon.data.model.venue.VenueOrdering
 
 @Composable
-fun EventSearchUtilityBar(
-    state: EventOrdering,
-    onChange: (EventOrdering) -> Unit
+fun FilterCard(
+    onClick: () -> Unit,
+    border: BorderStroke? = null,
+    content: @Composable () -> Unit
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Card(
+        onClick = onClick,
+        border = border
     ) {
-        item { OrderToggle(OrderType.DATE, state, onChange) }
-        item { OrderToggle(OrderType.VENUE, state, onChange) }
+        Box(modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
+            content()
+        }
     }
 }
 
 @Composable
-fun OrderToggle(
-    orderType: OrderType,
-    state: EventOrdering,
-    onChange: (EventOrdering) -> Unit
+fun <T> OrderToggle(
+    orderField: OrderField,
+    state: Ordering<T>,
+    onChange: (orderField: OrderField, order: Direction) -> Unit
 ) {
-    val optionSelected = state.option == orderType
+    val optionSelected = state.option == orderField
     FilterCard(
         onClick = {
             val order = if (optionSelected) {
-                if (state.order == Order.ASCENDING) Order.DESCENDING
-                else Order.ASCENDING
+                if (state.order == Direction.ASCENDING) Direction.DESCENDING
+                else Direction.ASCENDING
             }
-            else Order.ASCENDING
-            onChange(EventOrdering(option = orderType, order = order))
+            else Direction.ASCENDING
+            onChange(orderField, order)
         },
         border = if (optionSelected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null
     ) {
@@ -71,19 +77,55 @@ fun OrderToggle(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = orderType.label,
+                text = orderField.label,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = if (optionSelected) TextAlign.Start else TextAlign.Center
             )
             if (optionSelected) {
                 Icon(
-                    imageVector = if (state.order == Order.ASCENDING)
-                        Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                    contentDescription = if (state.order == Order.ASCENDING)
-                        "Ascending" else "Descending"
+                    imageVector = if (state.order == Direction.ASCENDING) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                    contentDescription = if (state.order == Direction.ASCENDING) "Ascending" else "Descending"
                 )
             }
         }
+    }
+}
+
+@Composable
+fun ArtistSearchUtilityBar(
+    state: ArtistOrdering,
+    onChange: (ArtistOrdering) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { OrderToggle(OrderField.NAME, state) { field, order -> onChange(ArtistOrdering(field, order)) } }
+    }
+}
+
+@Composable
+fun VenueSearchUtilityBar(
+    state: VenueOrdering,
+    onChange: (VenueOrdering) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { OrderToggle(OrderField.NAME, state) { field, order -> onChange(VenueOrdering(field, order)) } }
+        item { OrderToggle(OrderField.CITY, state) { field, order -> onChange(VenueOrdering(field, order)) } }
+    }
+}
+
+@Composable
+fun EventSearchUtilityBar(
+    state: EventOrdering,
+    onChange: (EventOrdering) -> Unit
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item { OrderToggle(OrderField.DATE, state) { field, order -> onChange(EventOrdering(field, order)) } }
+        item { OrderToggle(OrderField.VENUE, state) { field, order -> onChange(EventOrdering(field, order)) } }
     }
 }
 
@@ -171,27 +213,20 @@ fun RecommendationSelector(
     }
 }
 
-@Composable
-fun FilterCard(
-    onClick: () -> Unit,
-    border: BorderStroke? = null,
-    content: @Composable () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        border = border
-    ) {
-        Box(modifier = Modifier.padding(vertical = 4.dp, horizontal = 8.dp)) {
-            content()
-        }
-    }
-}
-
 @Preview
 @Composable
 fun EventSearchUtilityBarPreview() {
     EventSearchUtilityBar(
-        state = EventOrdering(OrderType.DATE, Order.DESCENDING),
+        state = EventOrdering(OrderField.DATE, Direction.DESCENDING),
+        onChange = {}
+    )
+}
+
+@Preview
+@Composable
+fun ArtistFiltersBarPreview() {
+    EventSearchUtilityBar(
+        state = EventOrdering(OrderField.DATE, Direction.DESCENDING),
         onChange = {}
     )
 }

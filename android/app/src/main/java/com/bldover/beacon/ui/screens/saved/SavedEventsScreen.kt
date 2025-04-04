@@ -12,12 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bldover.beacon.data.model.Artist
-import com.bldover.beacon.data.model.Event
-import com.bldover.beacon.data.model.EventOrdering
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.ui.components.common.AddButton
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.EventSearchUtilityBar
@@ -59,8 +59,8 @@ fun HistoryScreen(
             eventsState = savedEventsViewModel.pastEventsState.collectAsState().value,
             filterState = savedEventsViewModel.pastEventOrdering.collectAsState().value,
             accentPurchased = false,
-            onSearchChange = { savedEventsViewModel.filterPastEvents(it) },
-            onFilterChange = { savedEventsViewModel.sortPastEvents(it) },
+            onSearchChange = savedEventsViewModel::filterPastEvents,
+            onFilterChange = savedEventsViewModel::sortPastEvents,
             onEventClick = {
                 launchEventEditor(
                     eventId = it,

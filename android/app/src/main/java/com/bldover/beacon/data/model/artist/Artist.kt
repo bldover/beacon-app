@@ -1,4 +1,6 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.artist
+
+const val GENRE_UNSPECIFIED = "Unspecified"
 
 data class Artist(
     var id: String? = null,
@@ -21,11 +23,14 @@ data class Artist(
 
     fun hasMatch(searchTerm: String): Boolean {
         return name.contains(searchTerm, ignoreCase = true)
+                || genre.contains(searchTerm, ignoreCase = true)
     }
 
     fun isPopulated(): Boolean {
         return name.isNotEmpty() && (genre.isNotEmpty() || !genreSet)
     }
-}
 
-const val GENRE_UNSPECIFIED = "Unspecified"
+    fun hasGenre(): Boolean {
+        return genre.isNotEmpty() && GENRE_UNSPECIFIED != genre
+    }
+}

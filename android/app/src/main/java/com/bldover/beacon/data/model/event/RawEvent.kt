@@ -1,5 +1,8 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.event
 
+import com.bldover.beacon.data.model.venue.RawVenue
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.RawArtist
 import com.bldover.beacon.data.util.dateFormatter
 
 data class RawEvent(

@@ -1,5 +1,7 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.event
 
+import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.util.dateFormatter
 import java.time.LocalDate
 
@@ -29,7 +31,10 @@ data class Event(
         ticketmasterId = eventDetail.ticketmasterId
     )
 
-    fun hasMatch(term: String): Boolean = artists.any { it.name.contains(term, ignoreCase = true) }
+    fun hasMatch(term: String): Boolean {
+        return artists.any { it.name.contains(term, ignoreCase = true) || it.genre.contains(term, ignoreCase = true) }
+                || venue.name.contains(term, ignoreCase = true)
+    }
 
     fun isPopulated(): Boolean {
         return artists.isNotEmpty() && artists.all { it.isPopulated() } && venue.isPopulated()

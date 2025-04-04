@@ -2,7 +2,10 @@ package com.bldover.beacon.ui.screens.editor.venue
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.ordering.Direction
+import com.bldover.beacon.data.model.ordering.OrderField
+import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.model.venue.VenueOrdering
 import com.bldover.beacon.data.repository.VenueRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +31,8 @@ class VenuesViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<VenueState>(VenueState.Loading)
     val uiState: StateFlow<VenueState> = _uiState.asStateFlow()
+    private val _ordering = MutableStateFlow(VenueOrdering(OrderField.NAME, Direction.ASCENDING))
+    val ordering: StateFlow<VenueOrdering> = _ordering.asStateFlow()
 
     init {
         loadVenues()
@@ -41,6 +46,7 @@ class VenuesViewModel @Inject constructor(
                 val venues = venueRepository.getVenues().sortedBy(Venue::name)
                 Timber.i("Loaded ${venues.size} venues")
                 _uiState.value = VenueState.Success(venues, venues)
+                applyOrdering(_ordering.value)
             } catch (e: Exception) {
                 Timber.e(e,"Failed to load venues")
                 _uiState.value = VenueState.Error(e.message ?: "unknown error")
@@ -66,6 +72,24 @@ class VenuesViewModel @Inject constructor(
                 )
             }
             else -> return
+        }
+    }
+
+    fun applyOrdering(ordering: VenueOrdering) {
+        Timber.i("Sorting venues events by $ordering")
+        when (_uiState.value) {
+            is VenueState.Success -> {
+                val state = (_uiState.value as VenueState.Success)
+                _uiState.value = VenueState.Success(
+                    state.venues.sortedWith(Comparator(ordering::compare)),
+                    state.filtered.sortedWith(Comparator(ordering::compare))
+                )
+                _ordering.value = ordering
+            }
+            else -> {
+                Timber.w("Sorting venues by $ordering - not in success state")
+                return
+            }
         }
     }
 

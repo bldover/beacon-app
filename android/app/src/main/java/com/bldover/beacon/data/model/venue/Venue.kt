@@ -1,4 +1,4 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.venue
 
 data class Venue(
     var id: String? = null,
@@ -15,6 +15,7 @@ data class Venue(
 
     fun hasMatch(searchTerm: String): Boolean {
         return name.contains(searchTerm, ignoreCase = true)
+                || city.contains(searchTerm, ignoreCase = true)
     }
 
     fun isPopulated(): Boolean {

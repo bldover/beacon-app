@@ -1,6 +1,6 @@
 package com.bldover.beacon.data.api
 
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.venue.Venue
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET

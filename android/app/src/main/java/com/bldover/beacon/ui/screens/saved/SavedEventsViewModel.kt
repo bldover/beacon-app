@@ -2,10 +2,10 @@ package com.bldover.beacon.ui.screens.saved
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.Event
-import com.bldover.beacon.data.model.EventOrdering
-import com.bldover.beacon.data.model.Order
-import com.bldover.beacon.data.model.OrderType
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventOrdering
+import com.bldover.beacon.data.model.ordering.Direction
+import com.bldover.beacon.data.model.ordering.OrderField
 import com.bldover.beacon.data.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,9 +34,9 @@ class SavedEventsViewModel @Inject constructor(
     private val _futureEventsState = MutableStateFlow<SavedEventsState>(SavedEventsState.Loading)
     val futureEventsState: StateFlow<SavedEventsState> = _futureEventsState.asStateFlow()
 
-    private val _pastEventOrdering = MutableStateFlow(EventOrdering(OrderType.DATE, Order.DESCENDING))
+    private val _pastEventOrdering = MutableStateFlow(EventOrdering(OrderField.DATE, Direction.DESCENDING))
     val pastEventOrdering: StateFlow<EventOrdering> = _pastEventOrdering.asStateFlow()
-    private val _futureEventOrdering = MutableStateFlow(EventOrdering(OrderType.DATE, Order.ASCENDING))
+    private val _futureEventOrdering = MutableStateFlow(EventOrdering(OrderField.DATE, Direction.ASCENDING))
     val futureEventOrdering: StateFlow<EventOrdering> = _futureEventOrdering.asStateFlow()
 
     init {

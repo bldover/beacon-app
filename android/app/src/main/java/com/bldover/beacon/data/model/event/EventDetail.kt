@@ -1,5 +1,8 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.event
 
+import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.ArtistRank
 import com.bldover.beacon.data.util.dateFormatter
 import java.time.LocalDate
 
@@ -50,7 +53,11 @@ data class EventDetail(
         )
     }
 
-    fun hasMatch(term: String): Boolean = artists.any { it.name.contains(term, ignoreCase = true) }
+    fun hasMatch(term: String): Boolean {
+        return artists.any { it.name.contains(term, ignoreCase = true) || it.genre.contains(term, ignoreCase = true) }
+                || name.contains(term, ignoreCase = true)
+                || venue.name.contains(term, ignoreCase = true)
+    }
 
     val formattedPrice: String
         get() = price?.let { String.format("%.2f", it) } ?: "Unknown"

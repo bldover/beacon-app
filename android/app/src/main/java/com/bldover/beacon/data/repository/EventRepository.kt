@@ -1,9 +1,9 @@
 package com.bldover.beacon.data.repository
 
 import com.bldover.beacon.data.api.EventApi
-import com.bldover.beacon.data.model.Event
-import com.bldover.beacon.data.model.EventDetail
-import com.bldover.beacon.data.model.RawEvent
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventDetail
+import com.bldover.beacon.data.model.event.RawEvent
 import com.bldover.beacon.data.model.RecommendationThreshold
 import java.time.LocalDate
 

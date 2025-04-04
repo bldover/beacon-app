@@ -16,7 +16,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.bldover.beacon.data.model.Artist
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.ArtistOrdering
+import com.bldover.beacon.ui.components.common.ArtistSearchUtilityBar
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
@@ -27,17 +29,25 @@ import com.bldover.beacon.ui.components.editor.ArtistDetailsCard
 @Composable
 fun SearchableArtistsList(
     artistState: ArtistState,
+    orderingState: ArtistOrdering,
     onSearchArtists: (String) -> Unit,
+    onOrderingChange: (ArtistOrdering) -> Unit,
     onArtistSelected: (Artist) -> Unit,
     onNewArtist: () -> Unit
 ) {
     Scaffold(
         topBar = {
-            BasicSearchBar(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = artistState is ArtistState.Success,
-                onQueryChange = onSearchArtists
-            )
+            Column {
+                BasicSearchBar(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = artistState is ArtistState.Success,
+                    onQueryChange = onSearchArtists
+                )
+                ArtistSearchUtilityBar(
+                    state = orderingState,
+                    onChange = onOrderingChange
+                )
+            }
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {

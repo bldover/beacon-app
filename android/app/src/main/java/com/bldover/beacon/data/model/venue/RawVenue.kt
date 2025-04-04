@@ -1,4 +1,4 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.venue
 
 data class RawVenue(
     var id: String,

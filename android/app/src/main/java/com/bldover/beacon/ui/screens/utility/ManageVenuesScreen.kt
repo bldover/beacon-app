@@ -36,7 +36,9 @@ fun ManageVenuesScreen(
     ) {
         SearchableVenuesList(
             venueState = venueState,
+            orderingState = venuesViewModel.ordering.collectAsState().value,
             onSearchVenues = venuesViewModel::applyFilter,
+            onOrderingChange = venuesViewModel::applyOrdering,
             onVenueSelected = {
                 venueEditorViewModel.launchEditor(
                     navController = navController,

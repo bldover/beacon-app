@@ -32,7 +32,9 @@ fun ArtistSelectorScreen(
     ) {
         SearchableArtistsList(
             artistState = artistState,
+            orderingState = artistsViewModel.ordering.collectAsState().value,
             onSearchArtists = artistsViewModel::applyFilter,
+            onOrderingChange = artistsViewModel::applyOrdering,
             onArtistSelected = {
                 artistSelectorViewModel.selectArtist(it)
                 navController.popBackStack()

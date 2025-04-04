@@ -3,10 +3,10 @@ package com.bldover.beacon.ui.screens.editor.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import com.bldover.beacon.data.model.Artist
-import com.bldover.beacon.data.model.Event
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.Screen
-import com.bldover.beacon.data.model.Venue
+import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.repository.ArtistRepository
 import com.bldover.beacon.data.repository.EventRepository
 import com.bldover.beacon.data.repository.VenueRepository

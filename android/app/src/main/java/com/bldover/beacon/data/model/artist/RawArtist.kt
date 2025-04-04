@@ -1,4 +1,4 @@
-package com.bldover.beacon.data.model
+package com.bldover.beacon.data.model.artist
 
 data class RawArtist(
     val id: String,
