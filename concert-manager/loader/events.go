@@ -17,17 +17,17 @@ type eventCache interface {
 	AddSavedEvent(data.Event) (*data.Event, error)
 }
 
-type Loader struct {
+type EventLoader struct {
 	Cache eventCache
 }
 
 // requires a UTF-8 encoded CSV file
-func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
+func (l *EventLoader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 	log.Debug("Starting processing event file upload")
 	scanner := bufio.NewScanner(file)
 	first := true
 	events := []data.Event{}
- 	for scanner.Scan() {
+	for scanner.Scan() {
 		if first {
 			first = false
 			continue
@@ -57,7 +57,7 @@ func (l *Loader) Upload(ctx context.Context, file io.ReadCloser) (int, error) {
 	}
 
 	log.Infof("Successfully uploaded %d event rows", successCount)
-	log.Errorf("Failed to upload %d event rows", len(events) - successCount)
+	log.Errorf("Failed to upload %d event rows", len(events)-successCount)
 	if hasErr {
 		return successCount, errors.New("failed to add at least one row. check logs for more details")
 	}
@@ -72,15 +72,18 @@ func toEvent(row string) (data.Event, error) {
 
 	mainAct := data.Artist{
 		Name: strings.TrimSpace(parts[0]),
-		Genre: strings.TrimSpace(parts[1]),
 	}
-	if mainAct.Invalid() {
+	mainAct.Genres.TmGenres = []string{}
+	genres := strings.Split(strings.TrimSpace(parts[1]), ";")
+	mainAct.Genres.UserGenres = append(mainAct.Genres.UserGenres, genres...)
+	if !mainAct.Populated() {
 		return data.Event{}, errors.New("invalid main act")
 	}
+
 	date := strings.TrimSpace(parts[2])
 	venue := data.Venue{
-		Name: strings.TrimSpace(parts[3]),
-		City: strings.TrimSpace(parts[4]),
+		Name:  strings.TrimSpace(parts[3]),
+		City:  strings.TrimSpace(parts[4]),
 		State: strings.TrimSpace(parts[5]),
 	}
 	if !venue.Populated() {
@@ -93,23 +96,25 @@ func toEvent(row string) (data.Event, error) {
 	for i < len(parts) && j < len(parts) {
 		opener := data.Artist{
 			Name: strings.TrimSpace(parts[i]),
-			Genre: strings.TrimSpace(parts[j]),
 		}
-		if opener.Invalid() {
+		mainAct.Genres.TmGenres = []string{}
+		genres := strings.Split(strings.TrimSpace(parts[j]), ";")
+		mainAct.Genres.UserGenres = append(mainAct.Genres.UserGenres, genres...)
+		if !opener.Populated() {
 			return data.Event{}, errors.New("invalid opener")
 		}
 		if !opener.Populated() {
 			break
 		}
 		openers = append(openers, opener)
-		i, j = i + 2, j + 2
+		i, j = i+2, j+2
 	}
 
 	event := data.Event{
-		MainAct: mainAct,
-		Openers: openers,
-		Venue: venue,
-		Date: date,
+		MainAct:   &mainAct,
+		Openers:   openers,
+		Venue:     venue,
+		Date:      date,
 		Purchased: purchased,
 	}
 

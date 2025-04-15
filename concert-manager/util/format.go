@@ -11,7 +11,7 @@ import (
 
 func FormatArtist(artist data.Artist) string {
 	artistFmt := "%s - %s"
-    return fmt.Sprintf(artistFmt, artist.Name, artist.Genre)
+    return fmt.Sprintf(artistFmt, artist.Name, artist.Genres.UserGenres)
 }
 
 func FormatArtists(artists []data.Artist) []string {
@@ -23,8 +23,8 @@ func FormatArtists(artists []data.Artist) []string {
 }
 
 func FormatArtistExpanded(artist data.Artist) string {
-    artistFmt := "Name: %s\nGenre: %s"
-	return fmt.Sprintf(artistFmt, artist.Name, artist.Genre)
+    artistFmt := "Name: %s\nGenres: %s"
+	return fmt.Sprintf(artistFmt, artist.Name, artist.Genres.UserGenres)
 }
 
 func FormatVenue(venue data.Venue) string {
@@ -58,15 +58,17 @@ func FormatEvent(e data.Event) string {
 	genres := []string{}
 	if e.MainAct.Populated() {
 		artists = append(artists, e.MainAct.Name)
-		genres = append(genres, e.MainAct.Genre)
+		genres = append(genres, e.MainAct.Genres.UserGenres...)
 	}
 	for _, artist := range e.Openers {
 		if artist.Populated() {
 			if !slices.Contains(artists, artist.Name) {
 				artists = append(artists, artist.Name)
 			}
-			if !slices.Contains(genres, artist.Genre) {
-				genres = append(genres, artist.Genre)
+			for _, genre := range artist.Genres.UserGenres {
+				if !slices.Contains(genres, genre) {
+					genres = append(genres, genre)
+				}
 			}
 		}
 	}
@@ -127,8 +129,8 @@ func FormatEventExpanded(e data.Event) string {
 	purchasedFmt := "Purchased: %v"
 
 	mainAct := mainActNaFmt
-	if e.MainAct.Name != "" {
-		mainAct = fmt.Sprintf(mainActFmt, FormatArtist(e.MainAct))
+	if e.MainAct != nil {
+		mainAct = fmt.Sprintf(mainActFmt, FormatArtist(*e.MainAct))
 	}
 
 	openers := openerNaFmt
@@ -181,24 +183,24 @@ func FormatEventDetails(d data.EventDetails) string {
 	genres := []string{}
 	if event.MainAct.Name != "" {
 		artists = append(artists, event.MainAct.Name)
-		mainActGenre := event.MainAct.Genre
-		if mainActGenre == "" {
-			mainActGenre = d.EventGenre
+		mainActGenres := event.MainAct.Genres.UserGenres
+		if len(mainActGenres) == 0 {
+			mainActGenres = []string{d.EventGenre}
 		}
-		if mainActGenre != "" {
-			genres = append(genres, mainActGenre)
-		}
+		genres = append(genres, mainActGenres...)
 		for _, artist := range event.Openers {
 			if artist.Name != "" {
 				if !slices.Contains(artists, artist.Name) {
 					artists = append(artists, artist.Name)
 				}
-				openerGenre := artist.Genre
-				if openerGenre == "" {
-					openerGenre = d.EventGenre
+				openerGenres := artist.Genres.UserGenres
+				if len(openerGenres) == 0 {
+					openerGenres = []string{d.EventGenre}
 				}
-				if !slices.Contains(genres, openerGenre) && openerGenre != "" {
-					genres = append(genres, openerGenre)
+				for _, genre := range openerGenres {
+					if !slices.Contains(genres, genre) {
+						genres = append(genres, genre)
+					}
 				}
 			}
 		}
@@ -253,40 +255,40 @@ func FormatEventDetailsShort(details []data.EventDetails) []string {
 	return formattedEvents
 }
 
-func FormatEventRank(e data.EventRank) string {
+func FormatRankedEvent(e data.EventDetails) string {
 	fmtParts := []any{}
-	event := e.Event.Event
+	event := e.Event
 
 	artists := []string{}
 	genres := []string{}
 	if event.MainAct.Name != "" {
 		artists = append(artists, event.MainAct.Name)
-		mainActGenre := event.MainAct.Genre
-		if mainActGenre == "" {
-			mainActGenre = e.Event.EventGenre
+		mainActGenres := event.MainAct.Genres.UserGenres
+		if len(mainActGenres) == 0 {
+			mainActGenres = []string{e.EventGenre}
 		}
-		if mainActGenre != "" {
-			genres = append(genres, mainActGenre)
-		}
+		genres = append(genres, mainActGenres...)
 		for _, artist := range event.Openers {
 			if artist.Name != "" {
 				if !slices.Contains(artists, artist.Name) {
 					artists = append(artists, artist.Name)
 				}
-				openerGenre := artist.Genre
-				if openerGenre == "" {
-					openerGenre = e.Event.EventGenre
+				openerGenres := artist.Genres.UserGenres
+				if len(openerGenres) == 0 {
+					openerGenres = []string{e.EventGenre}
 				}
-				if !slices.Contains(genres, openerGenre) && openerGenre != "" {
-					genres = append(genres, openerGenre)
+				for _, genre := range openerGenres {
+					if !slices.Contains(genres, genre) {
+						genres = append(genres, genre)
+					}
 				}
 			}
 		}
 		artistStr := strings.Join(artists, ", ")
 		fmtParts = append(fmtParts, "Artists", artistStr)
 	} else {
-		eventName := e.Event.Name
-		genres = append(genres, e.Event.EventGenre)
+		eventName := e.Name
+		genres = append(genres, e.EventGenre)
 		fmtParts = append(fmtParts, "Event", eventName)
 	}
 	genreStr := strings.Join(genres, ", ")
@@ -297,15 +299,15 @@ func FormatEventRank(e data.EventRank) string {
 
 	fmtParts = append(fmtParts, event.Venue.Name)
 
-	price := e.Event.Price
+	price := e.Price
 	fmtParts = append(fmtParts, price)
 
-	fmtParts = append(fmtParts, e.Rank)
+	fmtParts = append(fmtParts, e.Ranks.Rank)
 
 	format := "%s: %s\n\tGenres: %s\n\tVenue: %s\n\tPrice: %v\n\tRank: %v\n"
 
 	similar := []string{}
-	for _, artistRank := range e.ArtistRanks {
+	for _, artistRank := range e.Ranks.ArtistRanks {
 		for _, relatedArtist := range artistRank.Related {
 			if matches := SearchStrings(relatedArtist, artists, 1, ExactTolerance); len(matches) == 0 {
 				similar = append(similar, relatedArtist)

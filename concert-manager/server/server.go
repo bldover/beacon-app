@@ -1,8 +1,8 @@
 package server
 
 import (
-	"concert-manager/cache"
 	"concert-manager/data"
+	"concert-manager/finder"
 	"concert-manager/log"
 	"context"
 	"encoding/json"
@@ -12,7 +12,8 @@ import (
 )
 
 type Server struct {
-    Loader loader
+    EventLoader eventLoader
+	ArtistInfoLoader artistInfoLoader
 	SavedEventCache savedEventCache
 	ArtistCache artistCache
 	VenueCache venueCache
@@ -20,8 +21,13 @@ type Server struct {
 	RecommendationCache recommendationCache
 }
 
-type loader interface {
+type eventLoader interface {
     Upload(context.Context, io.ReadCloser) (int, error)
+}
+
+type artistInfoLoader interface {
+    PopulateLastFmData(context.Context, []string) (int, error)
+	PopulateUserGenres(context.Context) (int, error)
 }
 
 type savedEventCache interface {
@@ -51,12 +57,12 @@ type venueCache interface {
 type upcomingEventsCache interface {
     GetUpcomingEvents() []data.EventDetails
 	ChangeLocation(string, string)
-	GetLocation() cache.Location
+	GetLocation() finder.Location
 	RefreshUpcomingEvents() error
 }
 
 type recommendationCache interface {
-    GetRecommendedEvents(cache.Threshold) []data.EventRank
+    GetRecommendedEvents(finder.RecLevel) []data.EventDetails
 }
 
 const port = ":3001"
@@ -76,6 +82,8 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))
+	http.HandleFunc("/v1/artists/loadlastfm", s.handleRequest(s.loadLastFmGenres))
+	http.HandleFunc("/v1/genres/loaduser", s.handleRequest(s.loadUserGenres))
 //	http.Handle("/spotify/callback", &spotify.SpotifyAuthHandler{})
 
 	log.Info("Starting server on port", port)

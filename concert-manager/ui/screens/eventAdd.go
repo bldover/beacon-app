@@ -97,7 +97,7 @@ func (a EventAdder) Actions() []string {
 func (a *EventAdder) NextScreen(i int) Screen {
 	switch i {
 	case editMainAct:
-		a.ArtistEditor.SetArtist(&a.newEvent.MainAct)
+		a.ArtistEditor.SetArtist(a.newEvent.MainAct)
 		return a.ArtistEditor
 	case addOpener:
 		if len(a.newEvent.Openers) >= maxOpeners {

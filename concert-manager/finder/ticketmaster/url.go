@@ -1,4 +1,4 @@
-package finder
+package ticketmaster
 
 import (
 	"concert-manager/log"
@@ -25,10 +25,7 @@ const (
 	pageSize       = 50
 )
 
-type Url string
-type UrlPath string
-
-func buildTicketmasterUrl(state string) (Url, error) {
+func buildTicketmasterUrl(state string) (string, error) {
 	token, err := getAuthToken()
 	if err != nil {
 		return "", err
@@ -44,10 +41,10 @@ func buildTicketmasterUrl(state string) (Url, error) {
 	url := fmt.Sprintf(urlFmt, host, eventPath, classification, state, radius, unit, startDate, sort, pageSize)
 	log.Debug("Built URL (without auth token): ", url)
 	url += fmt.Sprintf(apiKeyFmt, token)
-	return Url(url), nil
+	return url, nil
 }
 
-func buildTicketmasterUrlWithPath(path UrlPath) (Url, error) {
+func buildTicketmasterUrlWithPath(path string) (string, error) {
 	token, err := getAuthToken()
 	if err != nil {
 		return "", err
@@ -56,7 +53,7 @@ func buildTicketmasterUrlWithPath(path UrlPath) (Url, error) {
     url := string(host + path)
 	log.Debug("Built URL (without auth token): ", url)
 	url += fmt.Sprintf(apiKeyFmt, token)
-	return Url(url), nil
+	return url, nil
 }
 
 func getAuthToken() (string, error) {

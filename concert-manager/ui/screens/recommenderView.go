@@ -1,8 +1,8 @@
 package screens
 
 import (
-	"concert-manager/cache"
 	"concert-manager/data"
+	"concert-manager/finder"
 	"concert-manager/log"
 	"concert-manager/ui/input"
 	"concert-manager/ui/output"
@@ -13,9 +13,9 @@ import (
 )
 
 type recommendationCache interface {
-	GetRecommendedEvents(cache.Threshold) []data.EventRank
+	GetRecommendedEvents(finder.RecLevel) []data.EventDetails
 	ChangeLocation(string, string)
-	GetLocation() cache.Location
+	GetLocation() finder.Location
 	Invalidate()
 }
 
@@ -29,10 +29,10 @@ type RecommendationViewer struct {
 	SavedCache          savedEventCache
 	actions             []string
 	date                time.Time
-	recs                map[string][]data.EventRank
+	recs                map[string][]data.EventDetails
 	firstRecDate        time.Time
 	lastRecDate         time.Time
-	threshold           cache.Threshold
+	threshold           finder.RecLevel
 }
 
 const (
@@ -49,7 +49,7 @@ const (
 func NewRecommendationScreen() *RecommendationViewer {
 	view := RecommendationViewer{}
 	view.actions = []string{"Next Date", "Prev Date", "Goto Date", "Save Event", "Change Recommendation Threshold", "Change Location", "Refresh Events", "Discovery Menu"}
-	view.threshold = cache.LowThreshold
+	view.threshold = finder.LowMinRec
 	return &view
 }
 
@@ -60,14 +60,14 @@ func (v RecommendationViewer) Title() string {
 func (v *RecommendationViewer) Refresh() {
 	output.Displayf("Retrieving recommendations for %s...", v.RecommendationCache.GetLocation())
 	events := v.RecommendationCache.GetRecommendedEvents(v.threshold)
-	log.Debugf("Found %v recommendations for threshold %s\n", len(events), v.threshold.Level())
-	v.recs = map[string][]data.EventRank{}
+	log.Debugf("Found %v recommendations for threshold %s\n", len(events), v.threshold)
+	v.recs = map[string][]data.EventDetails{}
 	for _, e := range events {
-		date := util.Timestamp(e.Event.Event.Date)
+		date := util.Timestamp(e.Event.Date)
 		key := getRecKey(date)
 		eventsForDate := v.recs[key]
 		if eventsForDate == nil {
-			eventsForDate = []data.EventRank{}
+			eventsForDate = []data.EventDetails{}
 		}
 		eventsForDate = append(eventsForDate, e)
 		v.recs[key] = eventsForDate
@@ -75,7 +75,7 @@ func (v *RecommendationViewer) Refresh() {
 
 	firstDate, lastDate := time.Time{}.AddDate(9999, 0, 0), time.Time{}
 	for _, e := range events {
-		eventDate := util.Timestamp(e.Event.Event.Date)
+		eventDate := util.Timestamp(e.Event.Date)
 		if eventDate.Before(firstDate) {
 			firstDate = eventDate
 		}
@@ -98,7 +98,7 @@ func (v RecommendationViewer) DisplayData() {
 	}
 
 	var eventData strings.Builder
-	eventData.WriteString(fmt.Sprintf("Filter Threshold: %s\n", v.threshold.Level()))
+	eventData.WriteString(fmt.Sprintf("Filter Threshold: %s\n", v.threshold))
 
 	weekday := v.date.Weekday().String()
 	formattedDate := util.Date(v.date)
@@ -118,11 +118,11 @@ func (v RecommendationViewer) DisplayData() {
 	eventData.WriteString("--Recommended Events--\n")
 	recs := v.recs[getRecKey(v.date)]
 	if recs == nil {
-		recs = []data.EventRank{}
+		recs = []data.EventDetails{}
 	}
 	nonSavedRecs := getNonSavedEvents(recs, savedEvents)
 	for _, rec := range nonSavedRecs {
-		eventData.WriteString(util.FormatEventRank(rec))
+		eventData.WriteString(util.FormatRankedEvent(rec))
 	}
 	if len(nonSavedRecs) == 0 {
 		eventData.WriteString("(none)\n")
@@ -131,11 +131,11 @@ func (v RecommendationViewer) DisplayData() {
 	output.Displayln(eventData.String())
 }
 
-func getNonSavedEvents(recs []data.EventRank, saveds []data.Event) []data.EventRank {
-	nonSaved := []data.EventRank{}
+func getNonSavedEvents(recs []data.EventDetails, saveds []data.Event) []data.EventDetails {
+	nonSaved := []data.EventDetails{}
 	for _, rec := range recs {
 		match := false
-		recEvent := rec.Event.Event
+		recEvent := rec.Event
 		for _, saved := range saveds {
 			if saved.Date == recEvent.Date && saved.Venue.Name == recEvent.Venue.Name {
 				match = true
@@ -187,10 +187,9 @@ func (v *RecommendationViewer) NextScreen(i int) Screen {
 		newDate := input.PromptAndGetInput("date", input.DateValidation)
 		v.date = util.Timestamp(newDate)
 	case saveRecEvent:
-		events := []data.EventDetails{}
-		ranks := v.recs[getRecKey(v.date)]
-		for _, rank := range ranks {
-			events = append(events, rank.Event)
+		events := v.recs[getRecKey(v.date)]
+		if events == nil {
+			events = []data.EventDetails{}
 		}
 		selectScreen := &Selector[data.EventDetails]{
 			ScreenTitle: "Select Event",
@@ -213,11 +212,11 @@ func (v *RecommendationViewer) NextScreen(i int) Screen {
 			HandleSelect: func(s string) {
 				switch s {
 				case high:
-					v.threshold = cache.HighThreshold
+					v.threshold = finder.HighMinRec
 				case medium:
-					v.threshold = cache.MediumThreshold
+					v.threshold = finder.MediumMinRec
 				case low:
-					v.threshold = cache.LowThreshold
+					v.threshold = finder.LowMinRec
 				}
 				v.recs = nil
 			},

@@ -5,9 +5,10 @@ import (
 	"slices"
 )
 
-// gives us easy support to add (and then clone) complex fields in the future
 func CloneArtist(artist data.Artist) data.Artist {
-    return artist
+	clone := artist
+	clone.Genres = CloneGenreInfo(artist.Genres)
+    return clone
 }
 
 func CloneArtists(artists []data.Artist) []data.Artist {
@@ -18,6 +19,18 @@ func CloneArtists(artists []data.Artist) []data.Artist {
 	return clone
 }
 
+func CloneGenreInfo(genres data.GenreInfo) data.GenreInfo {
+    clone := data.GenreInfo{LfmGenres: []string{}, UserGenres: []string{}}
+	if genres.LfmGenres != nil {
+		clone.LfmGenres = append(clone.LfmGenres, genres.LfmGenres...)
+	}
+	if genres.UserGenres != nil {
+		clone.UserGenres = append(clone.UserGenres, genres.UserGenres...)
+	}
+	return clone
+}
+
+// gives us easy support to add (and then clone) complex fields in the future
 func CloneVenue(venue data.Venue) data.Venue {
     return venue
 }
@@ -47,6 +60,8 @@ func CloneEvents(events []data.Event) []data.Event {
 func CloneEventDetail(event data.EventDetails) data.EventDetails {
 	clone := event
 	clone.Event.Openers = slices.Clone(event.Event.Openers)
+	ranksClone := CloneRankInfo(*event.Ranks)
+	clone.Ranks = &ranksClone
 	return clone
 }
 
@@ -58,32 +73,22 @@ func CloneEventDetails(events []data.EventDetails) []data.EventDetails {
 	return clone
 }
 
+func CloneRankInfo(rankInfo data.RankInfo) data.RankInfo {
+    clone := rankInfo
+	clone.ArtistRanks = CloneArtistRanks(rankInfo.ArtistRanks)
+	return clone
+}
+
+func CloneArtistRanks(artists map[string]data.ArtistRank) map[string]data.ArtistRank {
+	clone := map[string]data.ArtistRank{}
+	for artist, rank := range artists {
+		clone[artist] = CloneArtistRank(rank)
+	}
+	return clone
+}
+
 func CloneArtistRank(artist data.ArtistRank) data.ArtistRank {
 	clone := artist
-	clone.Artist = CloneArtist(artist.Artist)
 	clone.Related = slices.Clone(artist.Related)
-	return clone
-}
-
-func CloneArtistRanks(artists []data.ArtistRank) []data.ArtistRank {
-	clone := []data.ArtistRank{}
-	for _, artist := range artists {
-		clone = append(clone, CloneArtistRank(artist))
-	}
-	return clone
-}
-
-func CloneEventRank(event data.EventRank) data.EventRank {
-	clone := event
-	clone.Event = CloneEventDetail(event.Event)
-	clone.ArtistRanks = CloneArtistRanks(event.ArtistRanks)
-	return clone
-}
-
-func CloneEventRanks(events []data.EventRank) []data.EventRank {
-    clone := []data.EventRank{}
-	for _, event := range events {
-		clone = append(clone, CloneEventRank(event))
-	}
 	return clone
 }

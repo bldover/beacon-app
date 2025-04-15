@@ -1,7 +1,6 @@
 package spotify
 
 import (
-	"concert-manager/api"
 	"concert-manager/log"
 	"encoding/json"
 	"errors"
@@ -13,16 +12,8 @@ import (
 	"time"
 )
 
-type trackJson struct {
-	Id string `json:"id"`
-	Title string `json:"name"`
-    Artists []artistJson `json:"artists"`
-}
-
-type artistJson struct {
-    Id string `json:"id"`
-	Name string `json:"name"`
-}
+var TEST_MODE = false
+const testModePageLimit = 20
 
 type Client struct {
 	auth *authentication
@@ -49,7 +40,7 @@ func NewClient() *Client {
 
 const baseUrl = "https://api.spotify.com/v1"
 const limit = 50
-const defaultThreadInitDelay = 100 * time.Millisecond
+const defaultThreadInitDelay = 0 * time.Millisecond
 
 type RequestEntity struct {
     requestUrl string
@@ -167,55 +158,33 @@ func getDelay(resp *http.Response) time.Duration {
 	return (time.Duration(delay) + 1) * time.Second
 }
 
-func toTrack(rawTrack trackJson, offset int) api.Track {
-    return api.Track{
-		TmId: rawTrack.Id,
-		Title: rawTrack.Title,
-		Artists: toArtists(rawTrack.Artists, 0),
-		Offset: offset,
-	}
-}
-
-func toTracks(rawTracks []trackJson, offset int) []api.Track {
-	tracks := []api.Track{}
-	for _, rawTrack := range rawTracks {
-		tracks = append(tracks, toTrack(rawTrack, offset))
-	}
-	return tracks
-}
-
-func toArtist(rawArtist artistJson, offset int) api.Artist {
-    return api.Artist{
-		TmId: rawArtist.Id,
-		Name: rawArtist.Name,
-		Offset: offset,
-	}
-}
-
-func toArtists(rawArtists []artistJson, offset int) []api.Artist {
-	artists := []api.Artist{}
-	for _, rawArtist := range rawArtists {
-		artists = append(artists, toArtist(rawArtist, offset))
-	}
-	return artists
-}
-
-type savedTrackJson struct {
-    Track trackJson `json:"track"`
-}
-
 type savedTrackResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
-	SavedTracks []savedTrackJson `json:"items"`
+	SavedTracks []trackInfo `json:"items"`
 }
+
+type trackInfo struct {
+    Track Track `json:"track"`
+}
+
+type Track struct {
+	Id string `json:"id"`
+	Title string `json:"name"`
+    Artists []Artist `json:"artists"`
+}
+
+type Artist struct {
+    Id string `json:"id"`
+	Name string `json:"name"`
+}
+
 const savedTracksPath = "/me/tracks"
 
-func (c *Client) GetSavedTracks() ([]api.Track, error) {
+func (c *Client) GetSavedTracks() ([]Track, error) {
 	log.Info("Request to get saved Spotify tracks")
-	var wg sync.WaitGroup
-	mu := &sync.Mutex{}
-	tracks := []api.Track{}
+	log.Debug("TEST_MODE:", TEST_MODE)
+	tracks := []Track{}
 	savedTracksUrl := baseUrl + savedTracksPath
 
 	// First request to get the total number of tracks
@@ -228,9 +197,9 @@ func (c *Client) GetSavedTracks() ([]api.Track, error) {
 		return tracks, err
 	}
 
-	savedTrackBatch := []api.Track{}
+	savedTrackBatch := []Track{}
 	for _, savedTrack := range response.SavedTracks {
-		savedTrackBatch = append(savedTrackBatch, toTrack(savedTrack.Track, 0))
+		savedTrackBatch = append(savedTrackBatch, savedTrack.Track)
 	}
 	tracks = append(tracks, savedTrackBatch...)
 
@@ -239,33 +208,29 @@ func (c *Client) GetSavedTracks() ([]api.Track, error) {
 	log.Debugf("Spotify indicated %d total saved tracks in %d pages", total, totalPages)
 
 	for i := 1; i < totalPages; i++ {
-		wg.Add(1)
-		go func(offset int) {
-			defer wg.Done()
-			queryParams := map[string]any{}
-			queryParams["limit"] = limit
-			queryParams["offset"] = offset
-			request := RequestEntity{savedTracksUrl, queryParams}
-			response := &savedTrackResponse{}
-			err := c.getPage(http.MethodGet, request, response)
-			if err != nil {
-				log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
-				return
-			}
+		offset := i * limit
+		queryParams := map[string]any{}
+		queryParams["limit"] = limit
+		queryParams["offset"] = offset
+		request := RequestEntity{savedTracksUrl, queryParams}
+		response := &savedTrackResponse{}
+		err := c.getPage(http.MethodGet, request, response)
+		if err != nil {
+			log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
+			continue
+		}
 
-			savedTrackBatch := []api.Track{}
-			for _, savedTrack := range response.SavedTracks {
-				savedTrackBatch = append(savedTrackBatch, toTrack(savedTrack.Track, i))
-			}
-			mu.Lock()
-			tracks = append(tracks, savedTrackBatch...)
-			mu.Unlock()
-		}(i * limit)
+		for _, savedTrack := range response.SavedTracks {
+			tracks = append(tracks, savedTrack.Track)
+		}
+
+		if TEST_MODE && i >= testModePageLimit {
+			break
+		}
 	}
 
-	wg.Wait()
 	retrievedCount := len(tracks)
-	if retrievedCount < total {
+	if retrievedCount < total && !TEST_MODE {
 		// tracks may still be valid for any successful batches; let the caller decide to use it or not
 		errMsg := fmt.Sprintf("failed to retrieve all saved tracks, found %d/%d", retrievedCount, total)
 		return tracks, errors.New(errMsg)
@@ -279,7 +244,7 @@ type topTrackResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
 	Offset int `json:"offset"`
-	TopTracks []trackJson `json:"items"`
+	TopTracks []Track `json:"items"`
 }
 
 const topTracksPath = "/me/top/tracks"
@@ -289,11 +254,9 @@ const LongTerm = "long_term"
 const MediumTerm = "medium_term"
 const ShortTerm = "short_term"
 
-func (c *Client) GetTopTracks(timeRange TimeRange) ([]api.Track, error) {
+func (c *Client) GetTopTracks(timeRange TimeRange) ([]Track, error) {
 	log.Info("Request to get top Spotify tracks with range:", timeRange)
-	var wg sync.WaitGroup
-	mu := &sync.Mutex{}
-	tracks := []api.Track{}
+	tracks := []Track{}
 	topTracksUrl := baseUrl + topTracksPath
 
 	// First request to get the total number of tracks
@@ -307,45 +270,35 @@ func (c *Client) GetTopTracks(timeRange TimeRange) ([]api.Track, error) {
 		return tracks, err
 	}
 
-	rankedTrackBatch := []api.Track{}
-	for _, trackJson := range response.TopTracks {
-		rankedTrackBatch = append(rankedTrackBatch, toTrack(trackJson, 0))
-	}
-	tracks = append(tracks, rankedTrackBatch...)
+	tracks = append(tracks, response.TopTracks...)
 
 	total := response.Total
 	totalPages := (total + limit - 1) / limit
 	log.Debugf("Spotify indicated %d total top tracks in %d pages", total, totalPages)
 
 	for i := 1; i < totalPages; i++ {
-		wg.Add(1)
-		go func(offset int) {
-			defer wg.Done()
-			queryParams := map[string]any{}
-			queryParams["limit"] = limit
-			queryParams["time_range"] = timeRange
-			queryParams["offset"] = offset
-			request := RequestEntity{topTracksUrl, queryParams}
-			response := &topTrackResponse{}
-			err := c.getPage(http.MethodGet, request, response)
-			if err != nil {
-				log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
-				return
-			}
+		offset := i * limit
+		queryParams := map[string]any{}
+		queryParams["limit"] = limit
+		queryParams["time_range"] = timeRange
+		queryParams["offset"] = offset
+		request := RequestEntity{topTracksUrl, queryParams}
+		response := &topTrackResponse{}
+		err := c.getPage(http.MethodGet, request, response)
+		if err != nil {
+			log.Errorf("Error fetching tracks at offset %d: %v", offset, err)
+			continue
+		}
 
-			rankedTrackBatch := []api.Track{}
-			for _, trackJson := range response.TopTracks {
-				rankedTrackBatch = append(rankedTrackBatch, toTrack(trackJson, offset))
-			}
-			mu.Lock()
-			tracks = append(tracks, rankedTrackBatch...)
-			mu.Unlock()
-		}(i * limit)
+		tracks = append(tracks, response.TopTracks...)
+
+		if TEST_MODE && i >= testModePageLimit {
+			break
+		}
 	}
 
-	wg.Wait()
 	retrievedCount := len(tracks)
-	if retrievedCount < total {
+	if retrievedCount < total && !TEST_MODE {
 		// tracks may still be valid for any successful batches; let the caller decide to use it or not
 		errMsg := fmt.Sprintf("failed to retrieve all top tracks, found %d/%d", retrievedCount, total)
 		return tracks, errors.New(errMsg)
@@ -358,16 +311,14 @@ type topArtistResponse struct {
 	Next string `json:"next"`
 	Total int `json:"total"`
 	Offset int `json:"offset"`
-	TopArtists []artistJson `json:"items"`
+	TopArtists []Artist `json:"items"`
 }
 
 const topArtistsPath = "/me/top/artists"
 
-func (c *Client) GetTopArtists(timeRange TimeRange) ([]api.Artist, error) {
+func (c *Client) GetTopArtists(timeRange TimeRange) ([]Artist, error) {
 	log.Info("Request to get top Spotify artists with range:", timeRange)
-	var wg sync.WaitGroup
-	mu := &sync.Mutex{}
-	artists := []api.Artist{}
+	artists := []Artist{}
 	topArtistsUrl := baseUrl + topArtistsPath
 
 	// First request to get the total number of artists
@@ -381,53 +332,39 @@ func (c *Client) GetTopArtists(timeRange TimeRange) ([]api.Artist, error) {
 		return artists, err
 	}
 
-	rankedArtistBatch := []api.Artist{}
-	for _, artistJson := range response.TopArtists {
-		rankedArtistBatch = append(rankedArtistBatch, toArtist(artistJson, 0))
-	}
-	artists = append(artists, rankedArtistBatch...)
+	artists = append(artists, response.TopArtists...)
 
 	total := response.Total
 	totalPages := (total + limit - 1) / limit
 	log.Debugf("Spotify indicated %d total top artists in %d pages", total, totalPages)
 
 	for i := 1; i < totalPages; i++ {
-		wg.Add(1)
-		go func(offset int) {
-			defer wg.Done()
-			queryParams := map[string]any{}
-			queryParams["limit"] = limit
-			queryParams["time_range"] = timeRange
-			queryParams["offset"] = offset
-			request := RequestEntity{topArtistsUrl, queryParams}
-			response := &topArtistResponse{}
-			err := c.getPage(http.MethodGet, request, response)
-			if err != nil {
-				log.Errorf("Error fetching artists at offset %d: %v", offset, err)
-				return
-			}
+		offset := i * limit
+		queryParams := map[string]any{}
+		queryParams["limit"] = limit
+		queryParams["time_range"] = timeRange
+		queryParams["offset"] = offset
+		request := RequestEntity{topArtistsUrl, queryParams}
+		response := &topArtistResponse{}
+		err := c.getPage(http.MethodGet, request, response)
+		if err != nil {
+			log.Errorf("Error fetching artists at offset %d: %v", offset, err)
+			continue
+		}
 
-			rankedArtistBatch := []api.Artist{}
-			for _, artistJson := range response.TopArtists {
-				rankedArtistBatch = append(rankedArtistBatch, toArtist(artistJson, offset))
-			}
-			mu.Lock()
-			artists = append(artists, rankedArtistBatch...)
-			mu.Unlock()
-		}(i * limit)
+		artists = append(artists, response.TopArtists...)
+
+		if TEST_MODE && i >= testModePageLimit {
+			break
+		}
 	}
 
-	wg.Wait()
 	retrievedCount := len(artists)
-	if retrievedCount < total {
+	if retrievedCount < total && !TEST_MODE {
 		// artists may still be valid for any successful batches; let the caller decide to use it or not
 		errMsg := fmt.Sprintf("failed to retrieve all top artists, found %d/%d", retrievedCount, total)
 		return artists, errors.New(errMsg)
 	}
 	log.Infof("Found %v top artists", len(artists))
 	return artists, nil
-}
-
-type relatedArtistResponse struct {
-    Artists []artistJson `json:"artists"`
 }

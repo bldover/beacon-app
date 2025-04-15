@@ -5,6 +5,7 @@ import (
 	"concert-manager/ui/input"
 	"concert-manager/ui/output"
 	"concert-manager/util"
+	"strings"
 )
 
 type artistCache interface {
@@ -36,7 +37,7 @@ func NewArtistEditScreen() *Editor {
 func (e *Editor) SetArtist(artist *data.Artist) {
 	e.artist = artist
 	e.tempArtist.Name = e.artist.Name
-	e.tempArtist.Genre = e.artist.Genre
+	e.tempArtist.Genres = e.artist.Genres
 }
 
 func (e Editor) Title() string {
@@ -69,7 +70,8 @@ func (e *Editor) NextScreen(i int) Screen {
 	case setArtistName:
 		e.tempArtist.Name = input.PromptAndGetInput("artist name", input.NoValidation)
 	case setArtistGenre:
-		e.tempArtist.Genre = input.PromptAndGetInput("artist genre", input.NoValidation)
+		input := input.PromptAndGetInput("artist genre", input.NoValidation)
+		e.tempArtist.Genres.UserGenres = strings.Split(input, ",")
 	case saveArtist:
 		if e.tempArtist.Populated() {
 			*e.artist = e.tempArtist

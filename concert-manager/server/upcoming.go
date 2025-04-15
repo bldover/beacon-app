@@ -1,7 +1,7 @@
 package server
 
 import (
-	"concert-manager/cache"
+	"concert-manager/finder"
 	"concert-manager/log"
 	"errors"
 	"fmt"
@@ -9,10 +9,10 @@ import (
 	"strings"
 )
 
-var thresholdOpts = map[string]cache.Threshold{
-	"low": cache.LowThreshold,
-	"medium": cache.MediumThreshold,
-	"high": cache.HighThreshold,
+var thresholdOpts = map[string]finder.RecLevel{
+	"low": finder.LowMinRec,
+	"medium": finder.MediumMinRec,
+	"high": finder.HighMinRec,
 }
 
 func (s *Server) getRecommendations(w http.ResponseWriter, r *http.Request) (any, int, error) {

@@ -1,13 +1,14 @@
 package ui
 
 import (
-	"concert-manager/cache"
+	"concert-manager/db"
+	"concert-manager/finder"
 	"concert-manager/log"
 	"concert-manager/ui/core"
 	"concert-manager/ui/screens"
 )
 
-func Start(savedCache *cache.SavedEventCache, upcomingCache *cache.UpcomingEventCache) {
+func Start(savedCache *db.Cache, upcomingCache *finder.Cache) {
 	log.Info("Initializing terminal UI")
 
 	addScreen := screens.NewEventAddScreen()

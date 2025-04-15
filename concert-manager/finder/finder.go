@@ -7,46 +7,34 @@ import (
 	"strings"
 )
 
-type FindEventRequest struct {
-    City string
-	State string
-}
-
-type EventRetriever interface {
-    GetUpcomingEvents(FindEventRequest) ([]data.EventDetails, error)
+type eventRetriever interface {
+    GetUpcomingEvents(string, string) ([]data.EventDetails, error)
 }
 
 type EventFinder struct {
-    retrievers map[string]EventRetriever
+	Ticketmaster eventRetriever
 }
 
 func NewEventFinder() *EventFinder {
 	finder := EventFinder{}
-	finder.retrievers = map[string]EventRetriever{}
-	finder.retrievers["Ticketmaster"] = ticketmasterRetriever{}
 	return &finder
 }
 
-func (finder EventFinder) FindAllEvents(request FindEventRequest) ([]data.EventDetails, error) {
+func (f EventFinder) FindAllEvents(city string, state string) ([]data.EventDetails, error) {
 	anyError := false
-	allEvents := []data.EventDetails{}
-
-	for name, retriever := range finder.retrievers {
-		events, err := retriever.GetUpcomingEvents(request)
-		if err != nil {
-			log.Error("Failed to retrieve all events from", name, err)
-			anyError = true
-		}
-		allEvents = append(allEvents, events...)
+	events, err := f.Ticketmaster.GetUpcomingEvents(city, state)
+	if err != nil {
+		log.Error("Failed to retrieve all events from Ticketmaster", err)
+		anyError = true
 	}
-	log.Debug("Total retrieved event count:", len(allEvents))
+	log.Debug("Total retrieved event count:", len(events))
 
-	postProcess(allEvents)
+	postProcess(events)
 
 	if anyError {
-		return allEvents, errors.New("some events were unable to be retrieved")
+		return events, errors.New("some events were unable to be retrieved")
 	}
-	return allEvents, nil
+	return events, nil
 }
 
 // venues sometimes have weird names from non-partnered ticketing sites

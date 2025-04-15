@@ -1,7 +1,8 @@
-package firestore
+package db
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"concert-manager/data"
@@ -9,17 +10,16 @@ import (
 	"concert-manager/util"
 
 	"cloud.google.com/go/firestore"
-	"google.golang.org/api/iterator"
 )
 
 const eventCollection string = "events"
 
 var eventFields = []string{"MainActRef", "OpenerRefs", "VenueRef", "Date", "Purchased"}
 
-type EventRepo struct {
+type EventClient struct {
 	Connection *Firestore
-	VenueRepo  *VenueRepo
-	ArtistRepo *ArtistRepo
+	VenueClient  *VenueClient
+	ArtistClient *ArtistClient
 }
 
 type EventEntity struct {
@@ -31,17 +31,19 @@ type EventEntity struct {
 	TmId       string
 }
 
-type Event = data.Event
-
-func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
+func (c *EventClient) Add(ctx context.Context, event data.Event) (string, error) {
 	log.Debug("Attemping to add event", event)
 	var mainActDoc *firestore.DocumentSnapshot
 	var err error
 	if event.MainAct.Populated() {
-		mainActDoc, err = repo.ArtistRepo.findDocRef(ctx, event.MainAct.Name)
+		mainActDoc, err = c.ArtistClient.findDocRef(ctx, event.MainAct.Id)
 		if err != nil {
-			log.Errorf("Failed to find existing artist %v while creating event %v", event.MainAct.Name, event)
+			log.Errorf("Error finding existing artist %v while creating event %v", event.MainAct.Name, event)
 			return "", err
+		}
+		if !mainActDoc.Exists() {
+			log.Errorf("No existing artist %v while creating event %v", event.MainAct.Name, event)
+			return "", errors.New("main artist does not exist")
 		}
 		log.Debugf("Found existing artist %v with document ID %v while adding event",
 			event.MainAct.Name, mainActDoc.Ref.ID)
@@ -53,35 +55,43 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 
 	openerRefs := []*firestore.DocumentRef{}
 	for _, opener := range event.Openers {
-		openerDoc, err := repo.ArtistRepo.findDocRef(ctx, opener.Name)
+		openerDoc, err := c.ArtistClient.findDocRef(ctx, opener.Id)
 		if err != nil {
-			log.Errorf("Failed to find existing opening artist %v while creating event %v", opener.Name, event)
+			log.Errorf("Error finding existing opening artist %v while creating event %v", opener.Name, event)
 			return "", err
+		}
+		if !openerDoc.Exists() {
+			log.Errorf("No existing opening artist %v while creating event %v", opener.Name, event)
+			return "", errors.New("opering artist does not exist")
 		}
 		log.Debugf("Found existing artist %v with document ID %v while adding event",
 			opener.Name, openerDoc.Ref.ID)
 		openerRefs = append(openerRefs, openerDoc.Ref)
 	}
 
-	venueDoc, err := repo.VenueRepo.findDocRef(ctx, event.Venue.Name, event.Venue.City, event.Venue.State)
+	venueDoc, err := c.VenueClient.findDocRef(ctx, event.Venue.Id)
 	if err != nil {
-		log.Errorf("Failed to find existing venue %+v while creating event", event.Venue)
+		log.Errorf("Error finding existing venue %+v while creating event", event.Venue)
 		return "", err
+	}
+	if !venueDoc.Exists() {
+		log.Errorf("No existing venue %+v while creating event", event.Venue)
+		return "", errors.New("venue does not exist")
 	}
 	log.Debugf("Found existing venue %v with document ID %v while adding event", event.Venue, venueDoc.Ref.ID)
 
-	existingEvent, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
-	if err == nil {
-		log.Debugf("Skipped adding event because it already existed as %+v, %v", event, existingEvent.Ref.ID)
-		return existingEvent.Ref.ID, nil
-	}
-	if err != iterator.Done {
-		log.Errorf("Error occurred while checking if artist %v already exists, %v", event, err)
+	existingEvent, err := c.findEventDocRef(ctx, event.Id)
+	if err != nil {
+		log.Errorf("Error occurred while checking if event %v already exists, %v", event, err)
 		return "", err
+	}
+	if existingEvent.Exists() {
+		log.Debugf("Skipped adding event because it already existed as %+v", event)
+		return existingEvent.Ref.ID, nil
 	}
 
 	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, util.Timestamp(event.Date), event.Purchased, event.TmId}
-	events := repo.Connection.Client.Collection(eventCollection)
+	events := c.Connection.Client.Collection(eventCollection)
 	docRef, _, err := events.Add(ctx, eventEntity)
 	if err != nil {
 		log.Errorf("Failed to add event %+v, %v", event, err)
@@ -91,12 +101,11 @@ func (repo *EventRepo) Add(ctx context.Context, event Event) (string, error) {
 	return docRef.ID, nil
 }
 
-func (repo *EventRepo) Delete(ctx context.Context, id string) error {
+func (c *EventClient) Delete(ctx context.Context, id string) error {
 	log.Debug("Attemting to delete event", id)
-	docId := repo.Connection.Client.Collection(eventCollection).Doc(id)
-	eventDoc, err := docId.Get(ctx)
+	eventDoc, err := c.Connection.Client.Collection(eventCollection).Doc(id).Get(ctx)
 	if err != nil {
-		log.Errorf("Failed to find existing event while removing %+v", id)
+		log.Errorf("Error while deleting event %s", id)
 		return err
 	}
 	_, err = eventDoc.Ref.Delete(ctx)
@@ -108,35 +117,9 @@ func (repo *EventRepo) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (repo *EventRepo) Exists(ctx context.Context, event Event) (bool, error) {
-	log.Debug("Checking for existence of event", event)
-	venueDoc, err := repo.VenueRepo.findDocRef(ctx, event.Venue.Name, event.Venue.City, event.Venue.State)
-	if err == iterator.Done {
-		log.Debugf("No existing venue found while checking for event existence %+v", event)
-		return false, nil
-	}
-	if err != nil {
-		log.Errorf("Error while checking existence of event venue %v, %v", event.Venue, err)
-		return false, err
-	}
-	log.Debugf("Found existing venue %v with document ID %v while checking event existence", event.Venue, venueDoc.Ref.ID)
-
-	doc, err := repo.findEventDocRef(ctx, event.Date, venueDoc.Ref)
-	if err == iterator.Done {
-		log.Debug("No existing event found for", event)
-		return false, nil
-	}
-	if err != nil {
-		log.Errorf("Error while checking existence of event %v, %v", event, err)
-		return false, err
-	}
-	log.Debugf("Found event %v with document ID %v", event, doc.Ref.ID)
-	return true, nil
-}
-
-func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
+func (c *EventClient) FindAll(ctx context.Context) ([]data.Event, error) {
 	log.Debug("Finding all events")
-	eventDocs, err := repo.Connection.Client.Collection(eventCollection).
+	eventDocs, err := c.Connection.Client.Collection(eventCollection).
 		Select(eventFields...).
 		Documents(ctx).
 		GetAll()
@@ -147,7 +130,7 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 	log.Debugf("Found %d events", len(eventDocs))
 
 	log.Debug("Finding all artists while finding all events")
-	artists, err := repo.ArtistRepo.findAllDocs(ctx)
+	artists, err := c.ArtistClient.findAllDocs(ctx)
 	if err != nil {
 		log.Error("Error retrieving artists while finding all events,", err)
 		return nil, err
@@ -155,7 +138,7 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 	log.Debugf("Found %d artists while retrieving all events", len(*artists))
 
 	log.Debug("Finding all venues while finding all events")
-	venues, err := repo.VenueRepo.findAllDocs(ctx)
+	venues, err := c.VenueClient.findAllDocs(ctx)
 	if err != nil {
 		log.Error("Error retrieving venues while finding all events,", err)
 		return nil, err
@@ -165,18 +148,18 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 	// TODO: This logic could use better error handling for when the firestore event is invalid
 	// Currently, the whole app panics if the event data is invalid or the artist or venue is missing
 	// It would be better to log an error and ignore invalid events
-	events := []Event{}
+	events := []data.Event{}
 	for _, e := range eventDocs {
 		eventData := e.Data()
 
-		var mainAct Artist
+		var mainAct data.Artist
 		if mainActRef, ok := eventData["MainActRef"].(*firestore.DocumentRef); ok {
 			mainAct = (*artists)[mainActRef.ID]
 		}
 		venueRef := eventData["VenueRef"].(*firestore.DocumentRef)
 		venue := (*venues)[venueRef.ID]
 
-		openers := []Artist{}
+		openers := []data.Artist{}
 		if openerRefs, ok := eventData["OpenerRefs"].([]interface{}); ok {
 			for _, openerRef := range openerRefs {
 				openers = append(openers, (*artists)[openerRef.(*firestore.DocumentRef).ID])
@@ -186,8 +169,8 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 		if id, ok := eventData["TmId"].(string); ok {
 			tmId = id
 		}
-		event := Event{
-			MainAct:   mainAct,
+		event := data.Event{
+			MainAct:   &mainAct,
 			Openers:   openers,
 			Venue:     venue,
 			Date:      util.Date(eventData["Date"].(time.Time)),
@@ -202,15 +185,9 @@ func (repo *EventRepo) FindAll(ctx context.Context) ([]Event, error) {
 	return events, nil
 }
 
-func (repo *EventRepo) findEventDocRef(ctx context.Context, date string, venueRef *firestore.DocumentRef) (*firestore.DocumentSnapshot, error) {
-	event, err := repo.Connection.Client.Collection(eventCollection).
-		Select().
-		Where("Date", "==", util.Timestamp(date)).
-		Where("VenueRef", "==", venueRef).
-		Documents(ctx).
-		Next()
-	if err != nil {
-		return nil, err
+func (c *EventClient) findEventDocRef(ctx context.Context, id string) (*firestore.DocumentSnapshot, error) {
+	if id == "" {
+		return &firestore.DocumentSnapshot{}, nil
 	}
-	return event, nil
+	return c.Connection.Client.Collection(eventCollection).Doc(id).Get(ctx)
 }

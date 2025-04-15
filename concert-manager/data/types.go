@@ -1,5 +1,7 @@
 package data
 
+import "fmt"
+
 type (
 	Venue struct {
 		Name  string `json:"name"`
@@ -8,12 +10,19 @@ type (
 		Id    string `json:"id"`
 	}
 	Artist struct {
-		Name  string `json:"name"`
-		Genre string `json:"genre"`
-		Id    string `json:"id"`
+		Name   string `json:"name"`
+		Genre  string
+		Genres GenreInfo `json:"genres"`
+		Id     string    `json:"id"`
+		MbId   string    `json:"mbId"`
+	}
+	GenreInfo struct {
+		LfmGenres  []string
+		TmGenres   []string
+		UserGenres []string
 	}
 	Event struct {
-		MainAct   Artist   `json:"mainAct"`
+		MainAct   *Artist  `json:"mainAct"`
 		Openers   []Artist `json:"openers"`
 		Venue     Venue    `json:"venue"`
 		Date      string   `json:"date"`
@@ -22,59 +31,50 @@ type (
 		TmId      string   `json:"tmId"`
 	}
 	EventDetails struct {
-		Name       string `json:"name"`
-		EventGenre string `json:"genre"`
-		Price      string `json:"price"`
-		Event      Event  `json:"event"`
+		Name       string    `json:"name"`
+		EventGenre string    `json:"genre"`
+		Price      string    `json:"price"`
+		Event      Event     `json:"event"`
+		Ranks      *RankInfo `json:"ranks"`
 	}
-	EventRank struct {
-		Event       EventDetails `json:"event"`
-		ArtistRanks []ArtistRank `json:"artistRanks"`
-		Rank        float64      `json:"rank"`
+	RankInfo struct {
+		Rank           float64               `json:"rank"`
+		Recommendation string                `json:"recommendation"`
+		ArtistRanks    map[string]ArtistRank `json:"artistRanks"`
 	}
 	ArtistRank struct {
-		Artist  Artist   `json:"artist"`
 		Rank    float64  `json:"rank"`
 		Related []string `json:"related"`
 	}
 )
+
+func (e *Event) String() string {
+	str := ""
+	if e.MainAct != nil {
+		str += fmt.Sprintf("%v", *e.MainAct)
+	}
+	str += fmt.Sprintf("%v", e.Openers)
+	str += fmt.Sprintf("%v", e.Venue)
+	str += fmt.Sprintf("%v", e.Purchased)
+	str += fmt.Sprintf("%v", e.Id)
+	str += fmt.Sprintf("%v", e.TmId)
+	return str
+}
 
 func (v *Venue) Populated() bool {
 	return allNotEmpty(v.Name, v.City, v.State)
 }
 
 func (a *Artist) Populated() bool {
-	return allNotEmpty(a.Name, a.Genre)
-}
-
-func (a *Artist) Invalid() bool {
-	return allNotEmpty(a.Name) != allNotEmpty(a.Genre)
+	return a.Name != ""
 }
 
 func (e *Event) Populated() bool {
-	invalidArtist := e.MainAct.Invalid()
-	populated := e.MainAct.Populated()
+	artistsPopulated := e.MainAct.Populated()
 	for _, opener := range e.Openers {
-		invalidArtist = invalidArtist || opener.Invalid()
-		populated = populated || opener.Populated()
+		artistsPopulated = artistsPopulated || opener.Populated()
 	}
-	return populated && !invalidArtist && e.Venue.Populated() && e.Date != ""
-}
-
-func (e Event) Equals(o Event) bool {
-	return e.MainAct.Equals(o.MainAct) && e.Venue.Equals(o.Venue) && e.Date == o.Date
-}
-
-func (a Artist) Equals(o Artist) bool {
-	return a.Id == o.Id
-}
-
-func (a Artist) EqualsFields(o Artist) bool {
-	return a.Name == o.Name && a.Genre == o.Genre
-}
-
-func (v Venue) Equals(o Venue) bool {
-	return v.Name == o.Name && v.City == o.City && v.State == o.State
+	return artistsPopulated && e.Venue.Populated() && e.Date != ""
 }
 
 func allNotEmpty(fields ...string) bool {

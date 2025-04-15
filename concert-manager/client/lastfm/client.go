@@ -1,7 +1,6 @@
 package lastfm
 
 import (
-	"concert-manager/api"
 	"concert-manager/log"
 	"encoding/json"
 	"errors"
@@ -9,12 +8,13 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"time"
 )
 
 const baseUrl = "http://ws.audioscrobbler.com/2.0/"
 const apiKeyEnv = "CM_LASTFM_API_KEY"
+
+const userAgent = "Beacon/2.0"
 
 type Client struct {
 	apiKey string
@@ -27,18 +27,6 @@ func NewClient() *Client {
 	}
 	return &Client{
 		apiKey: apiKey,
-	}
-}
-
-func toArtist(artist artist) api.Artist {
-	rank, err := strconv.ParseFloat(artist.Rank, 64)
-	if err != nil {
-		log.Errorf("invalid match value for lastfm similar artist: %s", artist)
-		rank = 0
-	}
-    return api.Artist{
-		Name: artist.Name,
-		Rank: float64(rank),
 	}
 }
 
@@ -60,6 +48,7 @@ func (c *Client) call(reqEntity requestEntity, response any) error {
 	}
 
 	req.Header.Set("autocorrect", "1")
+	req.Header.Set("User-Agent", "")
 
 	queryParams := reqEntity.queryParams
 	queryParams["api_key"] = c.apiKey
@@ -105,51 +94,89 @@ func (c *Client) call(reqEntity requestEntity, response any) error {
 	return errors.New("max retries exceeded calling LastFM URL: " + req.URL.Host + req.URL.Path + "?" + req.URL.RawQuery)
 }
 
-type relatedArtistResponse struct {
+type similarArtistResponse struct {
 	Similar similarArtistList `json:"similarartists"`
 }
 
 type similarArtistList struct {
-	Artists []artist `json:"artist"`
+	Artists []Artist `json:"artist"`
 }
 
-type artist struct {
+type Artist struct {
     Name string `json:"name"`
 	Rank string `json:"match"`
 }
 
-func (c *Client) GetRelatedArtists(artists []api.Artist) (map[api.Artist][]api.Artist, error) {
-	related := map[api.Artist][]api.Artist{}
-	successCount := 0
+func (c *Client) GetSimilarArtists(artist string) ([]Artist, error) {
+	queryParams := map[string]any{}
+	queryParams["method"] = "artist.getsimilar"
+	queryParams["artist"] = artist
 
-	for _, artist := range artists {
-		queryParams := map[string]any{}
-		queryParams["method"] = "artist.getsimilar"
-		queryParams["artist"] = artist.Name
-
-		request := requestEntity{queryParams}
-		response := &relatedArtistResponse{}
-		err := c.call(request, response)
-		if err != nil {
-			log.Errorf("Failed to retrieve related artists: %s", err)
-			continue
-		}
-
-		if response.Similar.Artists == nil || len(response.Similar.Artists) == 0 {
-			log.Errorf("No related artists found for %s", artist.Name)
-			continue
-		}
-
-		related[artist] = []api.Artist{}
-		for _, relatedArtist := range response.Similar.Artists {
-			related[artist] = append(related[artist], toArtist(relatedArtist))
-		}
-		successCount += 1
+	request := requestEntity{queryParams}
+	response := &similarArtistResponse{}
+	err := c.call(request, response)
+	if err != nil {
+		return nil, err
 	}
-	if successCount < len(artists) {
-		errMsg := fmt.Sprintf("failed to retrieve some related artists, found %d/%d", successCount, len(artists))
-		return related, errors.New(errMsg)
+
+	if response.Similar.Artists == nil || len(response.Similar.Artists) == 0 {
+		log.Infof("No related artists found for %s", artist)
+		return []Artist{}, nil
 	}
+
+	related := []Artist{}
+	related = append(related, response.Similar.Artists...)
 
 	return related, nil
+}
+
+type artistInfoResponse struct {
+    Artist ArtistInfo `json:"artist"`
+}
+
+type ArtistInfo struct {
+    Name string `json:"name"`
+	MbId string `json:"mbid"`
+	Url string `json:"url"`
+	Similar similarArtistList `json:"similar"`
+	Tags tagsResponse `json:"tags"`
+}
+
+type tagsResponse struct {
+	Tag []tag `json:"tag"`
+}
+
+type tag struct {
+    Name string `json:"name"`
+	Url string `json:"url"`
+}
+
+func (c *Client) GetArtistInfoByName(artistName string) (ArtistInfo, error) {
+	queryParams := map[string]any{}
+	queryParams["method"] = "artist.getinfo"
+	queryParams["artist"] = artistName
+
+	request := requestEntity{queryParams}
+	response := &artistInfoResponse{}
+	err := c.call(request, response)
+	if err != nil {
+		return ArtistInfo{}, err
+	}
+
+	return response.Artist, nil
+}
+
+func (c *Client) GetArtistInfoById(mbid string) (ArtistInfo, error) {
+	queryParams := map[string]any{}
+	queryParams["method"] = "artist.getinfo"
+	queryParams["mbid"] = mbid
+
+	request := requestEntity{queryParams}
+	response := &artistInfoResponse{}
+	err := c.call(request, response)
+	if err != nil {
+		return ArtistInfo{}, err
+	}
+
+	return response.Artist, nil
 }

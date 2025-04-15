@@ -1,8 +1,8 @@
 package screens
 
 import (
-	"concert-manager/cache"
 	"concert-manager/data"
+	"concert-manager/finder"
 	"concert-manager/log"
 	"concert-manager/ui/input"
 	"concert-manager/ui/output"
@@ -17,7 +17,7 @@ type eventRetrievalCache interface {
 	GetUpcomingEvents() []data.EventDetails
 	Invalidate()
 	ChangeLocation(string, string)
-	GetLocation() cache.Location
+	GetLocation() finder.Location
 }
 
 type DiscoveryViewer struct {

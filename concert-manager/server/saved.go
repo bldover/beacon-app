@@ -210,10 +210,39 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) (any, int,
 		return nil, http.StatusBadRequest, errors.New(errMsg)
 	}
 
-    rows, err := s.Loader.Upload(r.Context(), file)
+    rows, err := s.EventLoader.Upload(r.Context(), file)
 	if err != nil {
 		errMsg := fmt.Sprintf("error occurred during upload processing: %v", err)
 		return nil, http.StatusBadRequest, errors.New(errMsg)
 	}
 	return fmt.Sprintf("Successfully uploaded %d rows", rows), 0, nil
+}
+
+func (s *Server) loadLastFmGenres(w http.ResponseWriter, r *http.Request) (any, int, error) {
+	if r.Method != http.MethodGet {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	queryParams := r.URL.Query()
+	artists := queryParams["artists"]
+
+	updateCount, err := s.ArtistInfoLoader.PopulateLastFmData(r.Context(), artists)
+	if err != nil {
+		errMsg := fmt.Sprintf("some artist genres failed to refresh, %s", err)
+		return nil, http.StatusInternalServerError, errors.New(errMsg)
+	}
+	return fmt.Sprintf("Successfully refreshed genres for %d artists", updateCount), 0, nil
+}
+
+func (s *Server) loadUserGenres(w http.ResponseWriter, r *http.Request) (any, int, error) {
+	if r.Method != http.MethodGet {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	updateCount, err := s.ArtistInfoLoader.PopulateUserGenres(r.Context())
+	if err != nil {
+		errMsg := fmt.Sprintf("some artist user genres failed to populate, %v", err)
+		return nil, http.StatusInternalServerError, errors.New(errMsg)
+	}
+	return fmt.Sprintf("Successfully loaded user genres for %d artists", updateCount), 0, nil
 }

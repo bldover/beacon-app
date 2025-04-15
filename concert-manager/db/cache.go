@@ -1,4 +1,4 @@
-package cache
+package db
 
 import (
 	"concert-manager/data"
@@ -11,26 +11,26 @@ import (
 
 type Database interface {
 	ListEvents(context.Context) ([]data.Event, error)
-	AddEvent(context.Context, data.Event) (string, error)
+	AddEvent(context.Context, data.Event) (data.Event, error)
 	DeleteEvent(context.Context, string) error
 	ListArtists(context.Context) ([]data.Artist, error)
-	AddArtist(context.Context, data.Artist) (string, error)
-	UpdateArtist(context.Context, string, data.Artist) error
+	AddArtist(context.Context, data.Artist) (data.Artist, error)
+	UpdateArtist(context.Context, data.Artist) (data.Artist, error)
 	DeleteArtist(context.Context, string) error
 	ListVenues(context.Context) ([]data.Venue, error)
-	AddVenue(context.Context, data.Venue) (string, error)
-	UpdateVenue(context.Context, string, data.Venue) error
+	AddVenue(context.Context, data.Venue) (data.Venue, error)
+	UpdateVenue(context.Context, data.Venue) (data.Venue, error)
 	DeleteVenue(context.Context, string) error
 }
 
-type SavedEventCache struct {
+type Cache struct {
 	Database       Database
 	savedEvents    []data.Event
 	artists        []data.Artist
 	venues         []data.Venue
 }
 
-func (c *SavedEventCache) LoadCaches() {
+func (c *Cache) LoadCaches() {
 	log.Info("Initializing saved event cache")
 	savedEvents, err := c.Database.ListEvents(context.Background())
 	if err != nil {
@@ -56,7 +56,7 @@ func (c *SavedEventCache) LoadCaches() {
 	log.Info("Finished initializing saved event cache")
 }
 
-func (c *SavedEventCache) RefreshSavedEvents() error {
+func (c *Cache) RefreshSavedEvents() error {
     log.Info("Refreshing saved event cache")
 	savedEvents, err := c.Database.ListEvents(context.Background())
 	if err != nil {
@@ -67,7 +67,7 @@ func (c *SavedEventCache) RefreshSavedEvents() error {
 	return nil
 }
 
-func (c *SavedEventCache) RefreshArtists() error {
+func (c *Cache) RefreshArtists() error {
 	log.Info("Refreshing artists cache")
 	artists, err := c.Database.ListArtists(context.Background())
 	if err != nil {
@@ -78,7 +78,7 @@ func (c *SavedEventCache) RefreshArtists() error {
 	return nil
 }
 
-func (c *SavedEventCache) RefreshVenues() error {
+func (c *Cache) RefreshVenues() error {
 	log.Info("Refreshing venues cache")
 	venues, err := c.Database.ListVenues(context.Background())
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *SavedEventCache) RefreshVenues() error {
 	return nil
 }
 
-func (c SavedEventCache) GetSavedEvents() []data.Event {
+func (c Cache) GetSavedEvents() []data.Event {
 	log.Debug("Retrieving saved events from cache")
 	if c.savedEvents == nil {
 		return []data.Event{}
@@ -97,7 +97,7 @@ func (c SavedEventCache) GetSavedEvents() []data.Event {
 	return util.CloneEvents(c.savedEvents)
 }
 
-func (c SavedEventCache) GetPassedSavedEvents() []data.Event {
+func (c Cache) GetPassedSavedEvents() []data.Event {
 	log.Debug("Retrieving passed saved events from cache")
 	if c.savedEvents == nil {
 		return []data.Event{}
@@ -112,7 +112,7 @@ func (c SavedEventCache) GetPassedSavedEvents() []data.Event {
 	return passedEvents
 }
 
-func (c *SavedEventCache) AddSavedEvent(event data.Event) (*data.Event, error) {
+func (c *Cache) AddSavedEvent(event data.Event) (*data.Event, error) {
 	log.Debug("Adding saved event to cache", event)
 	existingIdx := slices.IndexFunc(c.savedEvents, event.Equals)
 	if existingIdx >= 0 {
@@ -120,38 +120,37 @@ func (c *SavedEventCache) AddSavedEvent(event data.Event) (*data.Event, error) {
 		existing := util.CloneEvent(c.savedEvents[existingIdx])
 		return &existing, nil
 	}
-	if event.MainAct.Populated() {
-		artist, err := c.AddArtist(event.MainAct)
+	if event.MainAct != nil && event.MainAct.Populated() {
+		artist, err := c.AddArtist(*event.MainAct)
 		if err != nil {
 			return nil, err
 		}
-		event.MainAct.Id = artist.Id
+		event.MainAct = artist
 	}
 	for i, opener := range event.Openers {
 		artist, err := c.AddArtist(opener)
 		if err != nil {
 			return nil, err
 		}
-		event.Openers[i].Id = artist.Id
+		event.Openers[i] = *artist
 	}
 	venue, err := c.AddVenue(event.Venue)
 	if err != nil {
 		return nil, err
 	}
-	event.Venue.Id = venue.Id
+	event.Venue = *venue
 
-	id, err := c.Database.AddEvent(context.Background(), event)
+	newEvent, err := c.Database.AddEvent(context.Background(), event)
 	if err != nil {
 		return nil, err
 	}
 
-	event.Id = id
-	c.savedEvents = append(c.savedEvents, util.CloneEvent(event))
-	log.Debug("Added saved event to cache", event)
-	return &event, nil
+	c.savedEvents = append(c.savedEvents, newEvent)
+	log.Debug("Added saved event to cache", newEvent)
+	return &newEvent, nil
 }
 
-func (c *SavedEventCache) DeleteSavedEvent(id string) error {
+func (c *Cache) DeleteSavedEvent(id string) error {
 	log.Debug("Deleting saved event from cache", id)
 	eventIdx := slices.IndexFunc(c.savedEvents, func(e data.Event) bool {
 		return e.Id == id
@@ -170,12 +169,12 @@ func (c *SavedEventCache) DeleteSavedEvent(id string) error {
 	return nil
 }
 
-func (c SavedEventCache) GetArtists() []data.Artist {
+func (c Cache) GetArtists() []data.Artist {
 	log.Debug("Retrieving artists from cache")
 	return slices.Clone(c.artists)
 }
 
-func (c *SavedEventCache) AddArtist(artist data.Artist) (*data.Artist, error) {
+func (c *Cache) AddArtist(artist data.Artist) (*data.Artist, error) {
 	log.Debug("Adding artist to cache", artist)
 	existingIdx := slices.IndexFunc(c.artists, artist.Equals)
 	if existingIdx >= 0 {
@@ -184,18 +183,17 @@ func (c *SavedEventCache) AddArtist(artist data.Artist) (*data.Artist, error) {
 		return &existing, nil
 	}
 
-	id, err := c.Database.AddArtist(context.Background(), artist)
+	newArtist, err := c.Database.AddArtist(context.Background(), artist)
 	if err != nil {
 		return nil, err
 	}
 
-	artist.Id = id
-	c.artists = append(c.artists, util.CloneArtist(artist))
-	log.Debug("Added artist to cache", artist)
-	return &artist, nil
+	c.artists = append(c.artists, newArtist)
+	log.Debug("Added artist to cache", newArtist)
+	return &newArtist, nil
 }
 
-func (c *SavedEventCache) UpdateArtist(id string, artist data.Artist) error {
+func (c *Cache) UpdateArtist(id string, artist data.Artist) error {
 	log.Debugf("Updating artist in cache, id=%v, %v", id, artist)
 	artistIdx := slices.IndexFunc(c.artists, func(a data.Artist) bool {
 		return a.Id == id
@@ -205,30 +203,30 @@ func (c *SavedEventCache) UpdateArtist(id string, artist data.Artist) error {
 		return errors.New("artist is not cached")
 	}
 
-	err := c.Database.UpdateArtist(context.Background(), id, artist)
+	artist.Id = id
+	updatedArtist, err := c.Database.UpdateArtist(context.Background(), artist)
 	if err != nil {
 		return err
 	}
 
-	artist.Id = id
-	c.artists = slices.Replace(c.artists, artistIdx, artistIdx+1, artist)
+	c.artists = slices.Replace(c.artists, artistIdx, artistIdx+1, updatedArtist)
 
 	for i, event := range c.savedEvents {
-		if event.MainAct.Id == id {
-			c.savedEvents[i].MainAct = artist
+		if event.MainAct != nil && event.MainAct.Id == id {
+			c.savedEvents[i].MainAct = &updatedArtist
 		}
 		for j, opener := range event.Openers {
 			if opener.Id == id {
-				c.savedEvents[i].Openers[j] = artist
+				c.savedEvents[i].Openers[j] = updatedArtist
 			}
 		}
 	}
 
-	log.Debug("Updated artist in cache", artist)
+	log.Debug("Updated artist in cache", updatedArtist)
 	return nil
 }
 
-func (c *SavedEventCache) DeleteArtist(id string) error {
+func (c *Cache) DeleteArtist(id string) error {
 	log.Debug("Deleting artist from cache", id)
 	artistIdx := slices.IndexFunc(c.artists, func(a data.Artist) bool {
 		return a.Id == id
@@ -247,12 +245,12 @@ func (c *SavedEventCache) DeleteArtist(id string) error {
 	return nil
 }
 
-func (c SavedEventCache) GetVenues() []data.Venue {
+func (c Cache) GetVenues() []data.Venue {
 	log.Debug("Retrieving venues from cache")
 	return util.CloneVenues(c.venues)
 }
 
-func (c *SavedEventCache) AddVenue(venue data.Venue) (*data.Venue, error) {
+func (c *Cache) AddVenue(venue data.Venue) (*data.Venue, error) {
 	log.Debug("Adding venue to cache", venue)
 	existingIdx := slices.IndexFunc(c.venues, venue.Equals)
 	if existingIdx >= 0 {
@@ -261,18 +259,17 @@ func (c *SavedEventCache) AddVenue(venue data.Venue) (*data.Venue, error) {
 		return &existing, nil
 	}
 
-	id, err := c.Database.AddVenue(context.Background(), venue)
+	newVenue, err := c.Database.AddVenue(context.Background(), venue)
 	if err != nil {
 		return nil, err
 	}
 
-	venue.Id = id
-	c.venues = append(c.venues, util.CloneVenue(venue))
-	log.Debug("Added venue to cache", venue)
-	return &venue, nil
+	c.venues = append(c.venues, newVenue)
+	log.Debug("Added venue to cache", newVenue)
+	return &newVenue, nil
 }
 
-func (c *SavedEventCache) UpdateVenue(id string, venue data.Venue) error {
+func (c *Cache) UpdateVenue(id string, venue data.Venue) error {
 	log.Debugf("Updating venue in cache, id=%v, %v", id, venue)
 	venueIdx := slices.IndexFunc(c.venues, func(a data.Venue) bool {
 		return a.Id == id
@@ -282,25 +279,25 @@ func (c *SavedEventCache) UpdateVenue(id string, venue data.Venue) error {
 		return errors.New("venue is not cached")
 	}
 
-	err := c.Database.UpdateVenue(context.Background(), id, venue)
+	venue.Id = id
+	updatedVenue, err := c.Database.UpdateVenue(context.Background(), venue)
 	if err != nil {
 		return err
 	}
 
-	venue.Id = id
-	c.venues = slices.Replace(c.venues, venueIdx, venueIdx+1, venue)
+	c.venues = slices.Replace(c.venues, venueIdx, venueIdx+1, updatedVenue)
 
 	for i, event := range c.savedEvents {
 		if event.Venue.Id == id {
-			c.savedEvents[i].Venue = venue
+			c.savedEvents[i].Venue = updatedVenue
 		}
 	}
 
-	log.Debug("Updated venue in cache", venue)
+	log.Debug("Updated venue in cache", updatedVenue)
 	return nil
 }
 
-func (c *SavedEventCache) DeleteVenue(id string) error {
+func (c *Cache) DeleteVenue(id string) error {
 	log.Debug("Deleting venue from cache", id)
 	venueIdx := slices.IndexFunc(c.venues, func(v data.Venue) bool {
 		return v.Id == id

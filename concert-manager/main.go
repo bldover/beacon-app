@@ -1,15 +1,13 @@
 package main
 
 import (
-	"concert-manager/api/lastfm"
-	"concert-manager/api/spotify"
-	"concert-manager/cache"
+	"concert-manager/client/lastfm"
+	"concert-manager/client/spotify"
 	"concert-manager/db"
-	"concert-manager/db/firestore"
 	"concert-manager/finder"
+	"concert-manager/finder/ticketmaster"
 	"concert-manager/loader"
 	"concert-manager/log"
-	"concert-manager/ranker"
 	"concert-manager/server"
 	"concert-manager/ui"
 	"os"
@@ -21,43 +19,52 @@ func main() {
 		log.Fatal("Failed to set up logger:", err)
 	}
 
-	dbConnection, err := firestore.Setup()
+	dbConnection, err := db.Setup()
 	if err != nil {
 		log.Fatal("Failed to set up database:", err)
 	}
 
-	venueRepo := &firestore.VenueRepo{Connection: dbConnection}
-	artistRepo := &firestore.ArtistRepo{Connection: dbConnection}
-	eventRepo := &firestore.EventRepo{
-		Connection: dbConnection,
-		VenueRepo:  venueRepo,
-		ArtistRepo: artistRepo,
-	}
-	interactor := &db.DatabaseRepository{
-		VenueRepo:  venueRepo,
-		ArtistRepo: artistRepo,
-		EventRepo:  eventRepo,
+	if slices.Contains(os.Args, "--test") {
+		log.Info("Starting in test mode")
+		spotify.TEST_MODE = true
 	}
 
-	savedCache := &cache.SavedEventCache{}
+	venueClient := &db.VenueClient{Connection: dbConnection}
+	artistClient := &db.ArtistClient{Connection: dbConnection}
+	eventClient := &db.EventClient{
+		Connection: dbConnection,
+		VenueClient:  venueClient,
+		ArtistClient: artistClient,
+	}
+	interactor := &db.EventRepository{
+		VenueRepo:  venueClient,
+		ArtistRepo: artistClient,
+		EventRepo:  eventClient,
+	}
+
+	savedCache := &db.Cache{}
 	savedCache.Database = interactor
 	savedCache.LoadCaches()
 
+	ticketmaster := ticketmaster.Ticketmaster{}
 	eventFinder := finder.NewEventFinder()
-	artistRanker := &ranker.ArtistRanker{
+	eventFinder.Ticketmaster = ticketmaster
+
+	eventRanker := &finder.EventRanker{
 		MusicSvc: spotify.NewClient(),
 		AnalyticsSvc: lastfm.NewClient(),
 	}
-	eventRanker := &ranker.EventRanker{ArtistRanker: artistRanker}
 
-	upcomingCache := cache.NewUpcomingEventCache()
+	upcomingCache := finder.NewUpcomingEventCache()
 	upcomingCache.Finder = eventFinder
 	upcomingCache.Ranker = eventRanker
 
-	loader := &loader.Loader{Cache: savedCache}
+	eventLoader := &loader.EventLoader{Cache: savedCache}
+	genreLoader := &loader.GenreLoader{Cache: savedCache, InfoProvider: lastfm.NewClient()}
 
 	server := server.Server{}
-	server.Loader = loader
+	server.EventLoader = eventLoader
+	server.ArtistInfoLoader = genreLoader
 	server.SavedEventCache = savedCache
 	server.ArtistCache = savedCache
 	server.VenueCache = savedCache
