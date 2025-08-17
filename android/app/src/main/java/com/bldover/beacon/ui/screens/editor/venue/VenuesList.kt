@@ -74,7 +74,7 @@ private fun VenueList(
     ScrollableItemList(
         items = venues,
         topAnchor = { NewVenueCard(onNewVenue) },
-        getItemKey = { it.id!! }
+        getItemKey = { it.id.primary!! }
     ) { venue ->
         VenueCard(
             venue = venue,

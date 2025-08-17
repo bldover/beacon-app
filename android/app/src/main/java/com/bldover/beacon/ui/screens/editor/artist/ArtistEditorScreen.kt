@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.bldover.beacon.data.util.toCommaSeparatedString
 import com.bldover.beacon.ui.components.common.BackButton
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
@@ -42,9 +43,9 @@ fun ArtistEditorScreen(
                 modifier = Modifier.fillMaxWidth()
             )
             TextField(
-                value = artist.genre,
-                onValueChange = artistEditorViewModel::updateGenre,
-                label = { Text("Genre") },
+                value = toCommaSeparatedString(artist.genres.user),
+                onValueChange = artistEditorViewModel::updateUserGenres,
+                label = { Text("User Genres") },
                 modifier = Modifier.fillMaxWidth()
             )
             Row(

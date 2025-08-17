@@ -1,8 +1,8 @@
 package com.bldover.beacon.data.model.venue
 
-import com.bldover.beacon.data.model.ordering.Direction
-import com.bldover.beacon.data.model.ordering.OrderField
-import com.bldover.beacon.data.model.ordering.Ordering
+import com.bldover.beacon.data.model.Direction
+import com.bldover.beacon.data.model.OrderField
+import com.bldover.beacon.data.model.Ordering
 
 class VenueOrdering(
     option: OrderField = OrderField.NAME,

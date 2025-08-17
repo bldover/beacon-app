@@ -1,8 +1,8 @@
 package com.bldover.beacon.data.model.artist
 
-import com.bldover.beacon.data.model.ordering.Direction
-import com.bldover.beacon.data.model.ordering.OrderField
-import com.bldover.beacon.data.model.ordering.Ordering
+import com.bldover.beacon.data.model.Direction
+import com.bldover.beacon.data.model.OrderField
+import com.bldover.beacon.data.model.Ordering
 
 class ArtistOrdering(
     option: OrderField = OrderField.NAME,
@@ -15,8 +15,8 @@ class ArtistOrdering(
                 Direction.DESCENDING -> String.CASE_INSENSITIVE_ORDER.compare(o2.name, o1.name)
             }
             OrderField.GENRE -> when (order) {
-                Direction.ASCENDING -> o1.genre.compareTo(o2.genre)
-                Direction.DESCENDING -> o2.genre.compareTo(o1.genre)
+                Direction.ASCENDING -> o1.genres.compareTo(o2.genres)
+                Direction.DESCENDING -> o2.genres.compareTo(o1.genres)
             }
             else -> 0
         }

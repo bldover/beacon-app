@@ -2,8 +2,8 @@ package com.bldover.beacon.ui.screens.editor.venue
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.ordering.Direction
-import com.bldover.beacon.data.model.ordering.OrderField
+import com.bldover.beacon.data.model.Direction
+import com.bldover.beacon.data.model.OrderField
 import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.model.venue.VenueOrdering
 import com.bldover.beacon.data.repository.VenueRepository

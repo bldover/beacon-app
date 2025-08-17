@@ -1,36 +1,38 @@
 package com.bldover.beacon.data.model.artist
 
-const val GENRE_UNSPECIFIED = "Unspecified"
+import com.bldover.beacon.data.dto.ArtistDto
 
 data class Artist(
-    var id: String? = null,
-    var name: String,
-    var genre: String,
-    var genreSet: Boolean = true,
+    var id: Id = Id(),
+    var name: String = "",
+    var genres: Genres = Genres(),
     var headliner: Boolean = false
 ) {
     constructor(
-        artist: RawArtist,
+        artist: ArtistDto,
         headliner: Boolean = false,
-        genreSet: Boolean = true
     ) : this(
-        id = artist.id.ifBlank { null },
+        id = Id(artist.id),
         name = artist.name,
-        genre = artist.genre,
-        genreSet = !(artist.genre.isBlank() || artist.genre == GENRE_UNSPECIFIED),
+        genres = Genres(artist.genres),
         headliner = headliner
     )
 
     fun hasMatch(searchTerm: String): Boolean {
         return name.contains(searchTerm, ignoreCase = true)
-                || genre.contains(searchTerm, ignoreCase = true)
+                || genres.hasGenre(searchTerm)
     }
 
     fun isPopulated(): Boolean {
-        return name.isNotEmpty() && (genre.isNotEmpty() || !genreSet)
+        return name.isNotEmpty()
     }
 
-    fun hasGenre(): Boolean {
-        return genre.isNotEmpty() && GENRE_UNSPECIFIED != genre
+    fun deepCopy(): Artist {
+        return Artist(
+            id = id.copy(),
+            name = name,
+            genres = genres.deepCopy(),
+            headliner = headliner
+        )
     }
 }

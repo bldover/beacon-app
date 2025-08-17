@@ -1,42 +1,42 @@
 package finder
 
 import (
-	"concert-manager/data"
+	"concert-manager/domain"
 	"concert-manager/log"
-	"concert-manager/util"
+	"concert-manager/ranker"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 )
 
 type finder interface {
-	FindAllEvents(string, string) ([]data.EventDetails, error)
+	FindAllEvents(string, string) ([]domain.EventDetails, error)
 }
 
-type ranker interface {
-	Rank(data.EventDetails) data.RankInfo
-}
-
-type savedEventCache interface {
-    GetArtists() []data.Artist
-	GetVenues() []data.Venue
-	GetSavedEvents() []data.Event
+type eventRanker interface {
+	Rank(domain.EventDetails) domain.RankInfo
 }
 
 type upcomingEventsData struct {
-	events     []data.EventDetails
+	events     []domain.EventDetails
 	lastLoaded time.Time
 }
 
-var	upcomingEventTTL, _ = time.ParseDuration("24h")
+type savedDataCache interface {
+	GetArtists() []domain.Artist
+	GetVenues() []domain.Venue
+	GetSavedEvents() []domain.Event
+}
+
+var upcomingEventTTL, _ = time.ParseDuration("24h")
 
 type Cache struct {
 	Location       Location
 	Finder         finder
-	Ranker         ranker
+	Ranker         eventRanker
+	SavedDataCache savedDataCache
+	MetadataFinder MetadataFinder
 	upcomingEvents map[string]upcomingEventsData
-	savedEventCache savedEventCache
 }
 
 const (
@@ -51,11 +51,11 @@ func NewUpcomingEventCache() *Cache {
 	return &cache
 }
 
-func (c *Cache) GetUpcomingEvents() []data.EventDetails {
-	return c.GetRecommendedEvents(NoMinRec)
+func (c *Cache) GetUpcomingEvents() []domain.EventDetails {
+	return c.GetRecommendedEvents(ranker.NoMinRec)
 }
 
-func (c *Cache) GetRecommendedEvents(level RecLevel) []data.EventDetails {
+func (c *Cache) GetRecommendedEvents(level ranker.RecLevel) []domain.EventDetails {
 	key := c.Location.key()
 	if d, ok := c.upcomingEvents[key]; !ok {
 		c.doRefresh()
@@ -63,20 +63,20 @@ func (c *Cache) GetRecommendedEvents(level RecLevel) []data.EventDetails {
 		go c.doRefresh()
 	}
 
-	threshold, _ := ToThreshold(level)
-	var events []data.EventDetails
+	threshold, _ := ranker.ToThreshold(level)
+	var events []domain.EventDetails
 	for _, event := range c.upcomingEvents[key].events {
 		if event.Ranks.Rank >= threshold {
-			events = append(events, util.CloneEventDetail(event))
+			events = append(events, domain.CloneEventDetail(event))
 		}
 	}
 	return events
 }
 
 func (c *Cache) doRefresh() {
-    err := c.RefreshUpcomingEvents()
+	err := c.RefreshUpcomingEvents()
 	if err != nil {
-		log.Error("Failed to refresh upcoming events", err)
+		log.Alert("Failed to refresh upcoming events", err)
 	}
 }
 
@@ -87,13 +87,18 @@ func (c *Cache) RefreshUpcomingEvents() error {
 	events, err := c.Finder.FindAllEvents(loc.City, loc.StateCode)
 	if err != nil {
 		if _, ok := c.upcomingEvents[key]; !ok {
-			eventData := upcomingEventsData{events: []data.EventDetails{}, lastLoaded: time.Time{}}
+			eventData := upcomingEventsData{events: []domain.EventDetails{}, lastLoaded: time.Time{}}
 			c.upcomingEvents[key] = eventData
 		}
 		return err
 	}
 
-	log.Debugf("Cache found %d upcoming events. Starting rank population", len(events))
+	log.Debugf("Cache found %d upcoming events", len(events))
+	for i, event := range events {
+		events[i] = c.enrichSavedData(event)
+	}
+	events = c.MetadataFinder.PopulateMetadata(events)
+
 	for i, event := range events {
 		rank := c.Ranker.Rank(event)
 		events[i].Ranks = &rank
@@ -105,45 +110,7 @@ func (c *Cache) RefreshUpcomingEvents() error {
 	return nil
 }
 
-func (c Cache) enrichSavedData(events []data.EventDetails) []data.EventDetails {
-	savedArtists := c.savedEventCache.GetArtists()
-	savedVenues := c.savedEventCache.GetVenues()
-	savedEvents := c.savedEventCache.GetSavedEvents()
-
-	enriched := make([]data.EventDetails, len(events))
-	for _, event := range events {
-		eventIdx := slices.IndexFunc(savedEvents, event.Event.EqualsFields)
-		if eventIdx != -1 {
-			event.Event = savedEvents[eventIdx]
-			enriched = append(enriched, event)
-			continue
-		}
-
-		venueIdx := slices.IndexFunc(savedVenues, event.Event.Venue.EqualsFields)
-		if venueIdx != -1 {
-			event.Event.Venue = savedVenues[venueIdx]
-		}
-
-		if event.Event.MainAct != nil {
-			mainActIdx := slices.IndexFunc(savedArtists, (*event.Event.MainAct).EqualsFields)
-			if mainActIdx != -1 {
-				event.Event.MainAct = &savedArtists[mainActIdx]
-			}
-		}
-
-		for i, opener := range event.Event.Openers {
-			openerIdx := slices.IndexFunc(savedArtists, opener.EqualsFields)
-			if openerIdx != -1 {
-				event.Event.Openers[i] = savedArtists[openerIdx]
-			}
-		}
-		enriched = append(enriched, event)
-	}
-
-	return enriched
-}
-
-func (c Cache) GetLocation() Location {
+func (c *Cache) GetLocation() Location {
 	return c.Location
 }
 
@@ -163,7 +130,7 @@ func (c Location) key() string {
 }
 
 func (c Location) String() string {
-    return fmt.Sprintf("%s, %s", c.City, c.StateCode)
+	return fmt.Sprintf("%s, %s", c.City, c.StateCode)
 }
 
 func (c *Cache) Invalidate() {

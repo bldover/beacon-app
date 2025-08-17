@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.event.EventOrdering
-import com.bldover.beacon.data.model.ordering.Direction
-import com.bldover.beacon.data.model.ordering.OrderField
+import com.bldover.beacon.data.model.Direction
+import com.bldover.beacon.data.model.OrderField
 import com.bldover.beacon.data.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

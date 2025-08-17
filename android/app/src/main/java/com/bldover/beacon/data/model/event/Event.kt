@@ -1,7 +1,8 @@
 package com.bldover.beacon.data.model.event
 
-import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.dto.EventDto
 import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.util.dateFormatter
 import java.time.LocalDate
 
@@ -13,7 +14,7 @@ data class Event(
     var purchased: Boolean,
     val ticketmasterId: String? = null
 ) {
-    constructor(event: RawEvent) : this(
+    constructor(event: EventDto) : this(
         id = event.id,
         artists = event.artists,
         venue = Venue(event.venue),
@@ -32,7 +33,7 @@ data class Event(
     )
 
     fun hasMatch(term: String): Boolean {
-        return artists.any { it.name.contains(term, ignoreCase = true) || it.genre.contains(term, ignoreCase = true) }
+        return artists.any { it.name.contains(term, ignoreCase = true) || it.genres.hasGenre(term) }
                 || venue.name.contains(term, ignoreCase = true)
     }
 

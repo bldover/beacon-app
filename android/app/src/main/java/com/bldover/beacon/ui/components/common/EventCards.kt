@@ -94,12 +94,6 @@ fun UpcomingEventCard(
                 text = event.venue.name,
                 style = MaterialTheme.typography.bodySmall
             )
-            if (event.price != null) {
-                Text(
-                    text = "Price: $${event.formattedPrice}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
             if (event.rank != null) {
                 Text(
                     text = "Rank: ${event.rank}",

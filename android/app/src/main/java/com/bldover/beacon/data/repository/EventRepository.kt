@@ -3,7 +3,7 @@ package com.bldover.beacon.data.repository
 import com.bldover.beacon.data.api.EventApi
 import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.event.EventDetail
-import com.bldover.beacon.data.model.event.RawEvent
+import com.bldover.beacon.data.dto.EventDto
 import com.bldover.beacon.data.model.RecommendationThreshold
 import java.time.LocalDate
 
@@ -32,7 +32,7 @@ class EventRepositoryImpl(private val eventApi: EventApi): EventRepository {
     }
 
     override suspend fun saveEvent(event: Event) {
-        eventApi.addEvent(RawEvent(event))
+        eventApi.addEvent(EventDto(event))
     }
 
     override suspend fun updateEvent(event: Event) {

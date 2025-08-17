@@ -29,6 +29,7 @@ import com.bldover.beacon.ui.components.editor.ArtistDetailsCard
 @Composable
 fun SearchableArtistsList(
     artistState: ArtistState,
+    showAllGenres: Boolean = false,
     orderingState: ArtistOrdering,
     onSearchArtists: (String) -> Unit,
     onOrderingChange: (ArtistOrdering) -> Unit,
@@ -55,6 +56,7 @@ fun SearchableArtistsList(
             when (artistState) {
                 is ArtistState.Success -> ArtistList(
                     artistState.filtered,
+                    showAllGenres,
                     onArtistSelected,
                     onNewArtist
                 )
@@ -68,16 +70,18 @@ fun SearchableArtistsList(
 @Composable
 private fun ArtistList(
     artists: List<Artist>,
+    showAllGenres: Boolean = false,
     onArtistSelected: (Artist) -> Unit,
     onNewArtist: () -> Unit
 ) {
     ScrollableItemList(
         items = artists,
         topAnchor = { NewArtistCard(onNewArtist) },
-        getItemKey = { it.id!! }
+        getItemKey = { it.id.primary!! }
     ) { artist ->
         ArtistDetailsCard(
             artist = artist,
+            showAllGenres = showAllGenres,
             onClick = {
                 onArtistSelected(artist)
             }

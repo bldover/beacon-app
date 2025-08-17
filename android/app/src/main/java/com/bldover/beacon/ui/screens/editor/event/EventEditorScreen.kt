@@ -58,12 +58,9 @@ fun EventEditorScreen(
         when (eventState) {
             is EventEditorState.Success -> {
                 val event = (eventState as EventEditorState.Success).event
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-
-                    ) {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     val headliner = event.artists.find { it.headliner }
-                    item(key = headliner?.id ?: "") {
+                    item {
                         if (headliner != null) {
                             SwipeableArtistEditCard(
                                 artist = headliner,
@@ -87,10 +84,7 @@ fun EventEditorScreen(
                         }
                     }
                     val openers = event.artists.filter { !it.headliner }
-                    items(
-                        items = openers,
-                        key = { it.id ?: it.name }
-                    ) { opener ->
+                    items(items = openers) { opener ->
                         SwipeableArtistEditCard(
                             artist = opener,
                             artistType = ArtistType.OPENER,

@@ -1,5 +1,7 @@
 package com.bldover.beacon.data.model.event
 
+import com.bldover.beacon.data.dto.EventDetailDto
+import com.bldover.beacon.data.dto.EventRankDto
 import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.artist.ArtistRank
@@ -18,7 +20,7 @@ data class EventDetail(
     val rank: Float? = null,
     val artistRanks: List<ArtistRank>? = null
 ) {
-    constructor(event: RawEventDetail) : this(
+    constructor(event: EventDetailDto) : this(
         id = event.event.id,
         name = event.name,
         artists = event.event.artists,
@@ -29,7 +31,7 @@ data class EventDetail(
         ticketmasterId = event.event.tmId.ifBlank { null }
     )
 
-    constructor(event: RawEventRank) : this(
+    constructor(event: EventRankDto) : this(
         id = event.event.event.id,
         name = event.event.name,
         artists = event.event.event.artists,
@@ -54,11 +56,8 @@ data class EventDetail(
     }
 
     fun hasMatch(term: String): Boolean {
-        return artists.any { it.name.contains(term, ignoreCase = true) || it.genre.contains(term, ignoreCase = true) }
+        return artists.any { it.name.contains(term, ignoreCase = true) || it.genres.hasGenre(term) }
                 || name.contains(term, ignoreCase = true)
                 || venue.name.contains(term, ignoreCase = true)
     }
-
-    val formattedPrice: String
-        get() = price?.let { String.format("%.2f", it) } ?: "Unknown"
 }

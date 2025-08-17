@@ -1,30 +1,30 @@
 package db
 
 import (
-	"concert-manager/data"
+	"concert-manager/domain"
 	"concert-manager/log"
-	"concert-manager/util"
+
 	"context"
 	"errors"
 )
 
 type (
 	VenueDatabase interface {
-		Add(context.Context, data.Venue) (string, error)
-		Update(context.Context, data.Venue) error
+		Add(context.Context, domain.Venue) (string, error)
+		Update(context.Context, domain.Venue) error
 		Delete(context.Context, string) error
-		FindAll(context.Context) ([]data.Venue, error)
+		FindAll(context.Context) ([]domain.Venue, error)
 	}
 	ArtistDatabase interface {
-		Add(context.Context, data.Artist) (string, error)
-		Update(context.Context, data.Artist) error
+		Add(context.Context, domain.Artist) (string, error)
+		Update(context.Context, domain.Artist) error
 		Delete(context.Context, string) error
-		FindAll(context.Context) ([]data.Artist, error)
+		FindAll(context.Context) ([]domain.Artist, error)
 	}
 	EventDatabase interface {
-		Add(context.Context, data.Event) (string, error)
+		Add(context.Context, domain.Event) (string, error)
 		Delete(context.Context, string) error
-		FindAll(context.Context) ([]data.Event, error)
+		FindAll(context.Context) ([]domain.Event, error)
 	}
 	EventRepository struct {
 		VenueRepo  VenueDatabase
@@ -33,26 +33,26 @@ type (
 	}
 )
 
-func (r *EventRepository) AddVenue(ctx context.Context, venue data.Venue) (data.Venue, error) {
+func (r *EventRepository) AddVenue(ctx context.Context, venue domain.Venue) (domain.Venue, error) {
 	log.Debug("Request to add venue", venue)
 	if !venue.Populated() {
 		log.Debug("Skipping adding venue because required fields are missing", venue)
 		return venue, errors.New("failed to create venue due to empty fields")
 	}
-	newVenue := util.CloneVenue(venue)
+	newVenue := domain.CloneVenue(venue)
 	id, err := r.VenueRepo.Add(ctx, newVenue)
 	if err != nil {
 		log.Errorf("Error while adding venue %v, %v\n", venue, err)
 		return venue, err
 	}
-	newVenue.Id = id
+	newVenue.ID.Primary = id
 	log.Debug("Added venue to database", newVenue)
 	return newVenue, nil
 }
 
-func (r *EventRepository) UpdateVenue(ctx context.Context, venue data.Venue) (data.Venue, error) {
+func (r *EventRepository) UpdateVenue(ctx context.Context, venue domain.Venue) (domain.Venue, error) {
 	log.Debug("Request to update venue", venue)
-	updateVenue := util.CloneVenue(venue)
+	updateVenue := domain.CloneVenue(venue)
 	err := r.VenueRepo.Update(ctx, updateVenue)
 	if err != nil {
 		log.Errorf("Error while updating venue %v, %v\n", venue, err)
@@ -73,9 +73,9 @@ func (r *EventRepository) DeleteVenue(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *EventRepository) ListVenues(ctx context.Context) ([]data.Venue, error) {
+func (r *EventRepository) ListVenues(ctx context.Context) ([]domain.Venue, error) {
 	log.Debug("Request to list all venues")
-    venues, err := r.VenueRepo.FindAll(ctx)
+	venues, err := r.VenueRepo.FindAll(ctx)
 	if err != nil {
 		log.Error("Error while listing all venues,", err)
 		return nil, err
@@ -83,18 +83,18 @@ func (r *EventRepository) ListVenues(ctx context.Context) ([]data.Venue, error) 
 	return venues, nil
 }
 
-func (r *EventRepository) AddArtist(ctx context.Context, artist data.Artist) (data.Artist, error) {
+func (r *EventRepository) AddArtist(ctx context.Context, artist domain.Artist) (domain.Artist, error) {
 	log.Debug("Request to add artist", artist)
 	if !artist.Populated() {
 		log.Debug("Skipping adding artist because required fields are missing", artist)
 		return artist, errors.New("failed to create artist due to empty fields")
 	}
-	newArtist := util.CloneArtist(artist)
-	if newArtist.Genres.LfmGenres == nil {
-		newArtist.Genres.LfmGenres = []string{}
+	newArtist := domain.CloneArtist(artist)
+	if newArtist.Genres.Spotify == nil {
+		newArtist.Genres.Spotify = []string{}
 	}
-	if newArtist.Genres.UserGenres == nil {
-		newArtist.Genres.UserGenres = []string{}
+	if newArtist.Genres.User == nil {
+		newArtist.Genres.User = []string{}
 	}
 	id, err := r.ArtistRepo.Add(ctx, newArtist)
 	if err != nil {
@@ -102,14 +102,14 @@ func (r *EventRepository) AddArtist(ctx context.Context, artist data.Artist) (da
 		return artist, err
 	}
 
-	newArtist.Id = id
+	newArtist.ID.Primary = id
 	log.Debug("Added artist to database", newArtist)
 	return newArtist, nil
 }
 
-func (r *EventRepository) UpdateArtist(ctx context.Context, artist data.Artist) (data.Artist, error) {
+func (r *EventRepository) UpdateArtist(ctx context.Context, artist domain.Artist) (domain.Artist, error) {
 	log.Debug("Request to update artist", artist)
-	updateArtist := util.CloneArtist(artist)
+	updateArtist := domain.CloneArtist(artist)
 	err := r.ArtistRepo.Update(ctx, updateArtist)
 	if err != nil {
 		log.Errorf("Error while updating artist %v, %v\n", artist, err)
@@ -130,9 +130,9 @@ func (r *EventRepository) DeleteArtist(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *EventRepository) ListArtists(ctx context.Context) ([]data.Artist, error) {
+func (r *EventRepository) ListArtists(ctx context.Context) ([]domain.Artist, error) {
 	log.Debug("Request to list all artists")
-    artists, err := r.ArtistRepo.FindAll(ctx)
+	artists, err := r.ArtistRepo.FindAll(ctx)
 	if err != nil {
 		log.Error("Error while listing all artists", err)
 		return nil, err
@@ -141,26 +141,26 @@ func (r *EventRepository) ListArtists(ctx context.Context) ([]data.Artist, error
 }
 
 // Requires that all the artists and the venue already exist
-func (r *EventRepository) AddEvent(ctx context.Context, event data.Event) (data.Event, error) {
+func (r *EventRepository) AddEvent(ctx context.Context, event domain.Event) (domain.Event, error) {
 	log.Debug("Request to add event", event)
 	if !event.Populated() {
 		log.Debug("Skipping adding event because required fields are missing", event)
 		return event, errors.New("failed to create event due to empty fields")
 	}
-	newEvent := util.CloneEvent(event)
+	newEvent := domain.CloneEvent(event)
 	id, err := r.EventRepo.Add(ctx, newEvent)
 	if err != nil {
 		log.Errorf("Error while adding event %v, %v\n", event, err)
 		return event, err
 	}
-	newEvent.Id = id
+	newEvent.ID.Primary = id
 	log.Debug("Added event to database", newEvent)
 	return newEvent, nil
 }
 
 func (r *EventRepository) DeleteEvent(ctx context.Context, id string) error {
 	log.Debug("Request to delete event", id)
-    err := r.EventRepo.Delete(ctx, id)
+	err := r.EventRepo.Delete(ctx, id)
 	if err != nil {
 		log.Errorf("Error while deleting event %v, %v\n", id, err)
 		return err
@@ -169,9 +169,9 @@ func (r *EventRepository) DeleteEvent(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *EventRepository) ListEvents(ctx context.Context) ([]data.Event, error) {
+func (r *EventRepository) ListEvents(ctx context.Context) ([]domain.Event, error) {
 	log.Debug("Request to list all events")
-    events, err := r.EventRepo.FindAll(ctx)
+	events, err := r.EventRepo.FindAll(ctx)
 	if err != nil {
 		log.Error("Error while listing all events", err)
 		return nil, err

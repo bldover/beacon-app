@@ -1,9 +1,10 @@
 package server
 
 import (
-	"concert-manager/data"
+	"concert-manager/domain"
 	"concert-manager/finder"
 	"concert-manager/log"
+	"concert-manager/ranker"
 	"context"
 	"encoding/json"
 	"io"
@@ -12,62 +13,69 @@ import (
 )
 
 type Server struct {
-    EventLoader eventLoader
-	ArtistInfoLoader artistInfoLoader
-	SavedEventCache savedEventCache
-	ArtistCache artistCache
-	VenueCache venueCache
-	UpcomingEventsCache upcomingEventsCache
-	RecommendationCache recommendationCache
+	EventLoader         eventLoader
+	ArtistInfoLoader    artistInfoLoader
+	SavedEventCache     savedEventStore
+	ArtistCache         artistStore
+	VenueCache          venueStore
+	UpcomingEventsCache upcomingEventsStore
+	SyncService         dataSyncService
 }
 
 type eventLoader interface {
-    Upload(context.Context, io.ReadCloser) (int, error)
+	Upload(context.Context, io.ReadCloser) (int, error)
 }
 
 type artistInfoLoader interface {
-    PopulateLastFmData(context.Context, []string) (int, error)
-	PopulateUserGenres(context.Context) (int, error)
+	ReloadGenres(context.Context, []string) (int, error)
 }
 
-type savedEventCache interface {
-    GetSavedEvents() []data.Event
-	GetPassedSavedEvents() []data.Event
-	AddSavedEvent(data.Event) (*data.Event, error)
+type savedEventStore interface {
+	GetSavedEvents() []domain.Event
+	GetPassedSavedEvents() []domain.Event
+	AddSavedEvent(domain.Event) (*domain.Event, error)
 	DeleteSavedEvent(string) error
 	RefreshSavedEvents() error
 }
 
-type artistCache interface {
-    GetArtists() []data.Artist
-	AddArtist(data.Artist) (*data.Artist, error)
-	UpdateArtist(string, data.Artist) error
+type artistStore interface {
+	GetArtists() []domain.Artist
+	AddArtist(domain.Artist) (*domain.Artist, error)
+	UpdateArtist(string, domain.Artist) error
 	DeleteArtist(string) error
 	RefreshArtists() error
 }
 
-type venueCache interface {
-    GetVenues() []data.Venue
-	AddVenue(data.Venue) (*data.Venue, error)
-	UpdateVenue(string, data.Venue) error
+type venueStore interface {
+	GetVenues() []domain.Venue
+	AddVenue(domain.Venue) (*domain.Venue, error)
+	UpdateVenue(string, domain.Venue) error
 	DeleteVenue(string) error
 	RefreshVenues() error
 }
 
-type upcomingEventsCache interface {
-    GetUpcomingEvents() []data.EventDetails
+type upcomingEventsStore interface {
+	GetUpcomingEvents() []domain.EventDetails
 	ChangeLocation(string, string)
 	GetLocation() finder.Location
 	RefreshUpcomingEvents() error
+	GetRecommendedEvents(ranker.RecLevel) []domain.EventDetails
 }
 
-type recommendationCache interface {
-    GetRecommendedEvents(finder.RecLevel) []data.EventDetails
+type dataSyncService interface {
+	SyncArtistAdd(string) error
+	SyncArtistUpdate(string) error
+	SyncArtistDelete(string)
+	SyncVenueAdd(string) error
+	SyncVenueUpdate(string) error
+	SyncVenueDelete(string)
+	SyncEventAdd(string) error
+	SyncEventUpdate(string) error
+	SyncEventDelete(string)
 }
 
 const port = ":3001"
 
-// TODO: Use (or write?) a better HTTP library to clean up the server routing and handlers
 func (s *Server) StartServer() {
 	http.HandleFunc("/v1/upload", s.handleRequest(s.handleUpload))
 	http.HandleFunc("/v1/events/upcoming", s.handleRequest(s.getUpcomingEvents))
@@ -82,9 +90,8 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))
-	http.HandleFunc("/v1/artists/loadlastfm", s.handleRequest(s.loadLastFmGenres))
-	http.HandleFunc("/v1/genres/loaduser", s.handleRequest(s.loadUserGenres))
-//	http.Handle("/spotify/callback", &spotify.SpotifyAuthHandler{})
+	http.HandleFunc("/v1/genres/refresh", s.handleRequest(s.reloadGenres))
+	http.Handle("/auth/callback", &authHandler{})
 
 	log.Info("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(port, nil))
@@ -107,4 +114,13 @@ func (s *Server) handleRequest(f handlerFunc) func(http.ResponseWriter, *http.Re
 		}
 		log.Infof("Finished processing request ID %d in %v ms", id, time.Since(startTs).Milliseconds())
 	}
+}
+
+// callback URL for retrieving OAUTH access tokens
+type authHandler struct{}
+
+func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	log.Debug("Received authorization callback")
+	out := "Request URI: " + r.RequestURI
+	w.Write([]byte(out))
 }

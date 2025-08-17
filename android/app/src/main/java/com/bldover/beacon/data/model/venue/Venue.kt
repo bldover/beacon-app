@@ -1,13 +1,15 @@
 package com.bldover.beacon.data.model.venue
 
+import com.bldover.beacon.data.dto.VenueDto
+
 data class Venue(
-    var id: String? = null,
-    var name: String,
-    var city: String,
-    var state: String
+    var id: Id = Id(),
+    var name: String = "",
+    var city: String = "",
+    var state: String = ""
 ) {
-    constructor(venue: RawVenue) : this(
-        id = venue.id.ifBlank { null },
+    constructor(venue: VenueDto) : this(
+        id = Id(venue.id),
         name = venue.name,
         city = venue.city,
         state = venue.state
@@ -20,5 +22,14 @@ data class Venue(
 
     fun isPopulated(): Boolean {
         return name.isNotEmpty() && city.isNotEmpty() && state.isNotEmpty()
+    }
+
+    fun deepCopy(): Venue {
+        return Venue(
+            id = id.copy(),
+            name = name,
+            city = city,
+            state = state
+        )
     }
 }

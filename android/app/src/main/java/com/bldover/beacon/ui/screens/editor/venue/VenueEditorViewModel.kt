@@ -12,7 +12,7 @@ import javax.inject.Inject
 @HiltViewModel
 class VenueEditorViewModel @Inject constructor() : ViewModel() {
 
-    private val _venueState = MutableStateFlow(Venue(name = "", city = "", state = ""))
+    private val _venueState = MutableStateFlow(Venue())
     val venueState = _venueState.asStateFlow()
 
     private var onSave: (Venue) -> Unit = {}
@@ -23,7 +23,7 @@ class VenueEditorViewModel @Inject constructor() : ViewModel() {
         onSave: (Venue) -> Unit,
     ) {
         this.onSave = onSave
-        _venueState.value = venue?.copy() ?: Venue(name = "", city = "", state = "")
+        _venueState.value = venue?.deepCopy() ?: Venue()
         navController.navigate(Screen.EDIT_VENUE.name)
     }
 

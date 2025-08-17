@@ -22,6 +22,7 @@ import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 @Composable
 fun ArtistDetailsCard(
     artist: Artist,
+    showAllGenres: Boolean = false,
     onClick: () -> Unit = {}
 ) {
     BasicCard(
@@ -34,7 +35,7 @@ fun ArtistDetailsCard(
             style = MaterialTheme.typography.bodyLarge
         )
         Text(
-            text = artist.genre,
+            text = if (showAllGenres) artist.genres.getGenres().joinToString(", ") else artist.genres.getTopGenre() ?: "",
             style = MaterialTheme.typography.bodySmall
         )
     }
@@ -61,16 +62,16 @@ fun SwipeableArtistEditCard(
     ) {
         DismissableCard(
             onDismiss = { onSwipe(artist) },
-            border = if (artist.id != null) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null,
+            border = if (artist.id.primary != null) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null,
         ) {
             SummaryLine(label = artistType.label) {
                 Text(
                     text = artist.name
                 )
                 Text(
-                    text = artist.genre,
+                    text = artist.genres.getTopGenre() ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (artist.genreSet) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }

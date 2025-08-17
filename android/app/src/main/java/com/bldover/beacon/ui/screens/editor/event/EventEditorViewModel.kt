@@ -6,12 +6,12 @@ import androidx.navigation.NavController
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.Screen
+import com.bldover.beacon.data.model.venue.Id
 import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.repository.ArtistRepository
 import com.bldover.beacon.data.repository.EventRepository
 import com.bldover.beacon.data.repository.VenueRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -70,16 +70,7 @@ class EventEditorViewModel @Inject constructor(
         event: Event,
         onSave: (Event) -> Unit
     ) {
-        viewModelScope.launch {
-            val deferredArtists = async { artistRepository.getArtists() }
-            val deferredVenue = async { venueRepository.getVenues() }
-            val savedArtists = deferredArtists.await()
-            val savedVenues = deferredVenue.await()
-            event.artists.onEach{ it.genreSet = false }
-            event.artists = preprocessArtists(event.artists, savedArtists)
-            event.venue = preprocessVenues(event.venue, savedVenues)
-            _uiState.value = EventEditorState.Success(event)
-        }
+        _uiState.value = EventEditorState.Success(event)
         this.onSave = onSave
         this.onDelete = {}
         this.showDelete = false
@@ -90,7 +81,7 @@ class EventEditorViewModel @Inject constructor(
         val event = Event(
             artists = emptyList(),
             date = LocalDate.now(),
-            venue = Venue(name = "", city = "", state = ""),
+            venue = Venue(id = Id(), name = "", city = "", state = ""),
             purchased = false
         )
         _uiState.value = EventEditorState.Success(event)
@@ -101,35 +92,13 @@ class EventEditorViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = EventEditorState.Loading
             try {
-                val eventReq = async { eventRepository.getEvent(eventId) }
-                val deferredArtists = async { artistRepository.getArtists() }
-                val deferredVenues = async { venueRepository.getVenues() }
-                val event = eventReq.await()
-                val savedArtists = deferredArtists.await()
-                val savedVenues = deferredVenues.await()
-                event.artists = preprocessArtists(event.artists, savedArtists)
-                event.venue = preprocessVenues(event.venue, savedVenues)
+                val event = eventRepository.getEvent(eventId)
                 _uiState.value = EventEditorState.Success(event.copy())
             } catch (e: Exception) {
                 Timber.e(e,"Failed to load event $eventId")
                 _uiState.value = EventEditorState.Error("Failed to load event")
             }
         }
-    }
-
-    private fun preprocessArtists(artists: List<Artist>, savedArtists: List<Artist>): List<Artist> {
-        return artists.map { artist ->
-            val saved = savedArtists.find { it.name.equals(artist.name, ignoreCase = true) }
-            saved?.let {
-                it.headliner = artist.headliner
-                it
-            } ?: artist
-        }
-    }
-
-    private fun preprocessVenues(venue: Venue, savedVenues: List<Venue>): Venue {
-        return savedVenues.find { it.name.equals(venue.name, ignoreCase = true)
-                && it.city.equals(venue.city, ignoreCase = true)} ?: venue
     }
 
     fun updateHeadliner(headliner: Artist?) {
@@ -244,7 +213,6 @@ class EventEditorViewModel @Inject constructor(
 
     fun onSave() {
         val event = (_uiState.value as EventEditorState.Success).event
-        event.artists.forEach { if (!it.genreSet) it.genre = "" }
         onSave(event)
     }
 

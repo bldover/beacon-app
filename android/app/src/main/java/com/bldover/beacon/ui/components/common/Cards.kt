@@ -87,7 +87,6 @@ fun ExpandableCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DismissableCard(
     modifier: Modifier = Modifier,

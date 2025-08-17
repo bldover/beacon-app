@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.bldover.beacon.ui.components.common
 
 import androidx.activity.compose.BackHandler
@@ -52,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import timber.log.Timber
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BasicSearchBar(
     modifier: Modifier = Modifier,
@@ -104,7 +105,6 @@ fun BasicSearchBar(
 }
 
 // androidx.compose.material3.DockedSearchBar but without the search suggestions/history box
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SimpleSearchBar(
     query: String,
@@ -163,7 +163,6 @@ private fun SimpleSearchBar(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OutlinedSearchBar(
     modifier: Modifier = Modifier,
@@ -211,7 +210,6 @@ fun OutlinedSearchBar(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SimpleOutlinedSearchBar(
     query: String,
@@ -263,7 +261,6 @@ private fun SimpleOutlinedSearchBar(
 }
 
 // androidx.compose.material3.SearchBarInputField is private so copied it here
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SimpleSearchBarInputField(
     query: String,

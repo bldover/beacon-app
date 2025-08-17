@@ -2,7 +2,8 @@ package loader
 
 import (
 	"bufio"
-	"concert-manager/data"
+
+	"concert-manager/domain"
 	"concert-manager/log"
 	"context"
 	"errors"
@@ -14,7 +15,7 @@ import (
 const minColumns = 7
 
 type eventCache interface {
-	AddSavedEvent(data.Event) (*data.Event, error)
+	AddSavedEvent(domain.Event) (*domain.Event, error)
 }
 
 type EventLoader struct {
@@ -26,7 +27,7 @@ func (l *EventLoader) Upload(ctx context.Context, file io.ReadCloser) (int, erro
 	log.Debug("Starting processing event file upload")
 	scanner := bufio.NewScanner(file)
 	first := true
-	events := []data.Event{}
+	events := []domain.Event{}
 	for scanner.Scan() {
 		if first {
 			first = false
@@ -64,44 +65,44 @@ func (l *EventLoader) Upload(ctx context.Context, file io.ReadCloser) (int, erro
 	return successCount, nil
 }
 
-func toEvent(row string) (data.Event, error) {
+func toEvent(row string) (domain.Event, error) {
 	parts := strings.Split(row, ",")
 	if len(parts) < minColumns {
-		return data.Event{}, errors.New("not enough columns in row")
+		return domain.Event{}, errors.New("not enough columns in row")
 	}
 
-	mainAct := data.Artist{
+	mainAct := domain.Artist{
 		Name: strings.TrimSpace(parts[0]),
 	}
-	mainAct.Genres.TmGenres = []string{}
+	mainAct.Genres.Ticketmaster = []string{}
 	genres := strings.Split(strings.TrimSpace(parts[1]), ";")
-	mainAct.Genres.UserGenres = append(mainAct.Genres.UserGenres, genres...)
+	mainAct.Genres.User = append(mainAct.Genres.User, genres...)
 	if !mainAct.Populated() {
-		return data.Event{}, errors.New("invalid main act")
+		return domain.Event{}, errors.New("invalid main act")
 	}
 
 	date := strings.TrimSpace(parts[2])
-	venue := data.Venue{
+	venue := domain.Venue{
 		Name:  strings.TrimSpace(parts[3]),
 		City:  strings.TrimSpace(parts[4]),
 		State: strings.TrimSpace(parts[5]),
 	}
 	if !venue.Populated() {
-		return data.Event{}, errors.New("invalid venue")
+		return domain.Event{}, errors.New("invalid venue")
 	}
 	purchased := strings.TrimSpace(parts[6]) == "TRUE"
 
-	openers := []data.Artist{}
+	openers := []domain.Artist{}
 	i, j := 7, 8
 	for i < len(parts) && j < len(parts) {
-		opener := data.Artist{
+		opener := domain.Artist{
 			Name: strings.TrimSpace(parts[i]),
 		}
-		mainAct.Genres.TmGenres = []string{}
+		mainAct.Genres.Ticketmaster = []string{}
 		genres := strings.Split(strings.TrimSpace(parts[j]), ";")
-		mainAct.Genres.UserGenres = append(mainAct.Genres.UserGenres, genres...)
+		mainAct.Genres.User = append(mainAct.Genres.User, genres...)
 		if !opener.Populated() {
-			return data.Event{}, errors.New("invalid opener")
+			return domain.Event{}, errors.New("invalid opener")
 		}
 		if !opener.Populated() {
 			break
@@ -110,7 +111,7 @@ func toEvent(row string) (data.Event, error) {
 		i, j = i+2, j+2
 	}
 
-	event := data.Event{
+	event := domain.Event{
 		MainAct:   &mainAct,
 		Openers:   openers,
 		Venue:     venue,

@@ -17,6 +17,7 @@ import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
+import com.bldover.beacon.data.model.artist.GenreInfo
 import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.ui.components.common.AddButton
 import com.bldover.beacon.ui.components.common.BasicSearchBar
@@ -228,7 +229,7 @@ fun SavedEventsListPreview() {
     val events = listOf(
         Event(
             id = "1",
-            artists = listOf(Artist("123", "Test Artist", "Test Genre")),
+            artists = listOf(Artist("123", "Test Artist", GenreInfo(listOf("Test Genre"), emptyList(), emptyList()))),
             venue = Venue("123", "Test Venue", "Test City", "Test State"),
             date = LocalDate.now(),
             purchased = false

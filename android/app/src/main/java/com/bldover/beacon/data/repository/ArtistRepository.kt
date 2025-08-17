@@ -2,7 +2,7 @@ package com.bldover.beacon.data.repository
 
 import com.bldover.beacon.data.api.ArtistApi
 import com.bldover.beacon.data.model.artist.Artist
-import com.bldover.beacon.data.model.artist.RawArtist
+import com.bldover.beacon.data.dto.ArtistDto
 import timber.log.Timber
 
 interface ArtistRepository {
@@ -20,16 +20,16 @@ class ArtistRepositoryImpl(private val artistApi: ArtistApi) : ArtistRepository 
     }
 
     override suspend fun addArtist(artist: Artist): Artist {
-        val newArtist = artistApi.addArtist(RawArtist(artist))
+        val newArtist = artistApi.addArtist(ArtistDto(artist))
         return Artist(newArtist)
     }
 
     override suspend fun updateArtist(artist: Artist): Artist {
-        artistApi.updateArtist(artist.id!!, RawArtist(artist))
+        artistApi.updateArtist(artist.id.primary!!, ArtistDto(artist))
         return artist
     }
 
     override suspend fun deleteArtist(artist: Artist) {
-        artistApi.deleteArtist(artist.id!!)
+        artistApi.deleteArtist(artist.id.primary!!)
     }
 }
