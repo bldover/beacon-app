@@ -92,6 +92,7 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))
 	http.HandleFunc("/v1/genres/refresh", s.handleRequest(s.reloadGenres))
 	http.Handle("/auth/callback", &authHandler{})
+	http.Handle("/spotify/callback", &authHandler{})
 
 	log.Info("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(port, nil))

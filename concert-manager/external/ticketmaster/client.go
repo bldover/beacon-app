@@ -43,10 +43,10 @@ type eventCount struct {
 
 type Ticketmaster struct{}
 
-func (t Ticketmaster) GetUpcomingEvents(city string, state string) ([]domain.EventDetails, error) {
-	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s", state)
+func (t Ticketmaster) GetUpcomingEvents(city string, stateCd string) ([]domain.EventDetails, error) {
+	log.Infof("Starting to retrieve all upcoming events from Ticketmaster for %s", stateCd)
 
-	url, err := buildTicketmasterUrl(state)
+	url, err := buildTicketmasterUrl(city, stateCd)
 	if err != nil {
 		return nil, err
 	}

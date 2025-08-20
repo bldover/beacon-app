@@ -84,6 +84,7 @@ func main() {
 	server.ArtistCache = savedCache
 	server.VenueCache = savedCache
 	server.UpcomingEventsCache = upcomingCache
+	server.SyncService = upcomingCache
 
 	server.StartServer()
 }
