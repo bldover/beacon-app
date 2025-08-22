@@ -2,21 +2,19 @@ package com.bldover.beacon.data.model.event
 
 import com.bldover.beacon.data.dto.EventDetailDto
 import com.bldover.beacon.data.dto.EventRankDto
-import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.artist.ArtistRank
+import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.util.dateFormatter
 import java.time.LocalDate
 
 data class EventDetail(
-    val id: String,
+    val id: EventId,
     val name: String,
     val artists: List<Artist>,
     val venue: Venue,
     val date: LocalDate,
     val purchased: Boolean,
-    val price: Float?,
-    val ticketmasterId: String? = null,
     val rank: Float? = null,
     val artistRanks: List<ArtistRank>? = null
 ) {
@@ -26,22 +24,18 @@ data class EventDetail(
         artists = event.event.artists,
         venue = Venue(event.event.venue),
         date = LocalDate.parse(event.event.date, dateFormatter),
-        purchased = event.event.purchased,
-        price = event.price.toFloatOrNull(),
-        ticketmasterId = event.event.tmId.ifBlank { null }
+        purchased = event.event.purchased
     )
 
     constructor(event: EventRankDto) : this(
-        id = event.event.event.id,
-        name = event.event.name,
-        artists = event.event.event.artists,
-        venue = Venue(event.event.event.venue),
-        date = LocalDate.parse(event.event.event.date, dateFormatter),
-        purchased = event.event.event.purchased,
-        price = event.event.price.toFloatOrNull(),
-        ticketmasterId = event.event.event.tmId.ifBlank { null },
-        rank = event.rank,
-        artistRanks = event.artistRanks.map { ArtistRank(it) }
+        id = event.event.id,
+        name = event.name,
+        artists = event.event.artists,
+        venue = Venue(event.event.venue),
+        date = LocalDate.parse(event.event.date, dateFormatter),
+        purchased = event.event.purchased,
+        rank = event.ranks.rank,
+        artistRanks = event.ranks.artistRanks.map { ArtistRank(it.key, it.value) }
     )
 
     fun asEvent(): Event {
@@ -50,8 +44,7 @@ data class EventDetail(
             artists = artists,
             venue = venue,
             date = date,
-            purchased = purchased,
-            ticketmasterId = ticketmasterId
+            purchased = purchased
         )
     }
 

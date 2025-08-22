@@ -2,10 +2,10 @@ package com.bldover.beacon.ui.screens.saved
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.event.Event
-import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.Direction
 import com.bldover.beacon.data.model.OrderField
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.repository.EventRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,8 +189,7 @@ class SavedEventsViewModel @Inject constructor(
             if (!event.isPopulated()) onError("Event is missing required fields")
             else {
                 try {
-                    if (event.id == null) eventRepository.saveEvent(event)
-                    else eventRepository.updateEvent(event)
+                    if (event.id.primary == null) eventRepository.saveEvent(event) else eventRepository.updateEvent(event)
                     Timber.i("Updated event $event")
                     onSuccess()
                     loadData()
@@ -225,7 +224,7 @@ class SavedEventsViewModel @Inject constructor(
         return when (futureEventsState.value) {
             is SavedEventsState.Success -> {
                 val savedEvents = (futureEventsState.value as SavedEventsState.Success).allEvents
-                savedEvents.any { it.ticketmasterId != null && event.ticketmasterId == it.ticketmasterId }
+                savedEvents.any { it.id.ticketmaster != null && event.id.ticketmaster == it.id.ticketmaster }
             }
             else -> false
         }

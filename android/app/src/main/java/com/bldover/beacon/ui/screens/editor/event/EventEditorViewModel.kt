@@ -3,11 +3,12 @@ package com.bldover.beacon.ui.screens.editor.event
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.event.Event
-import com.bldover.beacon.data.model.Screen
-import com.bldover.beacon.data.model.venue.Id
+import com.bldover.beacon.data.model.event.EventId
 import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.model.venue.VenueId
 import com.bldover.beacon.data.repository.ArtistRepository
 import com.bldover.beacon.data.repository.EventRepository
 import com.bldover.beacon.data.repository.VenueRepository
@@ -79,9 +80,10 @@ class EventEditorViewModel @Inject constructor(
 
     private fun loadDefaultEvent() {
         val event = Event(
+            id = EventId(),
             artists = emptyList(),
             date = LocalDate.now(),
-            venue = Venue(id = Id(), name = "", city = "", state = ""),
+            venue = Venue(id = VenueId(), name = "", city = "", state = ""),
             purchased = false
         )
         _uiState.value = EventEditorState.Success(event)

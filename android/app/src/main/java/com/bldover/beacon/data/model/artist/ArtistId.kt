@@ -2,7 +2,7 @@ package com.bldover.beacon.data.model.artist
 
 import com.bldover.beacon.data.dto.ArtistIdDto
 
-data class Id (
+data class ArtistId (
     var primary: String? = null,
     var ticketmaster: String? = null,
     var spotify: String? = null,

@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
@@ -31,7 +32,9 @@ import com.bldover.beacon.ui.components.editor.SwipeableArtistEditCard
 import com.bldover.beacon.ui.components.editor.VenueEditCard
 import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
+import com.bldover.beacon.ui.screens.editor.artist.ArtistsViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
+import com.bldover.beacon.ui.screens.editor.venue.VenuesViewModel
 import timber.log.Timber
 import java.time.LocalDate
 
@@ -42,7 +45,8 @@ fun EventEditorScreen(
     artistSelectorViewModel: ArtistSelectorViewModel,
     artistEditorViewModel: ArtistEditorViewModel,
     venueSelectorViewModel: VenueSelectorViewModel,
-    eventEditorViewModel: EventEditorViewModel
+    eventEditorViewModel: EventEditorViewModel,
+    artistsViewModel: ArtistsViewModel = hiltViewModel()
 ) {
     Timber.d("composing EventEditorScreen")
     ScreenFrame(
@@ -70,7 +74,19 @@ fun EventEditorScreen(
                                     artistEditorViewModel.launchEditor(
                                         navController = navController,
                                         artist = headliner,
-                                        onSave = { eventEditorViewModel.updateHeadliner(it) }
+                                        onSave = { updated ->
+                                            artistsViewModel.updateArtist(
+                                                artist = updated,
+                                                onSuccess = {
+                                                    eventEditorViewModel.updateHeadliner(it)
+                                                    navController.popBackStack()
+                                                },
+                                                onError = { err ->
+                                                    Timber.e(err)
+                                                    snackbarState.showSnackbar("Failed to save artist")
+                                                }
+                                            )
+                                        }
                                     )
                                 }
                             )
@@ -93,8 +109,18 @@ fun EventEditorScreen(
                                 artistEditorViewModel.launchEditor(
                                     navController = navController,
                                     artist = opener,
-                                    onSave = { newOpener ->
-                                        eventEditorViewModel.updateOpener(opener, newOpener)
+                                    onSave = { updated ->
+                                        artistsViewModel.updateArtist(
+                                            artist = updated,
+                                            onSuccess = {
+                                                eventEditorViewModel.updateOpener(opener, it)
+                                                navController.popBackStack()
+                                            },
+                                            onError = { err ->
+                                                Timber.e(err)
+                                                snackbarState.showSnackbar("Failed to save artist")
+                                            }
+                                        )
                                     }
                                 )
                             }

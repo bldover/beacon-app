@@ -6,6 +6,8 @@ import (
 	"context"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const artistCollection string = "artists"
@@ -42,7 +44,7 @@ type (
 func (c *ArtistClient) Add(ctx context.Context, artist domain.Artist) (string, error) {
 	log.Debug("Attempting to add artist", artist)
 	existingArtist, err := c.findDocRef(ctx, artist.ID.Primary)
-	if err != nil {
+	if err != nil && status.Code(err) != codes.NotFound {
 		log.Errorf("Error occurred while checking if artist %v already exists, %v", artist, err)
 		return "", err
 	}
@@ -79,7 +81,7 @@ func (c *ArtistClient) Add(ctx context.Context, artist domain.Artist) (string, e
 func (c *ArtistClient) Update(ctx context.Context, artist domain.Artist) error {
 	log.Debug("Attempting to update artist", artist)
 	artistDoc, err := c.Connection.Client.Collection(artistCollection).Doc(artist.ID.Primary).Get(ctx)
-	if err != nil {
+	if err != nil && status.Code(err) != codes.NotFound {
 		log.Errorf("Error while updating artist %+v, %v", artist, err)
 		return err
 	}

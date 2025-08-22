@@ -1,7 +1,7 @@
 package com.bldover.beacon.data.dto
 
 data class EventRankDto(
-    val event: EventDetailDto,
-    val rank: Float,
-    val artistRanks: List<ArtistRankDto>
+    var name: String,
+    val event: EventDto,
+    val ranks: RankDto
 )

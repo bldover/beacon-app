@@ -2,8 +2,8 @@ package com.bldover.beacon.ui.screens.editor.artist
 
 import androidx.lifecycle.ViewModel
 import androidx.navigation.NavController
-import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.Screen
+import com.bldover.beacon.data.model.artist.Artist
 import dagger.hilt.android.lifecycle.HiltViewModel
 import timber.log.Timber
 import javax.inject.Inject

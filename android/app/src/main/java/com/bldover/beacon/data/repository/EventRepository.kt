@@ -1,10 +1,10 @@
 package com.bldover.beacon.data.repository
 
 import com.bldover.beacon.data.api.EventApi
-import com.bldover.beacon.data.model.event.Event
-import com.bldover.beacon.data.model.event.EventDetail
 import com.bldover.beacon.data.dto.EventDto
 import com.bldover.beacon.data.model.RecommendationThreshold
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventDetail
 import java.time.LocalDate
 
 interface EventRepository {
@@ -41,7 +41,7 @@ class EventRepositoryImpl(private val eventApi: EventApi): EventRepository {
     }
 
     override suspend fun deleteEvent(event: Event) {
-        eventApi.deleteEvent(event.id!!)
+        eventApi.deleteEvent(event.id.primary!!)
     }
 
     override suspend fun getFutureSavedEvents(): List<Event> {

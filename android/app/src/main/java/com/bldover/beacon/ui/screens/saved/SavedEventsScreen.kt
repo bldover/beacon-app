@@ -12,13 +12,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bldover.beacon.data.model.artist.Artist
-import com.bldover.beacon.data.model.event.Event
-import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
-import com.bldover.beacon.data.model.artist.GenreInfo
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.ArtistId
+import com.bldover.beacon.data.model.artist.Genres
+import com.bldover.beacon.data.model.event.Event
+import com.bldover.beacon.data.model.event.EventId
+import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.venue.Venue
+import com.bldover.beacon.data.model.venue.VenueId
 import com.bldover.beacon.ui.components.common.AddButton
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.EventSearchUtilityBar
@@ -212,7 +215,7 @@ fun SavedEventsList(
                         SavedEventCard(
                             event = event,
                             accented = accentPurchased && event.purchased,
-                            onClick = { onEventClick(event.id!!) }
+                            onClick = { onEventClick(event.id.primary!!) }
                         )
                     }
                 }
@@ -228,9 +231,9 @@ fun SavedEventsList(
 fun SavedEventsListPreview() {
     val events = listOf(
         Event(
-            id = "1",
-            artists = listOf(Artist("123", "Test Artist", GenreInfo(listOf("Test Genre"), emptyList(), emptyList()))),
-            venue = Venue("123", "Test Venue", "Test City", "Test State"),
+            id = EventId(primary = "1"),
+            artists = listOf(Artist(ArtistId(primary = "123"), "Test Artist", Genres(user = listOf("Test Genre")))),
+            venue = Venue(VenueId(primary = "123"), "Test Venue", "Test City", "Test State"),
             date = LocalDate.now(),
             purchased = false
         )

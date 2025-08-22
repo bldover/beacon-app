@@ -5,7 +5,8 @@ import java.time.format.DateTimeFormatter
 val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("M/d/yyyy")
 
 fun toCommaSeparatedString(list: List<String>): String {
-    return list.reduce { acc, s -> "$acc, $s" }
+    return if (list.isEmpty()) ""
+    else list.reduce { acc, s -> "$acc, $s" }
 }
 
 fun fromCommaSeparatedString(string: String): List<String> {

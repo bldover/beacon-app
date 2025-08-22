@@ -1,10 +1,5 @@
 #!/bin/bash
 
-PROJECT_ID="concert-manager-dev"
-INSTANCE_NAME="concert-manager-dev"
-INSTANCE_ZONE="us-east1-b"
-SSH_USER="dover_bradley"
-
 BINARY_NAME="cm-server"
 REMOTE_INSTALL_DIR="/opt/concert-manager"
 REMOTE_BINARY_PATH="${REMOTE_INSTALL_DIR}/${BINARY_NAME}"

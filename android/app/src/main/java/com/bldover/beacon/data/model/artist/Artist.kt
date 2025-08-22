@@ -3,7 +3,7 @@ package com.bldover.beacon.data.model.artist
 import com.bldover.beacon.data.dto.ArtistDto
 
 data class Artist(
-    var id: Id = Id(),
+    var id: ArtistId = ArtistId(),
     var name: String = "",
     var genres: Genres = Genres(),
     var headliner: Boolean = false
@@ -12,7 +12,7 @@ data class Artist(
         artist: ArtistDto,
         headliner: Boolean = false,
     ) : this(
-        id = Id(artist.id),
+        id = ArtistId(artist.id),
         name = artist.name,
         genres = Genres(artist.genres),
         headliner = headliner

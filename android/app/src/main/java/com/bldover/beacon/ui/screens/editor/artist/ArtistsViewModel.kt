@@ -2,10 +2,10 @@ package com.bldover.beacon.ui.screens.editor.artist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.bldover.beacon.data.model.artist.Artist
-import com.bldover.beacon.data.model.artist.ArtistOrdering
 import com.bldover.beacon.data.model.Direction
 import com.bldover.beacon.data.model.OrderField
+import com.bldover.beacon.data.model.artist.Artist
+import com.bldover.beacon.data.model.artist.ArtistOrdering
 import com.bldover.beacon.data.repository.ArtistRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

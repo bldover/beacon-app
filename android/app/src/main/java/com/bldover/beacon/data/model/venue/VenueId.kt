@@ -2,7 +2,7 @@ package com.bldover.beacon.data.model.venue
 
 import com.bldover.beacon.data.dto.VenueIdDto
 
-data class Id (
+data class VenueId (
     var primary: String? = null,
     var ticketmaster: String? = null
 ) {

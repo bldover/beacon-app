@@ -1,14 +1,7 @@
 #!/bin/bash
 
-PROJECT_ID="concert-manager-dev"
-INSTANCE_NAME="concert-manager-dev"
-INSTANCE_ZONE="us-east1-b"
-SSH_USER="dover_bradley"
-
-LOCAL_PROJECT_ROOT="/mnt/c/Users/User/workspace/beacon-app/concert-manager"
 LOCAL_BUILD_DIR="${LOCAL_PROJECT_ROOT}/build"
 BINARY_NAME="cm-server"
-LOCAL_ENV_FILE="${LOCAL_PROJECT_ROOT}/resources/dev.env"
 
 REMOTE_INSTALL_DIR="/opt/concert-manager"
 REMOTE_BINARY_PATH="${REMOTE_INSTALL_DIR}/${BINARY_NAME}"

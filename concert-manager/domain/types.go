@@ -66,12 +66,12 @@ func (e *Event) Artists() []Artist {
 func (e *Event) String() string {
 	str := ""
 	if e.MainAct != nil {
-		str += fmt.Sprintf("%v", *e.MainAct)
+		str += fmt.Sprintf("%+v", *(e.MainAct))
 	}
-	str += fmt.Sprintf("%v", e.Openers)
-	str += fmt.Sprintf("%v", e.Venue)
-	str += fmt.Sprintf("%v", e.Purchased)
-	str += fmt.Sprintf("%v", e.ID)
+	str += fmt.Sprintf("%+v", e.Openers)
+	str += fmt.Sprintf("%+v", e.Venue)
+	str += fmt.Sprintf("%+v", e.Purchased)
+	str += fmt.Sprintf("%+v", e.ID)
 	return str
 }
 
@@ -86,11 +86,11 @@ func (g *GenreInfo) Genres() []string {
 }
 
 func (v *Venue) Populated() bool {
-	return allNotEmpty(v.Name, v.City, v.State)
+	return v != nil && allNotEmpty(v.Name, v.City, v.State)
 }
 
 func (a *Artist) Populated() bool {
-	return a.Name != ""
+	return a != nil && a.Name != ""
 }
 
 func (e *Event) Populated() bool {

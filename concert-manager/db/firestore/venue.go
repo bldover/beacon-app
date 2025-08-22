@@ -6,6 +6,8 @@ import (
 	"context"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const venueCollection = "venues"
@@ -33,7 +35,7 @@ type (
 func (c *VenueClient) Add(ctx context.Context, venue domain.Venue) (string, error) {
 	log.Debug("Attemping to add venue", venue)
 	existingVenue, err := c.findDocRef(ctx, venue.ID.Primary)
-	if err != nil {
+	if err != nil && status.Code(err) != codes.NotFound {
 		log.Errorf("Error occurred while checking if venue %v already exists, %v", venue, err)
 		return "", err
 	}
@@ -61,7 +63,7 @@ func (c *VenueClient) Add(ctx context.Context, venue domain.Venue) (string, erro
 func (c *VenueClient) Update(ctx context.Context, venue domain.Venue) error {
 	log.Debug("Attempting to update venue", venue)
 	venueDoc, err := c.Connection.Client.Collection(venueCollection).Doc(venue.ID.Primary).Get(ctx)
-	if err != nil {
+	if err != nil && status.Code(err) != codes.NotFound {
 		log.Errorf("Error while updating venue %+v, %v", venue, err)
 		return err
 	}

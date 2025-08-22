@@ -1,6 +1,6 @@
 package com.bldover.beacon.data.dto
 
-import com.bldover.beacon.data.model.artist.Id
+import com.bldover.beacon.data.model.artist.ArtistId
 
 data class ArtistIdDto(
     var primary: String,
@@ -8,7 +8,7 @@ data class ArtistIdDto(
     var spotify: String,
     var musicbrainz: String
 ) {
-    constructor(id: Id) : this(
+    constructor(id: ArtistId) : this(
         primary = id.primary ?: "",
         ticketmaster = id.ticketmaster ?: "",
         spotify = id.spotify ?: "",

@@ -88,7 +88,7 @@ func (e errorResponse) Error() string {
 func (c *Client) execute(req *http.Request) (*http.Response, error) {
 	retries := 0
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	log.Debugf("Spotify request without auth%+v", req)
+	log.Debugf("Calling Spotify URL: %s", req.URL)
 
 	for retries < 3 {
 		c.retryStrategy.lock.Lock()

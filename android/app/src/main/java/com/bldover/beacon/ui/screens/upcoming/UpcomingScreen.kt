@@ -12,9 +12,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
+import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
 import com.bldover.beacon.ui.components.common.LoadingSpinner

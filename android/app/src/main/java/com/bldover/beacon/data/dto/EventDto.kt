@@ -3,25 +3,24 @@ package com.bldover.beacon.data.dto
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.event.EventDetail
+import com.bldover.beacon.data.model.event.EventId
 import com.bldover.beacon.data.util.dateFormatter
 
 data class EventDto(
-    val id: String,
+    val id: EventId,
     val mainAct: ArtistDto?,
     val openers: List<ArtistDto>,
     val venue: VenueDto,
     val date: String,
-    val purchased: Boolean,
-    val tmId: String
+    val purchased: Boolean
 ) {
     constructor(event: Event): this(
-        id = event.id ?: "",
+        id = event.id,
         mainAct = event.artists.find { it.headliner }?.let { ArtistDto(it) },
         openers = event.artists.filter { !it.headliner }.map { ArtistDto(it) },
         venue = VenueDto(event.venue),
         date = event.date.format(dateFormatter),
-        purchased = event.purchased,
-        tmId = event.ticketmasterId ?: ""
+        purchased = event.purchased
     )
 
     constructor(eventDetail: EventDetail): this(
@@ -30,8 +29,7 @@ data class EventDto(
         openers = eventDetail.artists.filter { !it.headliner }.map { ArtistDto(it) },
         venue = VenueDto(eventDetail.venue),
         date = eventDetail.date.format(dateFormatter),
-        purchased = eventDetail.purchased,
-        tmId = eventDetail.ticketmasterId ?: ""
+        purchased = eventDetail.purchased
     )
 
     val artists: List<Artist>

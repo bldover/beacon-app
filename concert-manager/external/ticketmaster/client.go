@@ -57,7 +57,8 @@ func (t Ticketmaster) GetUpcomingEvents(city string, stateCd string) ([]domain.E
 		return nil, err
 	}
 
-	expectedEventCount := response.PageInfo.EventCount
+	// ticketmaster max 1k events
+	expectedEventCount := min(response.PageInfo.EventCount, 1000)
 	eventDetails := make([]domain.EventDetails, 0, expectedEventCount)
 
 	eventCount, err := t.populateAllEventDetails(response, &eventDetails)
@@ -87,7 +88,10 @@ func (t Ticketmaster) getRemainingPages(urlPath string, eventDetails *[]domain.E
 	retryCount := 0
 	maxRetries := 3
 	count := eventCount{}
-	for urlPath != "" {
+	total := 0
+	// ticketmaster restricts paging to the first 1k events only
+	// subtract since the first page of results isn't included
+	for urlPath != "" && total < (1000-pageSize) {
 		// try to not exceed the 5/s rate limit
 		waitTime := 200 * time.Millisecond
 		time.Sleep(waitTime)
@@ -119,6 +123,7 @@ func (t Ticketmaster) getRemainingPages(urlPath string, eventDetails *[]domain.E
 		count.successCount += pageEventCount.successCount
 		count.cancelledCount += pageEventCount.cancelledCount
 		count.failedCount += pageEventCount.failedCount
+		total += pageSize
 		retryCount = 0
 	}
 	return count

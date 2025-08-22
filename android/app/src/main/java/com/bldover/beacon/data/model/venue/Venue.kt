@@ -3,13 +3,13 @@ package com.bldover.beacon.data.model.venue
 import com.bldover.beacon.data.dto.VenueDto
 
 data class Venue(
-    var id: Id = Id(),
+    var id: VenueId = VenueId(),
     var name: String = "",
     var city: String = "",
     var state: String = ""
 ) {
     constructor(venue: VenueDto) : this(
-        id = Id(venue.id),
+        id = VenueId(venue.id),
         name = venue.name,
         city = venue.city,
         state = venue.state

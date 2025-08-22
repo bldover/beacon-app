@@ -27,12 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.Direction
 import com.bldover.beacon.data.model.OrderField
+import com.bldover.beacon.data.model.Ordering
 import com.bldover.beacon.data.model.RecommendationThreshold
 import com.bldover.beacon.data.model.artist.ArtistOrdering
-import com.bldover.beacon.data.model.Ordering
+import com.bldover.beacon.data.model.event.EventOrdering
 import com.bldover.beacon.data.model.venue.VenueOrdering
 
 @Composable

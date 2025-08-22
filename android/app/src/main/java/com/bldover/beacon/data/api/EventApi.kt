@@ -1,7 +1,7 @@
 package com.bldover.beacon.data.api
 
-import com.bldover.beacon.data.dto.EventDto
 import com.bldover.beacon.data.dto.EventDetailDto
+import com.bldover.beacon.data.dto.EventDto
 import com.bldover.beacon.data.dto.EventRankDto
 import com.bldover.beacon.data.model.RecommendationThreshold
 import retrofit2.http.Body

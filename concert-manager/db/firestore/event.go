@@ -10,6 +10,8 @@ import (
 	"concert-manager/util"
 
 	"cloud.google.com/go/firestore"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const eventCollection string = "events"
@@ -44,7 +46,7 @@ func (c *EventClient) Add(ctx context.Context, event domain.Event) (string, erro
 	var err error
 	if event.MainAct.Populated() {
 		mainActDoc, err = c.ArtistClient.findDocRef(ctx, event.MainAct.ID.Primary)
-		if err != nil {
+		if err != nil && status.Code(err) != codes.NotFound {
 			log.Errorf("Error finding existing artist %v while creating event %v", event.MainAct.Name, event)
 			return "", err
 		}
@@ -63,7 +65,7 @@ func (c *EventClient) Add(ctx context.Context, event domain.Event) (string, erro
 	openerRefs := []*firestore.DocumentRef{}
 	for _, opener := range event.Openers {
 		openerDoc, err := c.ArtistClient.findDocRef(ctx, opener.ID.Primary)
-		if err != nil {
+		if err != nil && status.Code(err) != codes.NotFound {
 			log.Errorf("Error finding existing opening artist %v while creating event %v", opener.Name, event)
 			return "", err
 		}
@@ -77,7 +79,7 @@ func (c *EventClient) Add(ctx context.Context, event domain.Event) (string, erro
 	}
 
 	venueDoc, err := c.VenueClient.findDocRef(ctx, event.Venue.ID.Primary)
-	if err != nil {
+	if err != nil && status.Code(err) != codes.NotFound {
 		log.Errorf("Error finding existing venue %+v while creating event", event.Venue)
 		return "", err
 	}
@@ -88,7 +90,7 @@ func (c *EventClient) Add(ctx context.Context, event domain.Event) (string, erro
 	log.Debugf("Found existing venue %v with document ID %v while adding event", event.Venue, venueDoc.Ref.ID)
 
 	existingEvent, err := c.findEventDocRef(ctx, event.ID.Primary)
-	if err != nil {
+	if err != nil && status.Code(err) != codes.NotFound {
 		log.Errorf("Error occurred while checking if event %v already exists, %v", event, err)
 		return "", err
 	}
