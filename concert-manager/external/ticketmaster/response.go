@@ -109,6 +109,10 @@ func toSpotifyId(url string) string {
 		return ""
 	}
 
+	if questionMarkIndex := strings.Index(url, "?"); questionMarkIndex != -1 {
+		url = url[:questionMarkIndex]
+	}
+
 	parts := strings.Split(url, "/")
 	if len(parts) == 0 {
 		return ""
