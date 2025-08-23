@@ -41,6 +41,8 @@ func postProcess(events []domain.EventDetails) {
 	for i := range events {
 		event := events[i].Event
 		// venues sometimes have weird names from non-partnered ticketing sites
+		// probably not needed with the new saved data replacement logic in the sync service
+		// so consider verifying and removing this
 		venue := event.Venue.Name
 		if strings.Contains(venue, "Eastern") {
 			event.Venue.Name = "The Eastern"

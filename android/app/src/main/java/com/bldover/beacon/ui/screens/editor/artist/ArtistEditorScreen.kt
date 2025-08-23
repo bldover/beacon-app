@@ -1,21 +1,22 @@
 package com.bldover.beacon.ui.screens.editor.artist
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.ui.components.common.BackButton
+import com.bldover.beacon.ui.components.common.CardTextField
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.components.editor.AddGenreCard
@@ -43,11 +44,12 @@ fun ArtistEditorScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                TextField(
+                CardTextField(
                     value = artist.name,
                     onValueChange = artistEditorViewModel::updateName,
                     label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = TextStyle(textAlign = TextAlign.End)
                 )
             }
             

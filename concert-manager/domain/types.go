@@ -17,7 +17,7 @@ type (
 	}
 	GenreInfo struct {
 		Spotify      []string `json:"spotify"`
-		LastFm       []string `json:"lastfm"`
+		LastFm       []string `json:"lastFm"`
 		Ticketmaster []string `json:"ticketmaster"`
 		User         []string `json:"user"`
 	}
@@ -59,6 +59,17 @@ func (e *Event) Artists() []Artist {
 	}
 	if e.Openers != nil {
 		artists = append(artists, e.Openers...)
+	}
+	return artists
+}
+
+func (e *Event) ArtistsMut() []*Artist {
+	artists := []*Artist{}
+	if e.MainAct != nil {
+		artists = append(artists, e.MainAct)
+	}
+	for i := range e.Openers {
+		artists = append(artists, &e.Openers[i])
 	}
 	return artists
 }

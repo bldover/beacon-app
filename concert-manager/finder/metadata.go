@@ -55,9 +55,9 @@ func (f MetadataFinder) PopulateMetadata(events []domain.EventDetails) []domain.
 func (f MetadataFinder) buildArtistsToUpdateMap(events []domain.EventDetails) map[*domain.Artist][]eventPosition {
 	artistToEvents := make(map[*domain.Artist][]eventPosition)
 	for i, event := range events {
-		for j, artist := range event.Event.Artists() {
+		for j, artist := range event.Event.ArtistsMut() {
 			loc := eventPosition{eventIndex: i, isMainAct: j == 0}
-			artistToEvents[&artist] = append(artistToEvents[&artist], loc)
+			artistToEvents[artist] = append(artistToEvents[artist], loc)
 		}
 	}
 	return artistToEvents
