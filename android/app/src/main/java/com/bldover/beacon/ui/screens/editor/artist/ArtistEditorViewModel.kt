@@ -33,7 +33,8 @@ class ArtistEditorViewModel @Inject constructor() : ViewModel() {
     }
 
     fun updateUserGenres(genres: String) {
-        _artistState.value.genres.user = fromCommaSeparatedString(genres)
+        val newGenres = _artistState.value.genres.copy(user = fromCommaSeparatedString(genres))
+        _artistState.value = _artistState.value.copy(genres = newGenres)
     }
 
     fun onSave() {

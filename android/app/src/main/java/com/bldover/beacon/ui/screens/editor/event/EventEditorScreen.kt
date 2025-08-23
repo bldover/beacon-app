@@ -75,7 +75,7 @@ fun EventEditorScreen(
                                         navController = navController,
                                         artist = headliner,
                                         onSave = { updated ->
-                                            artistsViewModel.updateArtist(
+                                            artistsViewModel.upsertArtist(
                                                 artist = updated,
                                                 onSuccess = {
                                                     eventEditorViewModel.updateHeadliner(it)
@@ -110,7 +110,7 @@ fun EventEditorScreen(
                                     navController = navController,
                                     artist = opener,
                                     onSave = { updated ->
-                                        artistsViewModel.updateArtist(
+                                        artistsViewModel.upsertArtist(
                                             artist = updated,
                                             onSuccess = {
                                                 eventEditorViewModel.updateOpener(opener, it)

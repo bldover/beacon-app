@@ -122,13 +122,25 @@ class ArtistsViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val createdArtist = artistRepository.updateArtist(artist)
-                onSuccess(createdArtist)
+                val updatedArtist = artistRepository.updateArtist(artist)
+                onSuccess(updatedArtist)
                 loadArtists()
             } catch (e: Exception) {
                 Timber.e(e,"Failed to update artist $artist")
                 onError("Error saving artist ${artist.name}, try again later")
             }
+        }
+    }
+
+    fun upsertArtist(
+        artist: Artist,
+        onSuccess: (Artist) -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        if (artist.id.primary == null) {
+            addArtist(artist, onSuccess, onError)
+        } else {
+            updateArtist(artist, onSuccess, onError)
         }
     }
 

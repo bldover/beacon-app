@@ -10,5 +10,5 @@ fun toCommaSeparatedString(list: List<String>): String {
 }
 
 fun fromCommaSeparatedString(string: String): List<String> {
-    return string.replace(" ", "").split(",")
+    return string.split(",").map { g -> g.trim() }
 }
