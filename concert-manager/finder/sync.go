@@ -96,18 +96,19 @@ func mergeArtist(source domain.Artist, target domain.Artist) domain.Artist {
 	if source.ID.MusicBrainz != "" {
 		artist.ID.MusicBrainz = source.ID.MusicBrainz
 	}
-	return target
+	return artist
 }
 
 func mergeVenue(source domain.Venue, target domain.Venue) domain.Venue {
-	target.Name = source.Name
-	target.City = source.City
-	target.State = source.State
-	target.ID.Primary = source.ID.Primary
+	venue := domain.CloneVenue(target)
+	venue.Name = source.Name
+	venue.City = source.City
+	venue.State = source.State
+	venue.ID.Primary = source.ID.Primary
 	if source.ID.Ticketmaster != "" {
-		target.ID.Ticketmaster = source.ID.Ticketmaster
+		venue.ID.Ticketmaster = source.ID.Ticketmaster
 	}
-	return target
+	return venue
 }
 
 func (c *Cache) SyncArtistAdd(id string) error {
