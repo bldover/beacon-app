@@ -121,7 +121,7 @@ func (c *Cache) SyncArtistAdd(id string) error {
 	newArtist := savedArtists[newArtistIdx]
 
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			if event.Event.MainAct != nil {
 				mainActIdx := slices.IndexFunc(savedArtists, (*event.Event.MainAct).EqualsFields)
@@ -151,7 +151,7 @@ func (c *Cache) SyncArtistUpdate(id string) error {
 	updatedArtist := savedArtists[updatedArtistIdx]
 
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			if event.Event.MainAct != nil {
 				mainActIdx := slices.IndexFunc(savedArtists, (*event.Event.MainAct).Equals)
@@ -173,7 +173,7 @@ func (c *Cache) SyncArtistUpdate(id string) error {
 
 func (c *Cache) SyncArtistDelete(id string) {
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			if event.Event.MainAct != nil && event.Event.MainAct.ID.Primary == id {
 				events[i].Event.MainAct.ID.Primary = ""
@@ -198,7 +198,7 @@ func (c *Cache) SyncVenueAdd(id string) error {
 	newVenue := savedVenues[newVenueIdx]
 
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			venueIdx := slices.IndexFunc(savedVenues, event.Event.Venue.EqualsFields)
 			if venueIdx != -1 {
@@ -219,7 +219,7 @@ func (c *Cache) SyncVenueUpdate(id string) error {
 	updatedVenue := savedVenues[updatedVenueIdx]
 
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			venueIdx := slices.IndexFunc(savedVenues, event.Event.Venue.Equals)
 			if venueIdx != -1 {
@@ -232,7 +232,7 @@ func (c *Cache) SyncVenueUpdate(id string) error {
 
 func (c *Cache) SyncVenueDelete(id string) {
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			if event.Event.Venue.ID.Primary == id {
 				events[i].Event.Venue.ID.Primary = ""
@@ -251,7 +251,7 @@ func (c *Cache) SyncEventAdd(id string) error {
 	newEvent := savedEvents[newEventIdx]
 
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			eventIdx := slices.IndexFunc(savedEvents, event.Event.EqualsFields)
 			if eventIdx != -1 {
@@ -272,7 +272,7 @@ func (c *Cache) SyncEventUpdate(id string) error {
 	updatedEvent := savedEvents[updatedEventIdx]
 
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			eventIdx := slices.IndexFunc(savedEvents, event.Event.Equals)
 			if eventIdx != -1 {
@@ -285,7 +285,7 @@ func (c *Cache) SyncEventUpdate(id string) error {
 
 func (c *Cache) SyncEventDelete(id string) {
 	for _, eventData := range c.upcomingEvents {
-		events := eventData.events
+		events := eventData.Events
 		for i, event := range events {
 			if event.Event.ID.Primary == id {
 				events[i].Event.ID.Primary = ""

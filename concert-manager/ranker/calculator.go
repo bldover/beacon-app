@@ -5,63 +5,11 @@ import (
 	"concert-manager/external"
 	"concert-manager/log"
 	"slices"
-	"strings"
-	"sync"
-	"time"
 )
 
-type spotifyService interface {
-	SavedTracks() ([]external.Track, error)
-	TopTracks(external.TimeRange) ([]external.Track, error)
-	TopArtists(external.TimeRange) ([]external.Artist, error)
-}
-
-type artistProvider interface {
-	SimilarArtists(string) ([]external.RankedArtist, error)
-}
-
-type ArtistRankCache struct {
+type RankCalculator struct {
 	MusicSvc       spotifyService
 	ArtistProvider artistProvider
-	ranks          map[string]domain.ArtistRank
-	lastRefresh    time.Time
-	refreshing     bool
-	refreshMutex   sync.Mutex
-}
-
-var rankTTL, _ = time.ParseDuration("168h")
-
-func (c *ArtistRankCache) Rank(artist domain.Artist) domain.ArtistRank {
-	if c.lastRefresh.IsZero() {
-		c.DoRefresh()
-	} else if time.Since(c.lastRefresh) > rankTTL {
-		go c.DoRefresh()
-	}
-	return c.ranks[toKey(artist.Name)]
-}
-
-func (c *ArtistRankCache) DoRefresh() {
-	c.refreshMutex.Lock()
-	if c.refreshing {
-		c.refreshMutex.Unlock()
-		return
-	}
-	c.refreshing = true
-	c.refreshMutex.Unlock()
-
-	log.Info("Refreshing artist ranks")
-	err := c.refreshRanks()
-	if err != nil {
-		// this would only happen for catastrophic failures or large Spotify rate limits, so don't retry
-		log.Alert("Failed to refresh artist ranks", err)
-	} else {
-		log.Info("Successfully refreshed artist ranks")
-	}
-
-	c.lastRefresh = time.Now().Round(0)
-	c.refreshMutex.Lock()
-	c.refreshing = false
-	c.refreshMutex.Unlock()
 }
 
 const (
@@ -79,34 +27,34 @@ const (
 	similarArtistFactor  = 0.15
 )
 
-func (c *ArtistRankCache) refreshRanks() error {
-	rawSavedTracks, err := c.MusicSvc.SavedTracks()
+func (calc *RankCalculator) CalculateRanks() (map[string]domain.ArtistRank, error) {
+	rawSavedTracks, err := calc.MusicSvc.SavedTracks()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rawTopTracksLongTerm, err := c.MusicSvc.TopTracks(external.LongTerm)
+	rawTopTracksLongTerm, err := calc.MusicSvc.TopTracks(external.LongTerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rawTopTracksMediumTerm, err := c.MusicSvc.TopTracks(external.MediumTerm)
+	rawTopTracksMediumTerm, err := calc.MusicSvc.TopTracks(external.MediumTerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rawTopTracksShortTerm, err := c.MusicSvc.TopTracks(external.ShortTerm)
+	rawTopTracksShortTerm, err := calc.MusicSvc.TopTracks(external.ShortTerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rawTopArtistsLongTerm, err := c.MusicSvc.TopArtists(external.LongTerm)
+	rawTopArtistsLongTerm, err := calc.MusicSvc.TopArtists(external.LongTerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rawTopArtistsMediumTerm, err := c.MusicSvc.TopArtists(external.MediumTerm)
+	rawTopArtistsMediumTerm, err := calc.MusicSvc.TopArtists(external.MediumTerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rawTopArtistsShortTerm, err := c.MusicSvc.TopArtists(external.ShortTerm)
+	rawTopArtistsShortTerm, err := calc.MusicSvc.TopArtists(external.ShortTerm)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	savedTracks := mapTracks(rawSavedTracks)
@@ -118,39 +66,35 @@ func (c *ArtistRankCache) refreshRanks() error {
 	topArtistsMediumTerm := mapArtists(rawTopArtistsMediumTerm)
 	topArtistsShortTerm := mapArtists(rawTopArtistsShortTerm)
 
-	prevRanks := c.ranks
-	c.ranks = make(map[string]domain.ArtistRank, len(topArtistsLongTerm)*15)
+	ranks := make(map[string]domain.ArtistRank, len(topArtistsLongTerm)*15)
 
-	c.normalizeTrackRanks(topTracksLongTerm)
-	c.normalizeTrackRanks(topTracksMediumTerm)
-	c.normalizeTrackRanks(topTracksShortTerm)
-	c.updateRankForSavedTracks(savedTracks, savedTrackFactor, trackRankCeilingPercent)
-	c.updateRankForRankedTracks(topTracksLongTerm, topTrackLongTermFactor, trackRankCeilingPercent)
-	c.updateRankForRankedTracks(topTracksMediumTerm, topTrackMediumTermFactor, trackRankCeilingPercent)
-	c.updateRankForRankedTracks(topTracksShortTerm, topTrackShortTermFactor, trackRankCeilingPercent)
+	calc.normalizeTrackRanks(topTracksLongTerm)
+	calc.normalizeTrackRanks(topTracksMediumTerm)
+	calc.normalizeTrackRanks(topTracksShortTerm)
+	calc.updateRankForSavedTracks(ranks, savedTracks, savedTrackFactor, trackRankCeilingPercent)
+	calc.updateRankForRankedTracks(ranks, topTracksLongTerm, topTrackLongTermFactor, trackRankCeilingPercent)
+	calc.updateRankForRankedTracks(ranks, topTracksMediumTerm, topTrackMediumTermFactor, trackRankCeilingPercent)
+	calc.updateRankForRankedTracks(ranks, topTracksShortTerm, topTrackShortTermFactor, trackRankCeilingPercent)
 
-	c.normalizeArtistRanks(topArtistsLongTerm)
-	c.normalizeArtistRanks(topArtistsMediumTerm)
-	c.normalizeArtistRanks(topArtistsShortTerm)
-	c.updateRankForArtists(topArtistsLongTerm, topArtistLongTermFactor)
-	c.updateRankForArtists(topArtistsMediumTerm, topArtistMediumTermFactor)
-	c.updateRankForArtists(topArtistsShortTerm, topArtistShortTermFactor)
+	calc.normalizeArtistRanks(topArtistsLongTerm)
+	calc.normalizeArtistRanks(topArtistsMediumTerm)
+	calc.normalizeArtistRanks(topArtistsShortTerm)
+	calc.updateRankForArtists(ranks, topArtistsLongTerm, topArtistLongTermFactor)
+	calc.updateRankForArtists(ranks, topArtistsMediumTerm, topArtistMediumTermFactor)
+	calc.updateRankForArtists(ranks, topArtistsShortTerm, topArtistShortTermFactor)
 
-	err = c.populateSimilarArtistRanks(topArtistsLongTerm)
+	err = calc.populateSimilarArtistRanks(ranks, topArtistsLongTerm)
 	if err != nil {
-		c.ranks = prevRanks
-		return err
+		return nil, err
 	}
 
-	c.normalizeRanks()
-	c.logRanks()
+	calc.normalizeRanks(ranks)
+	calc.logRanks(ranks)
 
-	return nil
+	return ranks, nil
 }
 
-// from spotify client, tracks ordered from highest to lowest rank
-// convert these to (0, 1], where top tracks have rank 1
-func (c *ArtistRankCache) normalizeTrackRanks(topTracks []rankedTrack) {
+func (calc *RankCalculator) normalizeTrackRanks(topTracks []rankedTrack) {
 	max := float64(len(topTracks))
 	for i := range topTracks {
 		track := &topTracks[i]
@@ -158,9 +102,7 @@ func (c *ArtistRankCache) normalizeTrackRanks(topTracks []rankedTrack) {
 	}
 }
 
-// from spotify client, artists ordered from highest to lowest rank
-// convert these to (0, 1], where top artists have rank 1
-func (c *ArtistRankCache) normalizeArtistRanks(topArtists []rankedArtist) {
+func (calc *RankCalculator) normalizeArtistRanks(topArtists []rankedArtist) {
 	max := float64(len(topArtists))
 	for i := range topArtists {
 		artist := &topArtists[i]
@@ -168,18 +110,18 @@ func (c *ArtistRankCache) normalizeArtistRanks(topArtists []rankedArtist) {
 	}
 }
 
-func (c *ArtistRankCache) normalizeRanks() {
+func (calc *RankCalculator) normalizeRanks(ranks map[string]domain.ArtistRank) {
 	maxRank := 0.
-	for _, rankData := range c.ranks {
+	for _, rankData := range ranks {
 		maxRank = max(maxRank, rankData.Rank)
 	}
-	for artist, rankData := range c.ranks {
+	for artist, rankData := range ranks {
 		rankData.Rank /= maxRank
-		c.ranks[artist] = rankData
+		ranks[artist] = rankData
 	}
 }
 
-func (c *ArtistRankCache) updateRankForSavedTracks(tracks []rankedTrack, factor float64, rankCeilPerc float64) {
+func (calc *RankCalculator) updateRankForSavedTracks(ranks map[string]domain.ArtistRank, tracks []rankedTrack, factor float64, rankCeilPerc float64) {
 	tempRanks := make(map[string]float64, len(tracks)*2)
 	maxRank := 0.
 	for _, track := range tracks {
@@ -195,13 +137,13 @@ func (c *ArtistRankCache) updateRankForSavedTracks(tracks []rankedTrack, factor 
 		ceiledRank := (adjRank / rankCeiling) * factor
 
 		key := toKey(artist)
-		rankData := c.ranks[key]
+		rankData := ranks[key]
 		rankData.Rank += ceiledRank
-		c.ranks[key] = rankData
+		ranks[key] = rankData
 	}
 }
 
-func (c *ArtistRankCache) updateRankForRankedTracks(tracks []rankedTrack, factor float64, rankCeilPerc float64) {
+func (calc *RankCalculator) updateRankForRankedTracks(ranks map[string]domain.ArtistRank, tracks []rankedTrack, factor float64, rankCeilPerc float64) {
 	tempRanks := make(map[string]float64, len(tracks)*2)
 	maxRank := 0.
 	for _, track := range tracks {
@@ -222,28 +164,27 @@ func (c *ArtistRankCache) updateRankForRankedTracks(tracks []rankedTrack, factor
 		normalizedRank := (adjRank / rankCeiling) * factor
 
 		key := toKey(artist)
-		rankData := c.ranks[key]
+		rankData := ranks[key]
 		rankData.Rank += normalizedRank
-		c.ranks[key] = rankData
+		ranks[key] = rankData
 	}
 }
 
-func (c *ArtistRankCache) updateRankForArtists(artists []rankedArtist, weight float64) {
+func (calc *RankCalculator) updateRankForArtists(ranks map[string]domain.ArtistRank, artists []rankedArtist, weight float64) {
 	for _, artist := range artists {
 		key := toKey(artist.Name)
-		rankData := c.ranks[key]
+		rankData := ranks[key]
 		rankData.Rank += artist.rank * weight
-		c.ranks[key] = rankData
+		ranks[key] = rankData
 	}
 }
 
-func (c *ArtistRankCache) populateSimilarArtistRanks(artists []rankedArtist) error {
+func (calc *RankCalculator) populateSimilarArtistRanks(ranks map[string]domain.ArtistRank, artists []rankedArtist) error {
 	log.Infof("Retrieving similar artist data for %v artists\n", len(artists))
-	// need this so we don't reference increasing ranks of known artists as we iterate
 	similarArtistRanks := make(map[string]float64, len(artists)*5)
 
 	for _, knownArtist := range artists {
-		similarArtists, err := c.ArtistProvider.SimilarArtists(knownArtist.Name)
+		similarArtists, err := calc.ArtistProvider.SimilarArtists(knownArtist.Name)
 		if err != nil {
 			log.Errorf("Failed to find similar artists for %v, %v", knownArtist, err)
 			return err
@@ -252,32 +193,56 @@ func (c *ArtistRankCache) populateSimilarArtistRanks(artists []rankedArtist) err
 			if similarArtist.Name == "" {
 				continue
 			}
-			knownArtistData := c.ranks[toKey(knownArtist.Name)]
+			knownArtistData := ranks[toKey(knownArtist.Name)]
 			calcRankInc := knownArtistData.Rank * similarArtist.Rank * similarArtistFactor
 
 			key := toKey(similarArtist.Name)
 			similarArtistRanks[key] += calcRankInc
-			similarRankData := c.ranks[key]
+			similarRankData := ranks[key]
 			if similarRankData.Related == nil {
 				similarRankData.Related = []string{}
 			}
 			similarRankData.Related = append(similarRankData.Related, knownArtist.Name)
-			c.ranks[key] = similarRankData
+			ranks[key] = similarRankData
 		}
 	}
 
 	for name, rank := range similarArtistRanks {
 		key := toKey(name)
-		rankData := c.ranks[key]
+		rankData := ranks[key]
 		rankData.Rank += rank
-		c.ranks[key] = rankData
+		ranks[key] = rankData
 	}
 	log.Info("Finished retrieving similar artist data")
 	return nil
 }
 
-func toKey(name string) string {
-	return strings.ToLower(name)
+func (calc *RankCalculator) logRanks(ranks map[string]domain.ArtistRank) {
+	if !log.IsDebug() {
+		return
+	}
+
+	log.Debug("Logging all artist ranks")
+	artists := make([]string, len(ranks))
+	for artist := range ranks {
+		artists = append(artists, artist)
+	}
+
+	slices.SortFunc(artists, func(a string, b string) int {
+		aRank := ranks[a].Rank
+		bRank := ranks[b].Rank
+		if aRank < bRank {
+			return -1
+		} else if aRank > bRank {
+			return 1
+		} else {
+			return 0
+		}
+	})
+
+	for _, artist := range artists {
+		log.Debugf("%s: %v", artist, ranks[artist])
+	}
 }
 
 type rankedTrack struct {
@@ -304,33 +269,4 @@ func mapArtists(artists []external.Artist) []rankedArtist {
 		ranked = append(ranked, rankedArtist{artist, 0})
 	}
 	return ranked
-}
-
-func (c *ArtistRankCache) logRanks() {
-	if !log.IsDebug() {
-		return
-	}
-
-	log.Debug("Logging all artist ranks")
-	artists := make([]string, len(c.ranks))
-	for artist := range c.ranks {
-		artists = append(artists, artist)
-	}
-
-	slices.SortFunc(artists, func(a string, b string) int {
-		aRank := c.ranks[a].Rank
-		bRank := c.ranks[b].Rank
-		if aRank < bRank {
-			return -1
-		} else if aRank > bRank {
-
-			return 1
-		} else {
-			return 0
-		}
-	})
-
-	for _, artist := range artists {
-		log.Debugf("%s: %v", artist, c.ranks[artist])
-	}
 }

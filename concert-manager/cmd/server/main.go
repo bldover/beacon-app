@@ -54,13 +54,17 @@ func main() {
 	spotifyClient := spotify.NewClient()
 	lastFmClient := lastfm.NewClient()
 
-	artistRanksCache := ranker.ArtistRankCache{
+	artistRanksCache := &ranker.ArtistRankCache{
 		MusicSvc:       spotifyClient,
 		ArtistProvider: lastFmClient,
 	}
+	err = artistRanksCache.InitializeFromFile()
+	if err != nil {
+		log.Fatal("Failed to initialize artist ranks cache:", err)
+	}
 
 	eventRanker := &ranker.EventRanker{
-		Cache: &artistRanksCache,
+		Cache: artistRanksCache,
 	}
 
 	artistInfoFinder := finder.MetadataFinder{
@@ -73,6 +77,10 @@ func main() {
 	upcomingCache.Ranker = eventRanker
 	upcomingCache.SavedDataCache = savedCache
 	upcomingCache.MetadataFinder = artistInfoFinder
+	err = upcomingCache.InitializeFromFile()
+	if err != nil {
+		log.Fatal("Failed to initialize upcoming events cache:", err)
+	}
 
 	eventLoader := &loader.EventLoader{Cache: savedCache}
 	genreLoader := &loader.GenreLoader{Cache: savedCache, MetadataProvider: artistInfoFinder}
