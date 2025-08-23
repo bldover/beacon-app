@@ -11,6 +11,7 @@ enum class Screen(val title: String) {
     EDIT_ARTIST("Edit Artist"),
     SELECT_VENUE("Select Venue"),
     SELECT_ARTIST("Select Artist"),
+    SELECT_GENRE("Select Genre"),
     MANAGE_VENUES("Manage Venues"),
     MANAGE_ARTISTS("Manage Artists");
 

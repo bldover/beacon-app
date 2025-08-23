@@ -37,6 +37,37 @@ class ArtistEditorViewModel @Inject constructor() : ViewModel() {
         _artistState.value = _artistState.value.copy(genres = newGenres)
     }
 
+    fun addGenre(genre: String) {
+        val currentUserGenres = _artistState.value.genres.user.toMutableList()
+        val allCurrentGenres = _artistState.value.genres.getGenres()
+        
+        // If this genre is not already in the current active genres, add to user genres
+        if (!allCurrentGenres.contains(genre)) {
+            // Start with current active genres if user genres is empty
+            val newUserGenres = if (currentUserGenres.isEmpty()) {
+                allCurrentGenres.toMutableList().apply { add(genre) }
+            } else {
+                currentUserGenres.apply { add(genre) }
+            }
+            val newGenres = _artistState.value.genres.copy(user = newUserGenres)
+            _artistState.value = _artistState.value.copy(genres = newGenres)
+        }
+    }
+
+    fun removeGenre(genre: String) {
+        val currentUserGenres = _artistState.value.genres.user.toMutableList()
+        val allCurrentGenres = _artistState.value.genres.getGenres()
+        
+        // Copy current active genres to user genres if user genres is empty, then remove the genre
+        val newUserGenres = if (currentUserGenres.isEmpty()) {
+            allCurrentGenres.toMutableList().apply { remove(genre) }
+        } else {
+            currentUserGenres.apply { remove(genre) }
+        }
+        val newGenres = _artistState.value.genres.copy(user = newUserGenres)
+        _artistState.value = _artistState.value.copy(genres = newGenres)
+    }
+
     fun onSave() {
         onSave(_artistState.value)
     }

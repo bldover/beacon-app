@@ -33,6 +33,8 @@ import com.bldover.beacon.ui.screens.editor.venue.VenueEditorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueEditorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
+import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorScreen
+import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorViewModel
 import com.bldover.beacon.ui.screens.saved.HistoryScreen
 import com.bldover.beacon.ui.screens.saved.PlannerScreen
 import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
@@ -68,6 +70,7 @@ fun BeaconApp(
     upcomingEventsViewModel: UpcomingEventsViewModel = hiltViewModel(),
     artistSelectorViewModel: ArtistSelectorViewModel = hiltViewModel(),
     venueSelectorViewModel: VenueSelectorViewModel = hiltViewModel(),
+    genreSelectorViewModel: GenreSelectorViewModel = hiltViewModel(),
     eventEditorViewModel: EventEditorViewModel = hiltViewModel(),
     artistEditorViewModel: ArtistEditorViewModel = hiltViewModel(),
     venueEditorViewModel: VenueEditorViewModel = hiltViewModel()
@@ -161,7 +164,14 @@ fun BeaconApp(
                     composable(Screen.EDIT_ARTIST.name) {
                         ArtistEditorScreen(
                             navController = navController,
-                            artistEditorViewModel = artistEditorViewModel
+                            artistEditorViewModel = artistEditorViewModel,
+                            genreSelectorViewModel = genreSelectorViewModel
+                        )
+                    }
+                    composable(Screen.SELECT_GENRE.name) {
+                        GenreSelectorScreen(
+                            navController = navController,
+                            genreSelectorViewModel = genreSelectorViewModel
                         )
                     }
                     composable(Screen.EDIT_VENUE.name) {
