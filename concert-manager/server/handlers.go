@@ -308,3 +308,13 @@ func (s *Server) refreshUpcomingEvents(w http.ResponseWriter, r *http.Request) (
 	}
 	return nil, 0, nil
 }
+
+func (s *Server) refreshRanks(w http.ResponseWriter, r *http.Request) (any, int, error) {
+	if r.Method != http.MethodPost {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	log.Info("Manual ranks refresh triggered via API")
+	go s.RanksCache.DoRefresh()
+	return map[string]string{"status": "refresh started"}, http.StatusOK, nil
+}

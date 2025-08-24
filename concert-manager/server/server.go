@@ -19,6 +19,7 @@ type Server struct {
 	ArtistCache         artistStore
 	VenueCache          venueStore
 	UpcomingEventsCache upcomingEventsStore
+	RanksCache          ranksRefresher
 	SyncService         dataSyncService
 }
 
@@ -74,6 +75,10 @@ type dataSyncService interface {
 	SyncEventDelete(string)
 }
 
+type ranksRefresher interface {
+	DoRefresh()
+}
+
 const port = ":3001"
 
 func (s *Server) StartServer() {
@@ -90,6 +95,7 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))
+	http.HandleFunc("/v1/ranks/refresh", s.handleRequest(s.refreshRanks))
 	http.HandleFunc("/v1/genres/refresh", s.handleRequest(s.reloadGenres))
 	http.Handle("/auth/callback", &authHandler{})
 	http.Handle("/spotify/callback", &authHandler{})
