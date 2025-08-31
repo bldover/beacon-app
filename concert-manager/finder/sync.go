@@ -123,17 +123,16 @@ func (c *Cache) SyncArtistAdd(id string) error {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			if event.Event.MainAct != nil {
-				mainActIdx := slices.IndexFunc(savedArtists, (*event.Event.MainAct).EqualsFields)
-				if mainActIdx != -1 {
-					events[i].Event.MainAct = &newArtist
-				}
+			mainAct := event.Event.MainAct
+			if mainAct != nil && mainAct.EqualsFields(newArtist) {
+				clonedArtist := domain.CloneArtist(newArtist)
+				events[i].Event.MainAct = &clonedArtist
 			}
 
 			for j, opener := range event.Event.Openers {
-				openerIdx := slices.IndexFunc(savedArtists, opener.EqualsFields)
-				if openerIdx != -1 {
-					events[i].Event.Openers[j] = newArtist
+				if opener.EqualsFields(newArtist) {
+					clonedArtist := domain.CloneArtist(newArtist)
+					events[i].Event.Openers[j] = clonedArtist
 				}
 			}
 		}
@@ -153,17 +152,16 @@ func (c *Cache) SyncArtistUpdate(id string) error {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			if event.Event.MainAct != nil {
-				mainActIdx := slices.IndexFunc(savedArtists, (*event.Event.MainAct).Equals)
-				if mainActIdx != -1 {
-					events[i].Event.MainAct = &updatedArtist
-				}
+			mainAct := event.Event.MainAct
+			if mainAct != nil && (mainAct.EqualsFields(updatedArtist) || mainAct.Equals(updatedArtist)) {
+				clonedArtist := domain.CloneArtist(updatedArtist)
+				events[i].Event.MainAct = &clonedArtist
 			}
 
 			for j, opener := range event.Event.Openers {
-				openerIdx := slices.IndexFunc(savedArtists, opener.Equals)
-				if openerIdx != -1 {
-					events[i].Event.Openers[j] = updatedArtist
+				if opener.EqualsFields(updatedArtist) || opener.Equals(updatedArtist) {
+					clonedArtist := domain.CloneArtist(updatedArtist)
+					events[i].Event.Openers[j] = clonedArtist
 				}
 			}
 		}
@@ -175,7 +173,8 @@ func (c *Cache) SyncArtistDelete(id string) {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			if event.Event.MainAct != nil && event.Event.MainAct.ID.Primary == id {
+			mainAct := event.Event.MainAct
+			if mainAct != nil && mainAct.ID.Primary == id {
 				events[i].Event.MainAct.ID.Primary = ""
 			}
 
@@ -200,8 +199,7 @@ func (c *Cache) SyncVenueAdd(id string) error {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			venueIdx := slices.IndexFunc(savedVenues, event.Event.Venue.EqualsFields)
-			if venueIdx != -1 {
+			if event.Event.Venue.Equals(newVenue) {
 				events[i].Event.Venue = newVenue
 			}
 		}
@@ -221,8 +219,8 @@ func (c *Cache) SyncVenueUpdate(id string) error {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			venueIdx := slices.IndexFunc(savedVenues, event.Event.Venue.Equals)
-			if venueIdx != -1 {
+			venue := event.Event.Venue
+			if venue.EqualsFields(updatedVenue) || venue.Equals(updatedVenue) {
 				events[i].Event.Venue = updatedVenue
 			}
 		}
@@ -253,8 +251,7 @@ func (c *Cache) SyncEventAdd(id string) error {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			eventIdx := slices.IndexFunc(savedEvents, event.Event.EqualsFields)
-			if eventIdx != -1 {
+			if event.Event.EqualsFields(newEvent) {
 				events[i].Event = newEvent
 			}
 		}
@@ -274,8 +271,7 @@ func (c *Cache) SyncEventUpdate(id string) error {
 	for _, eventData := range c.upcomingEvents {
 		events := eventData.Events
 		for i, event := range events {
-			eventIdx := slices.IndexFunc(savedEvents, event.Event.Equals)
-			if eventIdx != -1 {
+			if event.Event.EqualsFields(updatedEvent) || event.Event.Equals(updatedEvent) {
 				events[i].Event = updatedEvent
 			}
 		}

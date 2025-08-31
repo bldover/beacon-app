@@ -93,6 +93,12 @@ func (r *EventRepository) AddArtist(ctx context.Context, artist domain.Artist) (
 	if newArtist.Genres.Spotify == nil {
 		newArtist.Genres.Spotify = []string{}
 	}
+	if newArtist.Genres.Ticketmaster == nil {
+		newArtist.Genres.Ticketmaster = []string{}
+	}
+	if newArtist.Genres.LastFm == nil {
+		newArtist.Genres.LastFm = []string{}
+	}
 	if newArtist.Genres.User == nil {
 		newArtist.Genres.User = []string{}
 	}

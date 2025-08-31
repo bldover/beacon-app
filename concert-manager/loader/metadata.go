@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 )
 
 type artistCache interface {
@@ -52,9 +53,8 @@ func (l *GenreLoader) ReloadGenres(ctx context.Context, artists []string) (int, 
 
 		// remove once Genre is fully migrated to UserGenres
 		isUserGenreValid := len(artist.Genres.User) == 0 && artist.Genre != "" && artist.Genre != "Unspecified"
-		hasExternal := len(artist.Genres.LastFm)+len(artist.Genres.Spotify) > 0
-		if !hasExternal && isUserGenreValid {
-			artist.Genres.User = []string{artist.Genre}
+		if isUserGenreValid {
+			artist.Genres.User = []string{strings.ToLower(artist.Genre)}
 		}
 
 		if err := l.Cache.UpdateArtist(artist.ID.Primary, artist); err != nil {
