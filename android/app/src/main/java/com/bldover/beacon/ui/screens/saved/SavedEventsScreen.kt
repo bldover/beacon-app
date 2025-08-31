@@ -62,7 +62,6 @@ fun HistoryScreen(
         SavedEventsList(
             eventsState = savedEventsViewModel.pastEventsState.collectAsState().value,
             filterState = savedEventsViewModel.pastEventOrdering.collectAsState().value,
-            accentPurchased = false,
             onSearchChange = savedEventsViewModel::filterPastEvents,
             onFilterChange = savedEventsViewModel::sortPastEvents,
             onEventClick = {
@@ -185,7 +184,7 @@ fun TopBarIcons(
 fun SavedEventsList(
     eventsState: SavedEventsState,
     filterState: EventOrdering,
-    accentPurchased: Boolean,
+    accentPurchased: Boolean = false,
     onSearchChange: (String) -> Unit,
     onFilterChange: (EventOrdering) -> Unit,
     onEventClick: (String) -> Unit

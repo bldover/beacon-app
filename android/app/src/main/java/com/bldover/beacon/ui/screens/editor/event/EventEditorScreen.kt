@@ -18,12 +18,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
+import com.bldover.beacon.data.model.artist.ArtistType
+import com.bldover.beacon.ui.components.common.AddNewCard
 import com.bldover.beacon.ui.components.common.BackButton
 import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
-import com.bldover.beacon.ui.components.editor.AddArtistCard
-import com.bldover.beacon.ui.components.editor.ArtistType
 import com.bldover.beacon.ui.components.editor.DateEditCard
 import com.bldover.beacon.ui.components.editor.DeleteButton
 import com.bldover.beacon.ui.components.editor.PurchasedSwitch
@@ -34,7 +34,6 @@ import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistsViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
-import com.bldover.beacon.ui.screens.editor.venue.VenuesViewModel
 import timber.log.Timber
 import java.time.LocalDate
 
@@ -70,7 +69,7 @@ fun EventEditorScreen(
                                 artist = headliner,
                                 artistType = ArtistType.HEADLINER,
                                 onSwipe = { eventEditorViewModel.updateHeadliner(null) },
-                                onSelect = {
+                                onClick = {
                                     artistEditorViewModel.launchEditor(
                                         navController = navController,
                                         artist = headliner,
@@ -91,21 +90,23 @@ fun EventEditorScreen(
                                 }
                             )
                         } else {
-                            AddArtistCard(
-                                artistType = ArtistType.HEADLINER,
-                                onSelect = eventEditorViewModel::updateHeadliner,
-                                navController = navController,
-                                artistSelectorViewModel = artistSelectorViewModel
+                            AddNewCard(
+                                label = ArtistType.HEADLINER.label,
+                                onClick = {
+                                    artistSelectorViewModel.launchSelector(navController) {
+                                        eventEditorViewModel.updateHeadliner(it)
+                                    }
+                                }
                             )
                         }
                     }
                     val openers = event.artists.filter { !it.headliner }
-                    items(items = openers) { opener ->
+                    items(items = openers, key = { it.name }) { opener ->
                         SwipeableArtistEditCard(
                             artist = opener,
                             artistType = ArtistType.OPENER,
                             onSwipe = eventEditorViewModel::removeOpener,
-                            onSelect = {
+                            onClick = {
                                 artistEditorViewModel.launchEditor(
                                     navController = navController,
                                     artist = opener,
@@ -127,11 +128,13 @@ fun EventEditorScreen(
                         )
                     }
                     item {
-                        AddArtistCard(
-                            artistType = ArtistType.OPENER,
-                            onSelect = eventEditorViewModel::addOpener,
-                            navController = navController,
-                            artistSelectorViewModel = artistSelectorViewModel
+                        AddNewCard(
+                            label = ArtistType.OPENER.label,
+                            onClick = {
+                                artistSelectorViewModel.launchSelector(navController) {
+                                    eventEditorViewModel.addOpener(it)
+                                }
+                            }
                         )
                     }
                     item {
@@ -150,13 +153,13 @@ fun EventEditorScreen(
                             }
                         )
                     }
-                    item {
-                        val futureEvent = !event.date.isBefore(LocalDate.now())
-                        PurchasedSwitch(
-                            checked = !futureEvent || event.purchased,
-                            enabled = futureEvent,
-                            onChange = { eventEditorViewModel.updatePurchased(it) }
-                        )
+                    if (event.date.isAfter(LocalDate.now())) {
+                        item {
+                            PurchasedSwitch(
+                                checked = event.purchased,
+                                onChange = { eventEditorViewModel.updatePurchased(it) }
+                            )
+                        }
                     }
                     item {
                         Row(

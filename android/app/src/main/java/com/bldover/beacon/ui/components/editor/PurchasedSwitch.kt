@@ -9,29 +9,16 @@ import timber.log.Timber
 @Composable
 fun PurchasedSwitch(
     checked: Boolean,
-    enabled: Boolean = true,
     onChange: (Boolean) -> Unit
 ) {
-    Timber.d("compose PurchasedSwitch : checked=$checked, enabled=$enabled")
-    if (enabled) {
-        BasicCard {
-            SummaryLine(label = "Purchased") {
-                Switch(
-                    checked = checked,
-                    enabled = true,
-                    onCheckedChange = onChange
-                )
-            }
-        }
-    } else {
-        BasicOutlinedCard {
-            SummaryLine(label = "Purchased") {
-                Switch(
-                    checked = false,
-                    enabled = false,
-                    onCheckedChange = onChange
-                )
-            }
+    Timber.d("compose PurchasedSwitch : checked=$checked")
+    BasicCard {
+        SummaryLine(label = "Purchased") {
+            Switch(
+                checked = checked,
+                enabled = true,
+                onCheckedChange = onChange
+            )
         }
     }
 }

@@ -32,6 +32,7 @@ fun ArtistSelectorScreen(
     ) {
         SearchableArtistsList(
             artistState = artistState,
+            showAnyGenre = false,
             orderingState = artistsViewModel.ordering.collectAsState().value,
             onSearchArtists = artistsViewModel::applyFilter,
             onOrderingChange = artistsViewModel::applyOrdering,

@@ -5,21 +5,18 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.bldover.beacon.ui.components.common.AddNewCard
 import com.bldover.beacon.ui.components.common.BackButton
-import com.bldover.beacon.ui.components.common.CardTextField
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
-import com.bldover.beacon.ui.components.editor.AddGenreCard
+import com.bldover.beacon.ui.components.editor.ArtistNameDialogEditCard
 import com.bldover.beacon.ui.components.editor.SaveCancelButtons
 import com.bldover.beacon.ui.components.editor.SwipeableGenreCard
 import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorViewModel
@@ -44,16 +41,13 @@ fun ArtistEditorScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                CardTextField(
-                    value = artist.name,
+                ArtistNameDialogEditCard(
+                    artist = artist,
                     onValueChange = artistEditorViewModel::updateName,
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = TextStyle(textAlign = TextAlign.End)
                 )
             }
             
-            val currentGenres = artist.genres.getGenres()
+            val currentGenres = artist.genres.user
             items(items = currentGenres) { genre ->
                 SwipeableGenreCard(
                     genre = genre,
@@ -62,10 +56,13 @@ fun ArtistEditorScreen(
             }
             
             item {
-                AddGenreCard(
-                    onSelect = artistEditorViewModel::addGenre,
-                    navController = navController,
-                    genreSelectorViewModel = genreSelectorViewModel
+                AddNewCard(
+                    label = "Add Genre",
+                    onClick = {
+                        genreSelectorViewModel.launchSelector(navController, artist) {
+                            artistEditorViewModel.addGenre(it)
+                        }
+                    }
                 )
             }
             

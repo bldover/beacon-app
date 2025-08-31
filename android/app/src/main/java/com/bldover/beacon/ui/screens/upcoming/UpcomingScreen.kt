@@ -93,7 +93,7 @@ fun UpcomingEventList(
                     ) {
                         UpcomingEventCard(
                             event = it,
-                            accented = savedEventsViewModel.isSaved(it.asEvent()),
+                            accented = it.id.primary != null,
                             onClick = {
                                 eventEditorViewModel.launchEditor(
                                     navController = navController,

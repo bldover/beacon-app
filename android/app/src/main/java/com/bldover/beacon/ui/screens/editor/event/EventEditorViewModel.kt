@@ -29,9 +29,7 @@ sealed class EventEditorState {
 
 @HiltViewModel
 class EventEditorViewModel @Inject constructor(
-    private val eventRepository: EventRepository,
-    private val artistRepository: ArtistRepository,
-    private val venueRepository: VenueRepository
+    private val eventRepository: EventRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<EventEditorState>(EventEditorState.Loading)
@@ -132,7 +130,9 @@ class EventEditorViewModel @Inject constructor(
         val state = (_uiState.value as EventEditorState.Success)
         Timber.d("Adding opener - previous artists ${state.event.artists}")
         val artists = state.event.artists.toMutableList().apply {
-            add(opener)
+            if (!contains(opener)) {
+                add(opener)
+            }
         }
         Timber.d("Adding opener - new artists $artists")
         _uiState.value = EventEditorState.Success(state.event.copy(artists = artists))

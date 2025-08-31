@@ -19,7 +19,7 @@ data class EventDetail(
     val artistRanks: List<ArtistRank>? = null
 ) {
     constructor(event: EventDetailDto) : this(
-        id = event.event.id,
+        id = EventId(event.event.id),
         name = event.name,
         artists = event.event.artists,
         venue = Venue(event.event.venue),
@@ -28,7 +28,7 @@ data class EventDetail(
     )
 
     constructor(event: EventRankDto) : this(
-        id = event.event.id,
+        id = EventId(event.event.id),
         name = event.name,
         artists = event.event.artists,
         venue = Venue(event.event.venue),

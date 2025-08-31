@@ -3,7 +3,6 @@ package com.bldover.beacon.data.repository
 import com.bldover.beacon.data.api.ArtistApi
 import com.bldover.beacon.data.dto.ArtistDto
 import com.bldover.beacon.data.model.artist.Artist
-import timber.log.Timber
 
 interface ArtistRepository {
     suspend fun getArtists(): List<Artist>
@@ -15,7 +14,6 @@ interface ArtistRepository {
 class ArtistRepositoryImpl(private val artistApi: ArtistApi) : ArtistRepository {
 
     override suspend fun getArtists(): List<Artist> {
-        Timber.i("Call to getArtists()")
         return artistApi.getArtists().map { Artist(it) }
     }
 

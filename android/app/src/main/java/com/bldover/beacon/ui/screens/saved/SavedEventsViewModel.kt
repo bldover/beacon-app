@@ -219,14 +219,4 @@ class SavedEventsViewModel @Inject constructor(
             }
         }
     }
-
-    fun isSaved(event: Event): Boolean {
-        return when (futureEventsState.value) {
-            is SavedEventsState.Success -> {
-                val savedEvents = (futureEventsState.value as SavedEventsState.Success).allEvents
-                savedEvents.any { it.id.ticketmaster != null && event.id.ticketmaster == it.id.ticketmaster }
-            }
-            else -> false
-        }
-    }
 }

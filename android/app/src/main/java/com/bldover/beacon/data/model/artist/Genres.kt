@@ -18,7 +18,7 @@ data class Genres(
     fun hasGenre(genre: String) : Boolean = getGenres().any { it.contains(genre, ignoreCase = true) }
     fun getGenres() : List<String> = user.ifEmpty { spotify }.ifEmpty { lastFm }
     fun getTopGenre() : String? = getGenres().firstOrNull()
-    fun hasUserOverride() : Boolean = user.isNotEmpty()
+    fun hasUserGenre() : Boolean = user.isNotEmpty()
 
     override fun compareTo(other: Genres): Int {
         val genres = getGenres()

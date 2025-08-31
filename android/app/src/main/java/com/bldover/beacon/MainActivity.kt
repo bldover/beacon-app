@@ -29,12 +29,12 @@ import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorScreen
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 import com.bldover.beacon.ui.screens.editor.event.EventEditorScreen
 import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
+import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorScreen
+import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueEditorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueEditorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
-import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorScreen
-import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorViewModel
 import com.bldover.beacon.ui.screens.saved.HistoryScreen
 import com.bldover.beacon.ui.screens.saved.PlannerScreen
 import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel

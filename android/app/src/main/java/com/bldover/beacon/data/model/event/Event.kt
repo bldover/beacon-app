@@ -14,7 +14,7 @@ data class Event(
     var purchased: Boolean
 ) {
     constructor(event: EventDto) : this(
-        id = event.id,
+        id = EventId(event.id),
         artists = event.artists,
         venue = Venue(event.venue),
         date = LocalDate.parse(event.date, dateFormatter),
