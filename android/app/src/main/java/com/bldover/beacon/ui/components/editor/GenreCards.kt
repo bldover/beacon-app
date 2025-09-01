@@ -73,7 +73,7 @@ fun NewGenreDialogEditCard(
     var isVisible by remember { mutableStateOf(false) }
 
     AddNewCard(
-        label = "Genre",
+        label = "New Genre",
         onClick = { isVisible = true }
     )
 

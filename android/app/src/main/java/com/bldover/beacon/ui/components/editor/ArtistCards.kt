@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextDecoration
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.artist.ArtistType
 import com.bldover.beacon.ui.components.common.BasicCard
@@ -96,7 +97,8 @@ fun SwipeableArtistEditCard(
                 Text(
                     text = artist.genres.getTopGenre() ?: "",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textDecoration = if (artist.genres.hasUserGenre()) TextDecoration.None else TextDecoration.Underline
                 )
             }
         }
