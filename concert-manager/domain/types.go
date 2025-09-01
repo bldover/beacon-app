@@ -50,6 +50,12 @@ type (
 		Rank    float64  `json:"rank"`
 		Related []string `json:"related"`
 	}
+	GenreResponse struct {
+		User         []string `json:"user"`
+		Spotify      []string `json:"spotify"`
+		LastFm       []string `json:"lastFm"`
+		Ticketmaster []string `json:"ticketmaster"`
+	}
 )
 
 func (e *Event) Artists() []Artist {

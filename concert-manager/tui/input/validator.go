@@ -7,7 +7,7 @@ import (
 )
 
 func NoValidation(_ string) error {
-    return nil
+	return nil
 }
 
 func OnlyLettersValidation(in string) error {
@@ -32,7 +32,7 @@ func StateValidation(in string) error {
 	if len(in) != 2 {
 		return errors.New("state code must be two characters")
 	}
-    return OnlyLettersValidation(in)
+	return OnlyLettersValidation(in)
 }
 
 func DateValidation(date string) error {

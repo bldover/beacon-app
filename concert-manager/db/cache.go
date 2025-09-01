@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"sort"
 )
 
 type Database interface {
@@ -310,4 +311,53 @@ func (c *Cache) DeleteVenue(id string) error {
 	c.venues = slices.Delete(c.venues, venueIdx, venueIdx+1)
 	log.Debug("Deleted venue from cache", id)
 	return nil
+}
+
+func (c Cache) GetUniqueGenres() domain.GenreResponse {
+	userGenres := make(map[string]bool)
+	spotifyGenres := make(map[string]bool)
+	lastFmGenres := make(map[string]bool)
+	ticketmasterGenres := make(map[string]bool)
+
+	for _, artist := range c.artists {
+		for _, genre := range artist.Genres.User {
+			userGenres[genre] = true
+		}
+		for _, genre := range artist.Genres.Spotify {
+			spotifyGenres[genre] = true
+		}
+		for _, genre := range artist.Genres.LastFm {
+			lastFmGenres[genre] = true
+		}
+		for _, genre := range artist.Genres.Ticketmaster {
+			ticketmasterGenres[genre] = true
+		}
+	}
+
+	response := domain.GenreResponse{
+		User:         make([]string, 0, len(userGenres)),
+		Spotify:      make([]string, 0, len(spotifyGenres)),
+		LastFm:       make([]string, 0, len(lastFmGenres)),
+		Ticketmaster: make([]string, 0, len(ticketmasterGenres)),
+	}
+
+	for genre := range userGenres {
+		response.User = append(response.User, genre)
+	}
+	for genre := range spotifyGenres {
+		response.Spotify = append(response.Spotify, genre)
+	}
+	for genre := range lastFmGenres {
+		response.LastFm = append(response.LastFm, genre)
+	}
+	for genre := range ticketmasterGenres {
+		response.Ticketmaster = append(response.Ticketmaster, genre)
+	}
+
+	sort.Strings(response.User)
+	sort.Strings(response.Spotify)
+	sort.Strings(response.LastFm)
+	sort.Strings(response.Ticketmaster)
+
+	return response
 }

@@ -1,8 +1,8 @@
 package screens
 
 type UtilMenu struct {
-	PassedEventManager     Screen
-	actions                []string
+	PassedEventManager Screen
+	actions            []string
 }
 
 const (

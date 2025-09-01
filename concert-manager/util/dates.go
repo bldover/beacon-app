@@ -43,7 +43,7 @@ func PastDate(date string) bool {
 // expected that the date string has been previously validated to not error when converted to ints
 func Timestamp(date string) time.Time {
 	parts := strings.Split(date, "/")
-    month, _ := strconv.Atoi(parts[0])
+	month, _ := strconv.Atoi(parts[0])
 	day, _ := strconv.Atoi(parts[1])
 	year, _ := strconv.Atoi(parts[2])
 	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)

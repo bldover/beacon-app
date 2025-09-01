@@ -318,3 +318,12 @@ func (s *Server) refreshRanks(w http.ResponseWriter, r *http.Request) (any, int,
 	go s.RanksCache.DoRefresh()
 	return map[string]string{"status": "refresh started"}, http.StatusOK, nil
 }
+
+func (s *Server) handleGenres(w http.ResponseWriter, r *http.Request) (any, int, error) {
+	if r.Method != http.MethodGet {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	genres := s.ArtistCache.GetUniqueGenres()
+	return genres, 0, nil
+}

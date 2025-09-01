@@ -45,6 +45,7 @@ type artistStore interface {
 	UpdateArtist(string, domain.Artist) error
 	DeleteArtist(string) error
 	RefreshArtists() error
+	GetUniqueGenres() domain.GenreResponse
 }
 
 type venueStore interface {
@@ -96,6 +97,7 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))
 	http.HandleFunc("/v1/ranks/refresh", s.handleRequest(s.refreshRanks))
+	http.HandleFunc("/v1/genres", s.handleRequest(s.handleGenres))
 	http.HandleFunc("/v1/genres/refresh", s.handleRequest(s.reloadGenres))
 	http.Handle("/auth/callback", &authHandler{})
 	http.Handle("/spotify/callback", &authHandler{})
