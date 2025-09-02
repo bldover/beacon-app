@@ -27,7 +27,7 @@ fun GenreSelectorScreen(
             leadingIcon = { BackButton(navController = navController) }
         ) }
     ) {
-        SearchableGenresList(
+        SearchableArtistGenresList(
             artist = artist,
             allUserGenres = allUserGenres,
             filteredUserGenres = filteredUserGenres,

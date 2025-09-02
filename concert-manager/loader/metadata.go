@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strings"
 )
 
 type artistCache interface {
@@ -47,16 +46,6 @@ func (l *GenreLoader) ReloadGenres(ctx context.Context, artists []string) (int, 
 	}
 
 	for _, artist := range updatedArtists {
-		if len(artist.Genres.Spotify) == 0 {
-			log.Info("No Spotify genres present for artist", artist.Name)
-		}
-
-		// remove once Genre is fully migrated to UserGenres
-		isUserGenreValid := len(artist.Genres.User) == 0 && artist.Genre != "" && artist.Genre != "Unspecified"
-		if isUserGenreValid {
-			artist.Genres.User = []string{strings.ToLower(artist.Genre)}
-		}
-
 		if err := l.Cache.UpdateArtist(artist.ID.Primary, artist); err != nil {
 			log.Error("Failed to update genres for artist", artist, err)
 		}

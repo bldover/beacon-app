@@ -106,7 +106,6 @@ func (c *Cache) RefreshUpcomingEvents() error {
 		return err
 	}
 
-	log.Debugf("Cache found %d upcoming events", len(events))
 	for i, event := range events {
 		events[i] = c.enrichSavedData(event)
 	}
@@ -117,7 +116,7 @@ func (c *Cache) RefreshUpcomingEvents() error {
 		events[i].Ranks = &rank
 	}
 
-	log.Debugf("Finished upcoming event refresh, found %d events for key %s", len(events), key)
+	log.Infof("Finished upcoming event refresh, found %d events for key %s", len(events), key)
 	eventData := upcomingEventsData{Events: events, LastLoaded: time.Now().Round(0)}
 	c.upcomingEvents[key] = eventData
 	c.saveEventsToFile()

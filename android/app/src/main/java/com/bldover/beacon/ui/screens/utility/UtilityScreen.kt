@@ -44,6 +44,11 @@ fun UtilityScreen(navController: NavController) {
                     navController.navigate(Screen.MANAGE_VENUES.name)
                 }
             }
+            item {
+                UtilityItem(text = "Manage Genres") {
+                    navController.navigate(Screen.MANAGE_GENRES.name)
+                }
+            }
         }
     }
 }

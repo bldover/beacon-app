@@ -34,6 +34,7 @@ type eventPosition struct {
 }
 
 func (f MetadataFinder) PopulateMetadata(events []domain.EventDetails) []domain.EventDetails {
+	log.Infof("Populating metadata for %v events", len(events))
 	result := make([]domain.EventDetails, len(events))
 	for i, event := range events {
 		result[i] = domain.CloneEventDetail(event)
@@ -49,6 +50,7 @@ func (f MetadataFinder) PopulateMetadata(events []domain.EventDetails) []domain.
 		}
 	}
 
+	log.Info("Metadata loaded")
 	return result
 }
 

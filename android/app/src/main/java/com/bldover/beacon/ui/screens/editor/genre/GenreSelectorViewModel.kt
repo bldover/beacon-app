@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.artist.Artist
-import com.bldover.beacon.data.repository.ArtistRepository
+import com.bldover.beacon.data.repository.GenreRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +16,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class GenreSelectorViewModel @Inject constructor(
-    private val artistRepository: ArtistRepository
+    private val genreRepository: GenreRepository
 ) : ViewModel() {
 
     private var onSelect: (String) -> Unit = {}
@@ -63,8 +63,8 @@ class GenreSelectorViewModel @Inject constructor(
     private fun loadAllUserGenres() {
         viewModelScope.launch {
             try {
-                val artists = artistRepository.getArtists()
-                val userGenres = artists.flatMap { it.genres.user }.distinct().sorted()
+                val genreResponse = genreRepository.getGenres()
+                val userGenres = genreResponse.user.sorted()
                 _allUserGenres.value = userGenres
                 _filteredUserGenres.value = userGenres
                 _isFiltering.value = false

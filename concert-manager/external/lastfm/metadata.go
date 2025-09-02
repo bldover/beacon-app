@@ -30,7 +30,7 @@ type tag struct {
 }
 
 func (c *Client) ArtistInfoById(mbid string) (external.ArtistInfo, error) {
-	log.Info("Request to get LastFM artist details for ID", mbid)
+	log.Debug("Request to get LastFM artist details for ID", mbid)
 	queryParams := map[string]any{}
 	queryParams["method"] = "artist.getinfo"
 	queryParams["mbid"] = mbid
@@ -46,12 +46,12 @@ func (c *Client) ArtistInfoById(mbid string) (external.ArtistInfo, error) {
 	}
 
 	artistInfo := mapArtistInfo(*response.Artist)
-	log.Info("Retrieved LastFM details", artistInfo)
+	log.Debug("Retrieved LastFM details", artistInfo)
 	return artistInfo, nil
 }
 
 func (c *Client) SearchByName(name string) (external.ArtistInfo, error) {
-	log.Info("Request to get LastFM artist details for name", name)
+	log.Debug("Request to get LastFM artist details for name", name)
 	queryParams := map[string]any{}
 	queryParams["method"] = "artist.getinfo"
 	queryParams["artist"] = name
@@ -69,7 +69,7 @@ func (c *Client) SearchByName(name string) (external.ArtistInfo, error) {
 	}
 
 	info = mapArtistInfo(*response.Artist)
-	log.Info("Retrieved LastFm artist details", info)
+	log.Debug("Retrieved LastFm artist details", info)
 	return info, nil
 }
 

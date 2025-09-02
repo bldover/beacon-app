@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GCP deployment script for concert manager
-# Usage: ./deploy_gcp.sh [deploy|kill|status] [env_vars_file]
+# Usage: ./manage_svc.sh [deploy|start|stop|restart|status] [env_vars_file]
 
 set -e
 
@@ -245,7 +245,7 @@ restart_service() {
     if gcloud compute ssh "${SSH_USER}@${INSTANCE_NAME}" --zone "${INSTANCE_ZONE}" -- \
         "sudo systemctl is-active ${REMOTE_SERVICE_NAME}" | grep -q "active"; then
         echo "Service restarted successfully"
-        
+
         echo ""
         echo "Recent startup logs:"
         gcloud compute ssh "${SSH_USER}@${INSTANCE_NAME}" --zone "${INSTANCE_ZONE}" -- \

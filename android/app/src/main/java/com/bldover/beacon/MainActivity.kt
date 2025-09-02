@@ -41,6 +41,7 @@ import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingScreen
 import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
+import com.bldover.beacon.ui.screens.utility.ManageGenresScreen
 import com.bldover.beacon.ui.screens.utility.ManageVenuesScreen
 import com.bldover.beacon.ui.screens.utility.SettingsState
 import com.bldover.beacon.ui.screens.utility.UserSettingsScreen
@@ -192,6 +193,11 @@ fun BeaconApp(
                             navController = navController,
                             snackbarState = snackbarState,
                             artistEditorViewModel = artistEditorViewModel
+                        )
+                    }
+                    composable(Screen.MANAGE_GENRES.name) {
+                        ManageGenresScreen(
+                            navController = navController
                         )
                     }
                 }

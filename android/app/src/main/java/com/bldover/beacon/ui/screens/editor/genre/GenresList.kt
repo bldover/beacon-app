@@ -19,12 +19,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.ui.components.common.BasicSearchBar
+import com.bldover.beacon.ui.components.common.LoadErrorMessage
+import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.ScrollableItemList
 import com.bldover.beacon.ui.components.editor.GenreCard
 import com.bldover.beacon.ui.components.editor.NewGenreDialogEditCard
+import com.bldover.beacon.ui.screens.utility.GenreState
 
 @Composable
-fun SearchableGenresList(
+fun SearchableArtistGenresList(
     artist: Artist?,
     allUserGenres: List<String>,
     filteredUserGenres: List<String>,
@@ -43,7 +46,7 @@ fun SearchableGenresList(
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             Spacer(modifier = Modifier.height(16.dp))
-            GenreList(
+            ArtistGenresList(
                 artist = artist,
                 allUserGenres = allUserGenres,
                 filteredUserGenres = filteredUserGenres,
@@ -55,7 +58,7 @@ fun SearchableGenresList(
 }
 
 @Composable
-private fun GenreList(
+private fun ArtistGenresList(
     artist: Artist?,
     allUserGenres: List<String>,
     filteredUserGenres: List<String>,
@@ -130,4 +133,44 @@ private fun GenreList(
 private sealed class GenreItem {
     data class SectionHeader(val title: String) : GenreItem()
     data class Genre(val name: String, val section: String, val hasAccentBorder: Boolean = false) : GenreItem()
+}
+
+@Composable
+fun SearchableGenresList(
+    genreState: GenreState,
+    onSearchGenres: (String) -> Unit
+) {
+    Scaffold(
+        topBar = {
+            BasicSearchBar(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = genreState is GenreState.Success,
+                onQueryChange = onSearchGenres
+            )
+        }
+    ) { innerPadding ->
+        Column(modifier = Modifier.padding(innerPadding)) {
+            Spacer(modifier = Modifier.height(16.dp))
+            when (genreState) {
+                is GenreState.Success -> GenresList(genreState.filtered)
+                is GenreState.Error -> LoadErrorMessage()
+                is GenreState.Loading -> LoadingSpinner()
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenresList(
+    genres: List<String>
+) {
+    ScrollableItemList(
+        items = genres
+    ) { genre ->
+        GenreCard(
+            genre = genre,
+            onClick = { },
+            hasAccentBorder = false
+        )
+    }
 }
