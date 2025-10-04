@@ -164,13 +164,7 @@ fun SearchableGenresList(
 private fun GenresList(
     genres: List<String>
 ) {
-    ScrollableItemList(
-        items = genres
-    ) { genre ->
-        GenreCard(
-            genre = genre,
-            onClick = { },
-            hasAccentBorder = false
-        )
+    ScrollableItemList(items = genres) { genre ->
+        GenreCard(genre = genre)
     }
 }

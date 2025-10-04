@@ -153,7 +153,7 @@ fun EventEditorScreen(
                             }
                         )
                     }
-                    if (event.date.isAfter(LocalDate.now())) {
+                    if (!event.date.isBefore(LocalDate.now())) {
                         item {
                             PurchasedSwitch(
                                 checked = event.purchased,

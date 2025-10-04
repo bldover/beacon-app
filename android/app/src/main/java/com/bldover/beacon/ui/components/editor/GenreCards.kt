@@ -26,7 +26,7 @@ import com.bldover.beacon.ui.components.common.TextEntryDialog
 @Composable
 fun GenreCard(
     genre: String,
-    onClick: () -> Unit,
+    onClick: () -> Unit = {},
     hasAccentBorder: Boolean = false
 ) {
     BasicCard(
