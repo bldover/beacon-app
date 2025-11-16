@@ -149,6 +149,29 @@ func (c *Cache) AddSavedEvent(event domain.Event) (*domain.Event, error) {
 	return &newEvent, nil
 }
 
+func (c *Cache) UpdateSavedEvent(id string, event domain.Event) error {
+	log.Debugf("Updating event in cache, id=%v, %v", id, event)
+	eventIdx := slices.IndexFunc(c.savedEvents, func(e domain.Event) bool {
+		return e.ID.Primary == id
+	})
+	if eventIdx == -1 {
+		log.Errorf("Unable to find event %v when updating cache", id)
+		return errors.New("event is not cached")
+	}
+
+	event.ID.Primary = id
+	if err := c.Database.DeleteEvent(context.Background(), id); err != nil {
+		return err
+	}
+	updatedEvent, err := c.Database.AddEvent(context.Background(), event)
+	if err != nil {
+		return err
+	}
+
+	c.savedEvents = slices.Replace(c.savedEvents, eventIdx, eventIdx+1, updatedEvent)
+	return nil
+}
+
 func (c *Cache) DeleteSavedEvent(id string) error {
 	log.Debug("Deleting saved event from cache", id)
 	eventIdx := slices.IndexFunc(c.savedEvents, func(e domain.Event) bool {

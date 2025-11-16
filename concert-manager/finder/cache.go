@@ -25,8 +25,11 @@ type upcomingEventsData struct {
 
 type savedDataCache interface {
 	GetArtists() []domain.Artist
+	UpdateArtist(string, domain.Artist) error
 	GetVenues() []domain.Venue
+	UpdateVenue(string, domain.Venue) error
 	GetSavedEvents() []domain.Event
+	UpdateSavedEvent(string, domain.Event) error
 }
 
 var upcomingEventTTL, _ = time.ParseDuration("24h")

@@ -2,12 +2,21 @@ package finder
 
 import (
 	"concert-manager/domain"
+	"concert-manager/log"
 	"errors"
 	"fmt"
 	"slices"
 )
 
-// could be optimized but this is simple and fine for the data size
+// This logic helps with a couple things:
+//  1. Substitute saved events/venues/artists into found events. This is especially
+//     helpful for populating the primary ID so we know which data needs to be inserted
+//     when the event is saved.
+//  2. Updating IDs for improved future matching. Since the data source is Ticketmaster,
+//     we can compare the TM IDs to see if our saved data is a match. However, our saved
+//     data could have been manually created (no IDs) or did not have complete data from
+//     TM when we first saved it, so we will enrich the saved data with any IDs from TM that
+//     we don't already know about. This helps with metadata lookup and future matching here.
 func (c *Cache) enrichSavedData(event domain.EventDetails) domain.EventDetails {
 	savedArtists := c.SavedDataCache.GetArtists()
 	savedVenues := c.SavedDataCache.GetVenues()
@@ -19,7 +28,7 @@ func (c *Cache) enrichSavedData(event domain.EventDetails) domain.EventDetails {
 		return eventMatch(event.Event, o)
 	})
 	if eventIdx != -1 {
-		enriched.Event = mergeEvent(savedEvents[eventIdx], event.Event)
+		enriched.Event = c.mergeEvent(savedEvents[eventIdx], event.Event)
 		return enriched
 	}
 
@@ -27,7 +36,7 @@ func (c *Cache) enrichSavedData(event domain.EventDetails) domain.EventDetails {
 		return venueMatch(event.Event.Venue, o)
 	})
 	if venueIdx != -1 {
-		enriched.Event.Venue = mergeVenue(savedVenues[venueIdx], event.Event.Venue)
+		enriched.Event.Venue = c.mergeVenue(savedVenues[venueIdx], event.Event.Venue)
 	}
 
 	if event.Event.MainAct != nil {
@@ -35,7 +44,7 @@ func (c *Cache) enrichSavedData(event domain.EventDetails) domain.EventDetails {
 			return artistMatch(*event.Event.MainAct, o)
 		})
 		if mainActIdx != -1 {
-			artist := mergeArtist(savedArtists[mainActIdx], *event.Event.MainAct)
+			artist := c.mergeArtist(savedArtists[mainActIdx], *event.Event.MainAct)
 			enriched.Event.MainAct = &artist
 		}
 	}
@@ -45,7 +54,7 @@ func (c *Cache) enrichSavedData(event domain.EventDetails) domain.EventDetails {
 			return artistMatch(opener, o)
 		})
 		if openerIdx != -1 {
-			artist := mergeArtist(savedArtists[openerIdx], event.Event.Openers[i])
+			artist := c.mergeArtist(savedArtists[openerIdx], event.Event.Openers[i])
 			enriched.Event.Openers[i] = artist
 		}
 	}
@@ -53,61 +62,95 @@ func (c *Cache) enrichSavedData(event domain.EventDetails) domain.EventDetails {
 	return enriched
 }
 
-func eventMatch(a domain.Event, b domain.Event) bool {
-	fieldsMatch := venueMatch(a.Venue, b.Venue) && a.Date == b.Date && artistMatch(*a.MainAct, *b.MainAct)
-	return (a.ID.Ticketmaster != "" && a.ID.Ticketmaster == b.ID.Ticketmaster) || fieldsMatch
+func eventMatch(ext domain.Event, saved domain.Event) bool {
+	fieldsMatch := venueMatch(ext.Venue, saved.Venue) && ext.Date == saved.Date && artistMatch(*ext.MainAct, *saved.MainAct)
+	return (saved.ID.Ticketmaster != "" && ext.ID.Ticketmaster == saved.ID.Ticketmaster) || (saved.ID.Ticketmaster == "" && fieldsMatch)
 }
 
-func venueMatch(a domain.Venue, b domain.Venue) bool {
-	return (a.ID.Ticketmaster != "" && a.ID.Ticketmaster == b.ID.Ticketmaster) || a.EqualsFields(b)
+func venueMatch(ext domain.Venue, saved domain.Venue) bool {
+	return (saved.ID.Ticketmaster != "" && ext.ID.Ticketmaster == saved.ID.Ticketmaster) || (saved.ID.Ticketmaster == "" && ext.EqualsFields(saved))
 }
 
-func artistMatch(a domain.Artist, b domain.Artist) bool {
-	tmMatch := a.ID.Ticketmaster != "" && a.ID.Ticketmaster == b.ID.Ticketmaster
-	spotifyMatch := a.ID.Spotify != "" && a.ID.Spotify == b.ID.Spotify
-	mbMatch := a.ID.MusicBrainz != "" && a.ID.MusicBrainz == b.ID.MusicBrainz
-	return tmMatch || spotifyMatch || mbMatch || a.EqualsFields(b)
+func artistMatch(ext domain.Artist, saved domain.Artist) bool {
+	tmMatch := saved.ID.Ticketmaster != "" && ext.ID.Ticketmaster == saved.ID.Ticketmaster
+	return tmMatch || (saved.ID.Ticketmaster == "" && ext.EqualsFields(saved))
 }
 
-func mergeEvent(source domain.Event, target domain.Event) domain.Event {
+func (c *Cache) mergeEvent(source domain.Event, target domain.Event) domain.Event {
 	event := domain.CloneEvent(target)
 	event.MainAct = source.MainAct
 	event.Openers = source.Openers
 	event.Venue = source.Venue
 	event.Purchased = source.Purchased
 	event.ID.Primary = source.ID.Primary
-	if source.ID.Ticketmaster != "" {
-		event.ID.Ticketmaster = source.ID.Ticketmaster
+
+	// due to match logic, either the TM IDs match or the source didn't have an ID
+	if source.ID.Ticketmaster == "" && target.ID.Ticketmaster != "" {
+		if err := c.SavedDataCache.UpdateSavedEvent(event.ID.Primary, event); err != nil {
+			log.Errorf("Failed to update event while merging upcoming results for source: %v, target: %v", source, target)
+			return event
+		}
+		if err := c.SyncEventUpdate(event.ID.Primary); err != nil {
+			log.Errorf("Failed to sync event update while merging upcoming results for source: %v, target: %v", source, target)
+			return event
+		}
 	}
+
 	return event
 }
 
-func mergeArtist(source domain.Artist, target domain.Artist) domain.Artist {
+func (c *Cache) mergeArtist(source domain.Artist, target domain.Artist) domain.Artist {
 	artist := domain.CloneArtist(target)
 	artist.Name = source.Name
 	artist.Genres = source.Genres
 	artist.ID.Primary = source.ID.Primary
-	if source.ID.Ticketmaster != "" {
+
+	if target.ID.Ticketmaster == "" {
 		artist.ID.Ticketmaster = source.ID.Ticketmaster
 	}
-	if source.ID.Spotify != "" {
+	if target.ID.Spotify == "" {
 		artist.ID.Spotify = source.ID.Spotify
 	}
-	if source.ID.MusicBrainz != "" {
+	if target.ID.MusicBrainz == "" {
 		artist.ID.MusicBrainz = source.ID.MusicBrainz
 	}
+
+	tmIDAdded := source.ID.Ticketmaster == "" && target.ID.Ticketmaster != ""
+	spotifyIDAdded := source.ID.Spotify == "" && target.ID.Spotify != ""
+	mbIDAdded := source.ID.MusicBrainz == "" && target.ID.MusicBrainz != ""
+	if tmIDAdded || spotifyIDAdded || mbIDAdded {
+		if err := c.SavedDataCache.UpdateArtist(artist.ID.Primary, artist); err != nil {
+			log.Errorf("Failed to update artist while merging upcoming results for source: %v, target: %v", source, target)
+			return artist
+		}
+		if err := c.SyncArtistUpdate(artist.ID.Primary); err != nil {
+			log.Errorf("Failed to sync artist update while merging upcoming results for source: %v, target: %v", source, target)
+			return artist
+		}
+	}
+
 	return artist
 }
 
-func mergeVenue(source domain.Venue, target domain.Venue) domain.Venue {
+func (c *Cache) mergeVenue(source domain.Venue, target domain.Venue) domain.Venue {
 	venue := domain.CloneVenue(target)
 	venue.Name = source.Name
 	venue.City = source.City
 	venue.State = source.State
 	venue.ID.Primary = source.ID.Primary
-	if source.ID.Ticketmaster != "" {
-		venue.ID.Ticketmaster = source.ID.Ticketmaster
+
+	// due to match logic, either the TM IDs match or the source didn't have an ID
+	if source.ID.Ticketmaster == "" && target.ID.Ticketmaster != "" {
+		if err := c.SavedDataCache.UpdateVenue(venue.ID.Primary, venue); err != nil {
+			log.Errorf("Failed to update venue while merging upcoming results for source: %v, target: %v", source, target)
+			return venue
+		}
+		if err := c.SyncVenueUpdate(venue.ID.Primary); err != nil {
+			log.Errorf("Failed to sync venue update while merging upcoming results for source: %v, target: %v", source, target)
+			return venue
+		}
 	}
+
 	return venue
 }
 
