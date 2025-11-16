@@ -53,4 +53,16 @@ data class EventDetail(
                 || name.contains(term, ignoreCase = true)
                 || venue.name.contains(term, ignoreCase = true)
     }
+
+    fun isSaved(): Boolean {
+        return id.primary != null
+    }
+
+    fun uniqueId(): String {
+        return id.primary ?: id.ticketmaster ?: constructId()
+    }
+
+    private fun constructId(): String {
+        return artists.joinToString(",") { it.uniqueId() } + venue.uniqueId() + date.toString()
+    }
 }

@@ -32,4 +32,8 @@ data class Venue(
             state = state
         )
     }
+
+    fun uniqueId(): String {
+        return id.primary ?: id.ticketmaster ?: name
+    }
 }

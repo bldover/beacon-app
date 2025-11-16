@@ -35,4 +35,8 @@ data class Artist(
             headliner = headliner
         )
     }
+
+    fun uniqueId(): String {
+        return id.primary ?: id.ticketmaster ?: name
+    }
 }
