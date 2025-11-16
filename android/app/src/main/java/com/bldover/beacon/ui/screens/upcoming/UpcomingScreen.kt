@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,6 +29,8 @@ import com.bldover.beacon.ui.components.common.UpcomingEventCard
 import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
 import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import timber.log.Timber
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun UpcomingScreen(
@@ -87,30 +91,41 @@ fun UpcomingEventList(
             Spacer(modifier = Modifier.height(16.dp))
             when (upcomingState.value) {
                 is UpcomingEventsState.Success -> {
+                    val events = (upcomingState.value as UpcomingEventsState.Success).filtered
+                    val groupedEvents = events.groupBy { it.date }.toList().sortedBy { it.first }
+                    
                     ScrollableItemList(
-                        items = (upcomingState.value as UpcomingEventsState.Success).filtered,
+                        items = groupedEvents,
                         modifier = Modifier.padding(innerPadding)
-                    ) {
-                        UpcomingEventCard(
-                            event = it,
-                            accented = it.id.primary != null,
-                            onClick = {
-                                eventEditorViewModel.launchEditor(
-                                    navController = navController,
-                                    event = it.asEvent(),
-                                    onSave = { event: Event ->
-                                        savedEventsViewModel.addEvent(
-                                            event = event,
-                                            onSuccess = {
-                                                navController.popBackStack()
-                                                snackbarState.showSnackbar("Event saved")
-                                            },
-                                            onError = { msg -> snackbarState.showSnackbar(msg) }
+                    ) { (date, eventsForDate) ->
+                        Column {
+                            DateHeader(date = date)
+                            eventsForDate.forEach { event ->
+                                UpcomingEventCard(
+                                    event = event,
+                                    accented = event.id.primary != null,
+                                    onClick = {
+                                        eventEditorViewModel.launchEditor(
+                                            navController = navController,
+                                            event = event.asEvent(),
+                                            onSave = { event: Event ->
+                                                savedEventsViewModel.addEvent(
+                                                    event = event,
+                                                    onSuccess = {
+                                                        navController.popBackStack()
+                                                        snackbarState.showSnackbar("Event saved")
+                                                    },
+                                                    onError = { msg -> snackbarState.showSnackbar(msg) }
+                                                )
+                                            }
                                         )
                                     }
                                 )
+                                if (event != eventsForDate.last()) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                }
                             }
-                        )
+                        }
                     }
                 }
                 is UpcomingEventsState.Error -> {
@@ -122,4 +137,13 @@ fun UpcomingEventList(
             }
         }
     }
+}
+
+@Composable
+fun DateHeader(date: LocalDate) {
+    Text(
+        text = date.format(DateTimeFormatter.ofPattern("MMMM d")),
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }

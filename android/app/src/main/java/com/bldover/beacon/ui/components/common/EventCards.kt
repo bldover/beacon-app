@@ -87,10 +87,6 @@ fun UpcomingEventCard(
                 )
             }
             Text(
-                text = event.date.format(DateTimeFormatter.ISO_DATE),
-                style = MaterialTheme.typography.bodySmall
-            )
-            Text(
                 text = event.venue.name,
                 style = MaterialTheme.typography.bodySmall
             )
