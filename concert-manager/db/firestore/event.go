@@ -106,7 +106,13 @@ func (c *EventClient) Add(ctx context.Context, event domain.Event) (string, erro
 	eventEntity := EventEntity{mainActRef, openerRefs, venueDoc.Ref, util.Timestamp(event.Date), event.Purchased, idEntity}
 
 	events := c.Connection.Client.Collection(eventCollection)
-	docRef, _, err := events.Add(ctx, eventEntity)
+	var docRef *firestore.DocumentRef
+	if event.ID.Primary != "" {
+		docRef = events.Doc(event.ID.Primary)
+	} else {
+		docRef = events.NewDoc()
+	}
+	_, err = docRef.Set(ctx, eventEntity)
 	if err != nil {
 		log.Errorf("Failed to add event %+v, %v", event, err)
 		return "", err

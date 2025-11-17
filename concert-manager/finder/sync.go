@@ -87,11 +87,11 @@ func (c *Cache) mergeEvent(source domain.Event, target domain.Event) domain.Even
 	// due to match logic, either the TM IDs match or the source didn't have an ID
 	if source.ID.Ticketmaster == "" && target.ID.Ticketmaster != "" {
 		if err := c.SavedDataCache.UpdateSavedEvent(event.ID.Primary, event); err != nil {
-			log.Errorf("Failed to update event while merging upcoming results for source: %v, target: %v", source, target)
+			log.Alertf("Failed to update event while merging upcoming results for source: %v, target: %v, err: %v", source, target, err)
 			return event
 		}
 		if err := c.SyncEventUpdate(event.ID.Primary); err != nil {
-			log.Errorf("Failed to sync event update while merging upcoming results for source: %v, target: %v", source, target)
+			log.Alertf("Failed to sync event update while merging upcoming results for source: %v, target: %v, err: %v", source, target, err)
 			return event
 		}
 	}
