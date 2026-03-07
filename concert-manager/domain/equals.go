@@ -5,7 +5,8 @@ func (e Event) Equals(o Event) bool {
 }
 
 func (e Event) EqualsFields(o Event) bool {
-	return (e.MainAct == o.MainAct || e.MainAct.EqualsFields(*o.MainAct)) && e.Venue.EqualsFields(o.Venue) && e.Date == o.Date
+	mainActEq := (e.MainAct == o.MainAct || (e.MainAct != nil && o.MainAct != nil && e.MainAct.EqualsFields(*o.MainAct)))
+	return mainActEq && e.Venue.EqualsFields(o.Venue) && e.Date == o.Date
 }
 
 func (a Artist) Equals(o Artist) bool {

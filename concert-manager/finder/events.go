@@ -39,17 +39,13 @@ func (f EventFinder) FindAllEvents(city string, state string) ([]domain.EventDet
 
 func postProcess(events []domain.EventDetails) {
 	for i := range events {
-		event := events[i].Event
 		// venues sometimes have weird names from non-partnered ticketing sites
-		// probably not needed with the new saved data replacement logic in the sync service
-		// so consider verifying and removing this
-		venue := event.Venue.Name
-		if strings.Contains(venue, "Eastern") {
-			event.Venue.Name = "The Eastern"
-		} else if strings.Contains(venue, "Cadence") {
-			event.Venue.Name = "Cadence Bank Ampitheatre"
-		} else if strings.Contains(venue, "Altar") {
-			event.Venue.Name = "The Masquerade - Altar"
+		venue := events[i].Event.Venue.Name
+		if strings.Contains(venue, "The Eastern-GA") {
+			events[i].Event.Venue.Name = "The Eastern"
+		} else if strings.Contains(venue, "The Masquerade  - Altar") {
+			// probably the typo will be fixed at some point and we can remove this?
+			events[i].Event.Venue.Name = "The Masquerade - Altar"
 		}
 	}
 }

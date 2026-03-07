@@ -94,69 +94,73 @@ fun UpcomingEventList(
             }
         }
     ) { innerPadding ->
-        when (upcomingState.value) {
-            is UpcomingEventsState.Success -> {
-                val events = (upcomingState.value as UpcomingEventsState.Success).filtered
-                val groupedEvents = events
-                    .groupBy { it.date }
-                    .mapValues { (_, eventsForDate) ->
-                        eventsForDate.sortedWith(
-                            compareByDescending<EventDetail> { it.purchased && it.id.primary != null }
-                                .thenByDescending { it.id.primary != null }
-                                .thenByDescending { it.rank ?: Float.MIN_VALUE }
-                        )
-                    }
-                    .toList()
-                    .sortedBy { it.first }
-
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    item {
-                        Spacer(modifier = Modifier.height(0.dp))
-                    }
-
-                    groupedEvents.forEach { (date, eventsForDate) ->
-                        stickyHeader {
-                            DateHeader(date = date)
-                        }
-
-                        items(
-                            items = eventsForDate,
-                            key = { event -> event.uniqueId() }
-                        ) { event ->
-                            UpcomingEventCard(
-                                event = event,
-                                accented = event.isSaved(),
-                                onClick = {
-                                    eventEditorViewModel.launchEditor(
-                                        navController = navController,
-                                        event = event.asEvent(),
-                                        onSave = { event: Event ->
-                                            savedEventsViewModel.addEvent(
-                                                event = event,
-                                                onSuccess = {
-                                                    navController.popBackStack()
-                                                    snackbarState.showSnackbar("Event saved")
-                                                },
-                                                onError = { msg -> snackbarState.showSnackbar(msg) }
-                                            )
-                                        }
-                                    )
-                                }
+        Column {
+            when (upcomingState.value) {
+                is UpcomingEventsState.Success -> {
+                    val events = (upcomingState.value as UpcomingEventsState.Success).filtered
+                    val groupedEvents = events
+                        .groupBy { it.date }
+                        .mapValues { (_, eventsForDate) ->
+                            eventsForDate.sortedWith(
+                                compareByDescending<EventDetail> { it.purchased && it.id.primary != null }
+                                    .thenByDescending { it.id.primary != null }
+                                    .thenByDescending { it.rank ?: Float.MIN_VALUE }
                             )
+                        }
+                        .toList()
+                        .sortedBy { it.first }
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        groupedEvents.forEach { (date, eventsForDate) ->
+                            stickyHeader {
+                                DateHeader(date = date)
+                            }
+
+                            items(
+                                items = eventsForDate,
+                                key = { event -> event.uniqueId() }
+                            ) { event ->
+                                UpcomingEventCard(
+                                    event = event,
+                                    accented = event.isSaved(),
+                                    onClick = {
+                                        eventEditorViewModel.launchEditor(
+                                            navController = navController,
+                                            event = event.asEvent(),
+                                            onSave = { event: Event ->
+                                                savedEventsViewModel.addEvent(
+                                                    event = event,
+                                                    onSuccess = {
+                                                        navController.popBackStack()
+                                                        snackbarState.showSnackbar("Event saved")
+                                                    },
+                                                    onError = { msg ->
+                                                        snackbarState.showSnackbar(
+                                                            msg
+                                                        )
+                                                    }
+                                                )
+                                            }
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
-            }
-            is UpcomingEventsState.Error -> {
-                LoadErrorMessage()
-            }
-            is UpcomingEventsState.Loading -> {
-                LoadingSpinner()
+
+                is UpcomingEventsState.Error -> {
+                    LoadErrorMessage()
+                }
+
+                is UpcomingEventsState.Loading -> {
+                    LoadingSpinner()
+                }
             }
         }
     }
