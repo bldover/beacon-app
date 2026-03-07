@@ -26,10 +26,17 @@ type (
 		Delete(context.Context, string) error
 		FindAll(context.Context) ([]domain.Event, error)
 	}
+	RecordDatabase interface {
+		Add(context.Context, domain.Record) (string, error)
+		Update(context.Context, domain.Record) error
+		Delete(context.Context, string) error
+		FindAll(context.Context) ([]domain.Record, error)
+	}
 	EventRepository struct {
 		VenueRepo  VenueDatabase
 		ArtistRepo ArtistDatabase
 		EventRepo  EventDatabase
+		RecordRepo RecordDatabase
 	}
 )
 
@@ -183,4 +190,50 @@ func (r *EventRepository) ListEvents(ctx context.Context) ([]domain.Event, error
 		return nil, err
 	}
 	return events, nil
+}
+
+func (r *EventRepository) AddRecord(ctx context.Context, record domain.Record) (domain.Record, error) {
+	log.Debug("Request to add record", record)
+	newRecord := domain.CloneRecord(record)
+	id, err := r.RecordRepo.Add(ctx, newRecord)
+	if err != nil {
+		log.Errorf("Error while adding record %v, %v\n", record, err)
+		return record, err
+	}
+	newRecord.ID = id
+	log.Debug("Added record to database", newRecord)
+	return newRecord, nil
+}
+
+func (r *EventRepository) UpdateRecord(ctx context.Context, record domain.Record) (domain.Record, error) {
+	log.Debug("Request to update record", record)
+	updateRecord := domain.CloneRecord(record)
+	err := r.RecordRepo.Update(ctx, updateRecord)
+	if err != nil {
+		log.Errorf("Error while updating record %v, %v\n", record, err)
+		return record, err
+	}
+	log.Debug("Updated record in database", updateRecord)
+	return updateRecord, nil
+}
+
+func (r *EventRepository) DeleteRecord(ctx context.Context, id string) error {
+	log.Debug("Request to delete record", id)
+	err := r.RecordRepo.Delete(ctx, id)
+	if err != nil {
+		log.Errorf("Error while deleting record %v, %v\n", id, err)
+		return err
+	}
+	log.Debug("Deleted record from database", id)
+	return nil
+}
+
+func (r *EventRepository) ListRecords(ctx context.Context) ([]domain.Record, error) {
+	log.Debug("Request to list all records")
+	records, err := r.RecordRepo.FindAll(ctx)
+	if err != nil {
+		log.Error("Error while listing all records", err)
+		return nil, err
+	}
+	return records, nil
 }

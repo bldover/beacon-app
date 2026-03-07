@@ -18,6 +18,7 @@ type Server struct {
 	SavedEventCache     savedEventStore
 	ArtistCache         artistStore
 	VenueCache          venueStore
+	RecordCache         recordStore
 	UpcomingEventsCache upcomingEventsStore
 	RanksCache          ranksRefresher
 	SyncService         dataSyncService
@@ -54,6 +55,14 @@ type venueStore interface {
 	UpdateVenue(string, domain.Venue) error
 	DeleteVenue(string) error
 	RefreshVenues() error
+}
+
+type recordStore interface {
+	GetRecords() []domain.Record
+	AddRecord(domain.Record) (*domain.Record, error)
+	UpdateRecord(string, domain.Record) error
+	DeleteRecord(string) error
+	RefreshRecords() error
 }
 
 type upcomingEventsStore interface {
@@ -93,6 +102,9 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/venues", s.handleRequest(s.handleVenues))
 	http.HandleFunc("/v1/venues/", s.handleRequest(s.handleVenues))
 	http.HandleFunc("/v1/venues/refresh", s.handleRequest(s.refreshVenues))
+	http.HandleFunc("/v1/records", s.handleRequest(s.handleRecords))
+	http.HandleFunc("/v1/records/", s.handleRequest(s.handleRecords))
+	http.HandleFunc("/v1/records/refresh", s.handleRequest(s.refreshRecords))
 	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))

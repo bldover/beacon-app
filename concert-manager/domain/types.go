@@ -56,6 +56,13 @@ type (
 		LastFm       []string `json:"lastFm"`
 		Ticketmaster []string `json:"ticketmaster"`
 	}
+	Record struct {
+		Name   string `json:"name"`
+		Artist Artist `json:"artist"`
+		Year   int    `json:"year"`
+		Signed bool   `json:"signed"`
+		ID     string `json:"id"`
+	}
 )
 
 func (e *Event) Artists() []Artist {

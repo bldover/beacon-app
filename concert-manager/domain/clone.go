@@ -90,6 +90,12 @@ func CloneEventDetails(events []EventDetails) []EventDetails {
 	return clone
 }
 
+func CloneRecord(record Record) Record {
+	clone := record
+	clone.Artist = CloneArtist(record.Artist)
+	return clone
+}
+
 func CloneRankInfo(rankInfo RankInfo) RankInfo {
 	clone := rankInfo
 	clone.ArtistRanks = CloneArtistRanks(rankInfo.ArtistRanks)

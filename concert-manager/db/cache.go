@@ -22,6 +22,10 @@ type Database interface {
 	AddVenue(context.Context, domain.Venue) (domain.Venue, error)
 	UpdateVenue(context.Context, domain.Venue) (domain.Venue, error)
 	DeleteVenue(context.Context, string) error
+	ListRecords(context.Context) ([]domain.Record, error)
+	AddRecord(context.Context, domain.Record) (domain.Record, error)
+	UpdateRecord(context.Context, domain.Record) (domain.Record, error)
+	DeleteRecord(context.Context, string) error
 }
 
 type Cache struct {
@@ -29,6 +33,7 @@ type Cache struct {
 	savedEvents []domain.Event
 	artists     []domain.Artist
 	venues      []domain.Venue
+	records     []domain.Record
 }
 
 func (c *Cache) LoadCaches() {
@@ -53,6 +58,13 @@ func (c *Cache) LoadCaches() {
 	}
 	c.venues = venues
 	log.Info("Successfully initialized venues")
+
+	records, err := c.Database.ListRecords(context.Background())
+	if err != nil {
+		log.Fatal("Failed to initialize records:", err)
+	}
+	c.records = records
+	log.Info("Successfully initialized records")
 
 	log.Info("Finished initializing saved event cache")
 }
@@ -333,6 +345,75 @@ func (c *Cache) DeleteVenue(id string) error {
 
 	c.venues = slices.Delete(c.venues, venueIdx, venueIdx+1)
 	log.Debug("Deleted venue from cache", id)
+	return nil
+}
+
+func (c *Cache) RefreshRecords() error {
+	log.Info("Refreshing records cache")
+	records, err := c.Database.ListRecords(context.Background())
+	if err != nil {
+		return err
+	}
+	c.records = records
+	log.Info("Successfully refreshed records")
+	return nil
+}
+
+func (c Cache) GetRecords() []domain.Record {
+	if c.records == nil {
+		return []domain.Record{}
+	}
+	return slices.Clone(c.records)
+}
+
+func (c *Cache) AddRecord(record domain.Record) (*domain.Record, error) {
+	log.Debug("Adding record to cache", record)
+	newRecord, err := c.Database.AddRecord(context.Background(), record)
+	if err != nil {
+		return nil, err
+	}
+	c.records = append(c.records, newRecord)
+	log.Debug("Added record to cache", newRecord)
+	return &newRecord, nil
+}
+
+func (c *Cache) UpdateRecord(id string, record domain.Record) error {
+	log.Debugf("Updating record in cache, id=%v, %v", id, record)
+	recordIdx := slices.IndexFunc(c.records, func(r domain.Record) bool {
+		return r.ID == id
+	})
+	if recordIdx == -1 {
+		log.Errorf("Unable to find record %v when updating cache", id)
+		return errors.New("record is not cached")
+	}
+
+	record.ID = id
+	updatedRecord, err := c.Database.UpdateRecord(context.Background(), record)
+	if err != nil {
+		return err
+	}
+
+	c.records = slices.Replace(c.records, recordIdx, recordIdx+1, updatedRecord)
+	log.Debug("Updated record in cache", updatedRecord)
+	return nil
+}
+
+func (c *Cache) DeleteRecord(id string) error {
+	log.Debug("Deleting record from cache", id)
+	recordIdx := slices.IndexFunc(c.records, func(r domain.Record) bool {
+		return r.ID == id
+	})
+	if recordIdx == -1 {
+		log.Errorf("Unable to find record %v when deleting from cache", id)
+		return errors.New("record is not cached")
+	}
+
+	if err := c.Database.DeleteRecord(context.Background(), id); err != nil {
+		return err
+	}
+
+	c.records = slices.Delete(c.records, recordIdx, recordIdx+1)
+	log.Debug("Deleted record from cache", id)
 	return nil
 }
 

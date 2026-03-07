@@ -37,10 +37,12 @@ func main() {
 		VenueClient:  venueClient,
 		ArtistClient: artistClient,
 	}
+	recordClient := &firestore.RecordClient{Connection: dbConnection}
 	interactor := &db.EventRepository{
 		VenueRepo:  venueClient,
 		ArtistRepo: artistClient,
 		EventRepo:  eventClient,
+		RecordRepo: recordClient,
 	}
 
 	savedCache := &db.Cache{}
@@ -91,6 +93,7 @@ func main() {
 	server.SavedEventCache = savedCache
 	server.ArtistCache = savedCache
 	server.VenueCache = savedCache
+	server.RecordCache = savedCache
 	server.UpcomingEventsCache = upcomingCache
 	server.RanksCache = artistRanksCache
 	server.SyncService = upcomingCache
