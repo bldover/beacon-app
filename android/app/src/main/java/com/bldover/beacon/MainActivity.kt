@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -15,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -40,8 +42,11 @@ import com.bldover.beacon.ui.screens.saved.PlannerScreen
 import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingScreen
+import com.bldover.beacon.ui.screens.editor.record.RecordEditorScreen
+import com.bldover.beacon.ui.screens.editor.record.RecordEditorViewModel
 import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
 import com.bldover.beacon.ui.screens.utility.ManageGenresScreen
+import com.bldover.beacon.ui.screens.utility.ManageRecordsScreen
 import com.bldover.beacon.ui.screens.utility.ManageVenuesScreen
 import com.bldover.beacon.ui.screens.utility.SettingsState
 import com.bldover.beacon.ui.screens.utility.UserSettingsScreen
@@ -74,7 +79,8 @@ fun BeaconApp(
     genreSelectorViewModel: GenreSelectorViewModel = hiltViewModel(),
     eventEditorViewModel: EventEditorViewModel = hiltViewModel(),
     artistEditorViewModel: ArtistEditorViewModel = hiltViewModel(),
-    venueEditorViewModel: VenueEditorViewModel = hiltViewModel()
+    venueEditorViewModel: VenueEditorViewModel = hiltViewModel(),
+    recordEditorViewModel: RecordEditorViewModel = hiltViewModel()
 ) {
     Timber.d("composing BeaconApp")
     val navController = rememberNavController()
@@ -84,7 +90,7 @@ fun BeaconApp(
 
     Scaffold(
         bottomBar = { NavigationBottomBar(navController = navController) },
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState, modifier = Modifier.imePadding()) }
     ) { innerPadding ->
         Timber.d("composing BeaconApp - content")
         val snackbarState = remember { SnackbarState(coroutineScope, snackbarHostState) }
@@ -198,6 +204,20 @@ fun BeaconApp(
                     composable(Screen.MANAGE_GENRES.name) {
                         ManageGenresScreen(
                             navController = navController
+                        )
+                    }
+                    composable(Screen.MANAGE_RECORDS.name) {
+                        ManageRecordsScreen(
+                            navController = navController,
+                            snackbarState = snackbarState,
+                            recordEditorViewModel = recordEditorViewModel
+                        )
+                    }
+                    composable(Screen.EDIT_RECORD.name) {
+                        RecordEditorScreen(
+                            navController = navController,
+                            recordEditorViewModel = recordEditorViewModel,
+                            artistSelectorViewModel = artistSelectorViewModel
                         )
                     }
                 }

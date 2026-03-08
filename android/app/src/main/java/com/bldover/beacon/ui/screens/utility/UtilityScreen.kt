@@ -49,6 +49,11 @@ fun UtilityScreen(navController: NavController) {
                     navController.navigate(Screen.MANAGE_GENRES.name)
                 }
             }
+            item {
+                UtilityItem(text = "Manage Records") {
+                    navController.navigate(Screen.MANAGE_RECORDS.name)
+                }
+            }
         }
     }
 }

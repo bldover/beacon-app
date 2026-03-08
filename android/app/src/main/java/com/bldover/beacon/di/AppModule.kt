@@ -8,6 +8,7 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import com.bldover.beacon.data.api.ArtistApi
 import com.bldover.beacon.data.api.EventApi
 import com.bldover.beacon.data.api.GenreApi
+import com.bldover.beacon.data.api.RecordApi
 import com.bldover.beacon.data.api.RetrofitInstance
 import com.bldover.beacon.data.api.VenueApi
 import com.bldover.beacon.data.repository.ArtistRepository
@@ -16,6 +17,8 @@ import com.bldover.beacon.data.repository.EventRepository
 import com.bldover.beacon.data.repository.EventRepositoryImpl
 import com.bldover.beacon.data.repository.GenreRepository
 import com.bldover.beacon.data.repository.GenreRepositoryImpl
+import com.bldover.beacon.data.repository.RecordRepository
+import com.bldover.beacon.data.repository.RecordRepositoryImpl
 import com.bldover.beacon.data.repository.UserSettingsRepository
 import com.bldover.beacon.data.repository.VenueRepository
 import com.bldover.beacon.data.repository.VenueRepositoryImpl
@@ -77,6 +80,18 @@ object AppModule {
     @Singleton
     fun providesGenreRepository(genreApi: GenreApi): GenreRepository {
         return GenreRepositoryImpl(genreApi)
+    }
+
+    @Provides
+    @Singleton
+    fun providesRecordApi(): RecordApi {
+        return RetrofitInstance.retrofit.create<RecordApi>()
+    }
+
+    @Provides
+    @Singleton
+    fun providesRecordRepository(recordApi: RecordApi): RecordRepository {
+        return RecordRepositoryImpl(recordApi)
     }
 
     @Provides
