@@ -368,11 +368,13 @@ func (c Cache) GetAlbums() []domain.Album {
 
 func (c *Cache) AddAlbum(album domain.Album) (*domain.Album, error) {
 	log.Debug("Adding album to cache", album)
-	artist, err := c.AddArtist(album.Artist)
-	if err != nil {
-		return nil, err
+	for i, artist := range album.Artists {
+		savedArtist, err := c.AddArtist(artist)
+		if err != nil {
+			return nil, err
+		}
+		album.Artists[i] = *savedArtist
 	}
-	album.Artist = *artist
 	newAlbum, err := c.Database.AddAlbum(context.Background(), album)
 	if err != nil {
 		return nil, err
@@ -392,11 +394,13 @@ func (c *Cache) UpdateAlbum(id string, album domain.Album) error {
 		return errors.New("album is not cached")
 	}
 
-	artist, err := c.AddArtist(album.Artist)
-	if err != nil {
-		return err
+	for i, artist := range album.Artists {
+		savedArtist, err := c.AddArtist(artist)
+		if err != nil {
+			return err
+		}
+		album.Artists[i] = *savedArtist
 	}
-	album.Artist = *artist
 	album.ID = id
 	updatedAlbum, err := c.Database.UpdateAlbum(context.Background(), album)
 	if err != nil {

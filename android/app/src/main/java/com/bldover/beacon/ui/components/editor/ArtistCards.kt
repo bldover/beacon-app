@@ -12,10 +12,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
 import com.bldover.beacon.data.model.artist.Artist
-import com.bldover.beacon.data.model.artist.ArtistType
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.DismissableCard
 import com.bldover.beacon.ui.components.common.TextEntryDialog
@@ -75,7 +74,7 @@ fun ArtistNameDialogEditCard(
 @Composable
 fun SwipeableArtistEditCard(
     artist: Artist,
-    artistType: ArtistType,
+    label: String,
     onSwipe: (Artist) -> Unit,
     onClick: (() -> Unit)? = null,
 ) {
@@ -90,7 +89,7 @@ fun SwipeableArtistEditCard(
             onDismiss = { onSwipe(artist) },
             border = if (artist.id.primary != null) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null,
         ) {
-            SummaryLine(label = artistType.label) {
+            SummaryLine(label = label) {
                 Text(
                     text = artist.name
                 )

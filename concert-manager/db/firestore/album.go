@@ -13,7 +13,7 @@ import (
 
 const albumCollection = "albums"
 
-var albumFields = []string{"Name", "ArtistRef", "Year", "Signed", "ID"}
+var albumFields = []string{"Name", "ArtistRefs", "Year", "Signed", "Wishlisted", "Variant", "Format", "Notes", "CoverImageUrl", "ID"}
 
 type (
 	AlbumClient struct {
@@ -22,24 +22,33 @@ type (
 	}
 
 	AlbumEntity struct {
-		Name      string
-		ArtistRef *firestore.DocumentRef
-		Year      int
-		Signed    bool
-		ID        string
+		Name          string
+		ArtistRefs    []*firestore.DocumentRef
+		Year          int
+		Signed        bool
+		Wishlisted    bool
+		Variant       string
+		Format        string
+		Notes         string
+		CoverImageUrl string
+		ID            string
 	}
 )
 
 func (c *AlbumClient) Add(ctx context.Context, album domain.Album) (string, error) {
 	log.Debug("Attempting to add album", album)
-	artistDoc, err := c.ArtistClient.findDocRef(ctx, album.Artist.ID.Primary)
-	if err != nil && status.Code(err) != codes.NotFound {
-		log.Errorf("Error finding existing artist %v while adding album %v", album.Artist.Name, album)
-		return "", err
-	}
-	if !artistDoc.Exists() {
-		log.Errorf("No existing artist %v while adding album %v", album.Artist.Name, album)
-		return "", errors.New("artist does not exist")
+	artistRefs := make([]*firestore.DocumentRef, 0, len(album.Artists))
+	for _, artist := range album.Artists {
+		artistDoc, err := c.ArtistClient.findDocRef(ctx, artist.ID.Primary)
+		if err != nil && status.Code(err) != codes.NotFound {
+			log.Errorf("Error finding existing artist %v while adding album %v", artist.Name, album)
+			return "", err
+		}
+		if !artistDoc.Exists() {
+			log.Errorf("No existing artist %v while adding album %v", artist.Name, album)
+			return "", errors.New("artist does not exist")
+		}
+		artistRefs = append(artistRefs, artistDoc.Ref)
 	}
 
 	existingAlbum, err := c.findDocRef(ctx, album.ID)
@@ -53,10 +62,15 @@ func (c *AlbumClient) Add(ctx context.Context, album domain.Album) (string, erro
 	}
 
 	albumEntity := AlbumEntity{
-		Name:      album.Name,
-		ArtistRef: artistDoc.Ref,
-		Year:      album.Year,
-		Signed:    album.Signed,
+		Name:          album.Name,
+		ArtistRefs:    artistRefs,
+		Year:          album.Year,
+		Signed:        album.Signed,
+		Wishlisted:    album.Wishlisted,
+		Variant:       album.Variant,
+		Format:        album.Format,
+		Notes:         album.Notes,
+		CoverImageUrl: album.CoverImageUrl,
 	}
 
 	albums := c.Connection.Client.Collection(albumCollection)
@@ -81,22 +95,31 @@ func (c *AlbumClient) Update(ctx context.Context, album domain.Album) error {
 		return err
 	}
 
-	artistDoc, err := c.ArtistClient.findDocRef(ctx, album.Artist.ID.Primary)
-	if err != nil && status.Code(err) != codes.NotFound {
-		log.Errorf("Error finding existing artist %v while updating album %v", album.Artist.Name, album)
-		return err
-	}
-	if !artistDoc.Exists() {
-		log.Errorf("No existing artist %v while updating album %v", album.Artist.Name, album)
-		return errors.New("artist does not exist")
+	artistRefs := make([]*firestore.DocumentRef, 0, len(album.Artists))
+	for _, artist := range album.Artists {
+		artistDoc, err := c.ArtistClient.findDocRef(ctx, artist.ID.Primary)
+		if err != nil && status.Code(err) != codes.NotFound {
+			log.Errorf("Error finding existing artist %v while updating album %v", artist.Name, album)
+			return err
+		}
+		if !artistDoc.Exists() {
+			log.Errorf("No existing artist %v while updating album %v", artist.Name, album)
+			return errors.New("artist does not exist")
+		}
+		artistRefs = append(artistRefs, artistDoc.Ref)
 	}
 
 	albumEntity := AlbumEntity{
-		Name:      album.Name,
-		ArtistRef: artistDoc.Ref,
-		Year:      album.Year,
-		Signed:    album.Signed,
-		ID:        album.ID,
+		Name:          album.Name,
+		ArtistRefs:    artistRefs,
+		Year:          album.Year,
+		Signed:        album.Signed,
+		Wishlisted:    album.Wishlisted,
+		Variant:       album.Variant,
+		Format:        album.Format,
+		Notes:         album.Notes,
+		CoverImageUrl: album.CoverImageUrl,
+		ID:            album.ID,
 	}
 
 	_, err = albumDoc.Ref.Set(ctx, albumEntity)
@@ -154,8 +177,32 @@ func (c *AlbumClient) FindAll(ctx context.Context) ([]domain.Album, error) {
 		if signed, ok := data["Signed"].(bool); ok {
 			album.Signed = signed
 		}
-		if artistRef, ok := data["ArtistRef"].(*firestore.DocumentRef); ok {
-			album.Artist = (*artists)[artistRef.ID]
+		if wishlisted, ok := data["Wishlisted"].(bool); ok {
+			album.Wishlisted = wishlisted
+		}
+		if variant, ok := data["Variant"].(string); ok {
+			album.Variant = variant
+		}
+		if format, ok := data["Format"].(string); ok {
+			album.Format = format
+		}
+		if notes, ok := data["Notes"].(string); ok {
+			album.Notes = notes
+		}
+		if coverImageUrl, ok := data["CoverImageUrl"].(string); ok {
+			album.CoverImageUrl = coverImageUrl
+		}
+		if artistRefs, ok := data["ArtistRefs"].([]interface{}); ok {
+			for _, ref := range artistRefs {
+				if docRef, ok := ref.(*firestore.DocumentRef); ok {
+					if artist, exists := (*artists)[docRef.ID]; exists {
+						album.Artists = append(album.Artists, artist)
+					}
+				}
+			}
+		}
+		if album.Artists == nil {
+			album.Artists = []domain.Artist{}
 		}
 		albums = append(albums, album)
 	}

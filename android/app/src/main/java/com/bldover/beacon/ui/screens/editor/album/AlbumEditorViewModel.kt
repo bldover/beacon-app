@@ -5,6 +5,7 @@ import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.album.Album
+import com.bldover.beacon.data.model.album.AlbumFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,8 +40,27 @@ class AlbumEditorViewModel @Inject constructor() : ViewModel() {
         _albumState.value = _albumState.value.copy(name = name)
     }
 
-    fun updateArtist(artist: Artist) {
-        _albumState.value = _albumState.value.copy(artist = artist)
+    fun addArtist(artist: Artist) {
+        val artists = _albumState.value.artists.toMutableList()
+        if (!artists.contains(artist)) {
+            artists.add(artist)
+        }
+        _albumState.value = _albumState.value.copy(artists = artists)
+    }
+
+    fun removeArtist(artist: Artist) {
+        val artists = _albumState.value.artists.toMutableList()
+        artists.remove(artist)
+        _albumState.value = _albumState.value.copy(artists = artists)
+    }
+
+    fun replaceArtist(old: Artist, new: Artist) {
+        val artists = _albumState.value.artists.toMutableList()
+        val idx = artists.indexOf(old)
+        if (idx >= 0) {
+            artists[idx] = new
+        }
+        _albumState.value = _albumState.value.copy(artists = artists)
     }
 
     fun updateYear(year: Int) {
@@ -49,6 +69,26 @@ class AlbumEditorViewModel @Inject constructor() : ViewModel() {
 
     fun updateSigned(signed: Boolean) {
         _albumState.value = _albumState.value.copy(signed = signed)
+    }
+
+    fun updateWishlisted(wishlisted: Boolean) {
+        _albumState.value = _albumState.value.copy(wishlisted = wishlisted)
+    }
+
+    fun updateVariant(variant: String) {
+        _albumState.value = _albumState.value.copy(variant = variant)
+    }
+
+    fun updateFormat(format: AlbumFormat) {
+        _albumState.value = _albumState.value.copy(format = format)
+    }
+
+    fun updateNotes(notes: String) {
+        _albumState.value = _albumState.value.copy(notes = notes)
+    }
+
+    fun updateCoverImageUri(uri: String) {
+        _albumState.value = _albumState.value.copy(coverImageUri = uri)
     }
 
     fun onSave() {

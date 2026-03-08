@@ -80,7 +80,7 @@ private fun AlbumDetailsCard(
 ) {
     BasicCard(modifier = Modifier.clickable { onClick() }) {
         Text(
-            text = "${album.artist.name} - ${album.name}",
+            text = "${album.artists.joinToString(", ") { it.name }} - ${album.name}",
             style = MaterialTheme.typography.bodyLarge
         )
         Text(

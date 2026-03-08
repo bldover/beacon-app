@@ -92,7 +92,7 @@ func CloneEventDetails(events []EventDetails) []EventDetails {
 
 func CloneAlbum(album Album) Album {
 	clone := album
-	clone.Artist = CloneArtist(album.Artist)
+	clone.Artists = CloneArtists(album.Artists)
 	return clone
 }
 

@@ -18,7 +18,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
-import com.bldover.beacon.data.model.artist.ArtistType
 import com.bldover.beacon.ui.components.common.AddNewCard
 import com.bldover.beacon.ui.components.common.BackButton
 import com.bldover.beacon.ui.components.common.LoadingSpinner
@@ -67,7 +66,7 @@ fun EventEditorScreen(
                         if (headliner != null) {
                             SwipeableArtistEditCard(
                                 artist = headliner,
-                                artistType = ArtistType.HEADLINER,
+                                label = "Headliner",
                                 onSwipe = { eventEditorViewModel.updateHeadliner(null) },
                                 onClick = {
                                     artistEditorViewModel.launchEditor(
@@ -91,7 +90,7 @@ fun EventEditorScreen(
                             )
                         } else {
                             AddNewCard(
-                                label = ArtistType.HEADLINER.label,
+                                label = "Headliner",
                                 onClick = {
                                     artistSelectorViewModel.launchSelector(navController) {
                                         eventEditorViewModel.updateHeadliner(it)
@@ -104,7 +103,7 @@ fun EventEditorScreen(
                     items(items = openers, key = { it.name }) { opener ->
                         SwipeableArtistEditCard(
                             artist = opener,
-                            artistType = ArtistType.OPENER,
+                            label = "Opener",
                             onSwipe = eventEditorViewModel::removeOpener,
                             onClick = {
                                 artistEditorViewModel.launchEditor(
@@ -129,7 +128,7 @@ fun EventEditorScreen(
                     }
                     item {
                         AddNewCard(
-                            label = ArtistType.OPENER.label,
+                            label = "Opener",
                             onClick = {
                                 artistSelectorViewModel.launchSelector(navController) {
                                     eventEditorViewModel.addOpener(it)

@@ -39,7 +39,7 @@ class AlbumsViewModel @Inject constructor(
             _uiState.value = AlbumState.Loading
             try {
                 val albums = albumRepository.getAlbums()
-                    .sortedWith(compareBy({ it.artist.name }, { it.year }))
+                    .sortedWith(compareBy({ it.artists.firstOrNull()?.name ?: "" }, { it.year }))
                 _uiState.value = AlbumState.Success(albums, albums)
                 Timber.i("Loaded ${albums.size} albums")
             } catch (e: Exception) {
