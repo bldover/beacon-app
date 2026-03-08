@@ -37,7 +37,7 @@ func main() {
 		VenueClient:  venueClient,
 		ArtistClient: artistClient,
 	}
-	albumClient := &firestore.AlbumClient{Connection: dbConnection}
+	albumClient := &firestore.AlbumClient{Connection: dbConnection, ArtistClient: artistClient}
 	interactor := &db.EventRepository{
 		VenueRepo:  venueClient,
 		ArtistRepo: artistClient,
