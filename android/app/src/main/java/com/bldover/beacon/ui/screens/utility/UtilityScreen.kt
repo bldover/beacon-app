@@ -50,8 +50,8 @@ fun UtilityScreen(navController: NavController) {
                 }
             }
             item {
-                UtilityItem(text = "Manage Records") {
-                    navController.navigate(Screen.MANAGE_RECORDS.name)
+                UtilityItem(text = "Manage Albums") {
+                    navController.navigate(Screen.MANAGE_ALBUMS.name)
                 }
             }
         }

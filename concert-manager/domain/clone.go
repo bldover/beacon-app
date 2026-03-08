@@ -90,9 +90,9 @@ func CloneEventDetails(events []EventDetails) []EventDetails {
 	return clone
 }
 
-func CloneRecord(record Record) Record {
-	clone := record
-	clone.Artist = CloneArtist(record.Artist)
+func CloneAlbum(album Album) Album {
+	clone := album
+	clone.Artist = CloneArtist(album.Artist)
 	return clone
 }
 

@@ -319,51 +319,51 @@ func (s *Server) refreshRanks(w http.ResponseWriter, r *http.Request) (any, int,
 	return map[string]string{"status": "refresh started"}, http.StatusOK, nil
 }
 
-func (s *Server) handleRecords(w http.ResponseWriter, r *http.Request) (any, int, error) {
+func (s *Server) handleAlbums(w http.ResponseWriter, r *http.Request) (any, int, error) {
 	switch r.Method {
 	case http.MethodGet:
-		records := s.RecordCache.GetRecords()
-		return records, 0, nil
+		albums := s.AlbumCache.GetAlbums()
+		return albums, 0, nil
 	case http.MethodPost:
-		var record domain.Record
-		if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		var album domain.Album
+		if err := json.NewDecoder(r.Body).Decode(&album); err != nil {
 			return nil, http.StatusBadRequest, errors.New("invalid body")
 		}
-		savedRecord, err := s.RecordCache.AddRecord(record)
+		savedAlbum, err := s.AlbumCache.AddAlbum(album)
 		if err != nil {
-			errMsg := fmt.Sprintf("failed to save record: %v", err)
+			errMsg := fmt.Sprintf("failed to save album: %v", err)
 			return nil, http.StatusInternalServerError, errors.New(errMsg)
 		}
-		return savedRecord, 0, nil
+		return savedAlbum, 0, nil
 	case http.MethodPut:
 		pathParts := strings.Split(r.URL.Path, "/")
 		if len(pathParts) != 4 {
-			return nil, http.StatusBadRequest, errors.New("missing record ID in path")
+			return nil, http.StatusBadRequest, errors.New("missing album ID in path")
 		}
 		id := pathParts[3]
 		if len(id) == 0 {
-			return nil, http.StatusBadRequest, errors.New("missing record ID in path")
+			return nil, http.StatusBadRequest, errors.New("missing album ID in path")
 		}
-		var record domain.Record
-		if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		var album domain.Album
+		if err := json.NewDecoder(r.Body).Decode(&album); err != nil {
 			return nil, http.StatusBadRequest, errors.New("invalid body")
 		}
-		if err := s.RecordCache.UpdateRecord(id, record); err != nil {
-			errMsg := fmt.Sprintf("failed to update record: %v", err)
+		if err := s.AlbumCache.UpdateAlbum(id, album); err != nil {
+			errMsg := fmt.Sprintf("failed to update album: %v", err)
 			return nil, http.StatusInternalServerError, errors.New(errMsg)
 		}
 		return nil, 0, nil
 	case http.MethodDelete:
 		pathParts := strings.Split(r.URL.Path, "/")
 		if len(pathParts) != 4 {
-			return nil, http.StatusBadRequest, errors.New("missing record ID in path")
+			return nil, http.StatusBadRequest, errors.New("missing album ID in path")
 		}
 		id := pathParts[3]
 		if len(id) == 0 {
-			return nil, http.StatusBadRequest, errors.New("missing record ID in path")
+			return nil, http.StatusBadRequest, errors.New("missing album ID in path")
 		}
-		if err := s.RecordCache.DeleteRecord(id); err != nil {
-			errMsg := fmt.Sprintf("failed to delete record: %v", err)
+		if err := s.AlbumCache.DeleteAlbum(id); err != nil {
+			errMsg := fmt.Sprintf("failed to delete album: %v", err)
 			return nil, http.StatusInternalServerError, errors.New(errMsg)
 		}
 		return nil, 0, nil
@@ -371,14 +371,14 @@ func (s *Server) handleRecords(w http.ResponseWriter, r *http.Request) (any, int
 	return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
 }
 
-func (s *Server) refreshRecords(w http.ResponseWriter, r *http.Request) (any, int, error) {
+func (s *Server) refreshAlbums(w http.ResponseWriter, r *http.Request) (any, int, error) {
 	if r.Method != http.MethodPost {
 		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
 	}
 
-	if err := s.RecordCache.RefreshRecords(); err != nil {
-		log.Errorf("Failed to refresh records %v", err)
-		return nil, http.StatusInternalServerError, errors.New("failed to refresh records cache")
+	if err := s.AlbumCache.RefreshAlbums(); err != nil {
+		log.Errorf("Failed to refresh albums %v", err)
+		return nil, http.StatusInternalServerError, errors.New("failed to refresh albums cache")
 	}
 	return nil, 0, nil
 }

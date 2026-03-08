@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.screens.editor.record
+package com.bldover.beacon.ui.screens.editor.album
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.bldover.beacon.data.model.record.Record
+import com.bldover.beacon.data.model.album.Album
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.BasicSearchBar
 import com.bldover.beacon.ui.components.common.LoadErrorMessage
@@ -25,82 +25,82 @@ import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.ScrollableItemList
 
 @Composable
-fun SearchableRecordsList(
-    recordState: RecordState,
-    onSearchRecords: (String) -> Unit,
-    onRecordSelected: (Record) -> Unit,
-    onNewRecord: () -> Unit
+fun SearchableAlbumsList(
+    albumState: AlbumState,
+    onSearchAlbums: (String) -> Unit,
+    onAlbumSelected: (Album) -> Unit,
+    onNewAlbum: () -> Unit
 ) {
     Scaffold(
         topBar = {
             BasicSearchBar(
                 modifier = Modifier.fillMaxWidth(),
-                enabled = recordState is RecordState.Success,
-                onQueryChange = onSearchRecords
+                enabled = albumState is AlbumState.Success,
+                onQueryChange = onSearchAlbums
             )
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             Spacer(modifier = Modifier.height(16.dp))
-            when (recordState) {
-                is RecordState.Success -> RecordList(
-                    recordState.filtered,
-                    onRecordSelected,
-                    onNewRecord
+            when (albumState) {
+                is AlbumState.Success -> AlbumList(
+                    albumState.filtered,
+                    onAlbumSelected,
+                    onNewAlbum
                 )
-                is RecordState.Error -> LoadErrorMessage()
-                is RecordState.Loading -> LoadingSpinner()
+                is AlbumState.Error -> LoadErrorMessage()
+                is AlbumState.Loading -> LoadingSpinner()
             }
         }
     }
 }
 
 @Composable
-private fun RecordList(
-    records: List<Record>,
-    onRecordSelected: (Record) -> Unit,
-    onNewRecord: () -> Unit
+private fun AlbumList(
+    albums: List<Album>,
+    onAlbumSelected: (Album) -> Unit,
+    onNewAlbum: () -> Unit
 ) {
     ScrollableItemList(
-        items = records,
-        topAnchor = { NewRecordCard(onNewRecord) },
+        items = albums,
+        topAnchor = { NewAlbumCard(onNewAlbum) },
         getItemKey = { it.id!! }
-    ) { record ->
-        RecordDetailsCard(
-            record = record,
-            onClick = { onRecordSelected(record) }
+    ) { album ->
+        AlbumDetailsCard(
+            album = album,
+            onClick = { onAlbumSelected(album) }
         )
     }
 }
 
 @Composable
-private fun RecordDetailsCard(
-    record: Record,
+private fun AlbumDetailsCard(
+    album: Album,
     onClick: () -> Unit
 ) {
     BasicCard(modifier = Modifier.clickable { onClick() }) {
         Text(
-            text = "${record.artist.name} - ${record.name}",
+            text = "${album.artist.name} - ${album.name}",
             style = MaterialTheme.typography.bodyLarge
         )
         Text(
-            text = record.year.toString(),
+            text = album.year.toString(),
             style = MaterialTheme.typography.bodySmall
         )
     }
 }
 
 @Composable
-private fun NewRecordCard(onNewRecord: () -> Unit) {
-    BasicCard(modifier = Modifier.clickable { onNewRecord() }) {
+private fun NewAlbumCard(onNewAlbum: () -> Unit) {
+    BasicCard(modifier = Modifier.clickable { onNewAlbum() }) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = "New Record")
+            Text(text = "New Album")
             Icon(
                 imageVector = Icons.Default.AddCircle,
-                contentDescription = "New Record"
+                contentDescription = "New Album"
             )
         }
     }

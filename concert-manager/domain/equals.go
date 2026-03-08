@@ -25,6 +25,6 @@ func (v Venue) EqualsFields(o Venue) bool {
 	return v.Name == o.Name && v.City == o.City && v.State == o.State
 }
 
-func (r Record) Equals(o Record) bool {
-	return r.ID == o.ID
+func (a Album) Equals(o Album) bool {
+	return a.ID == o.ID
 }

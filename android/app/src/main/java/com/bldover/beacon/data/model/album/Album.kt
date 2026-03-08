@@ -1,16 +1,16 @@
-package com.bldover.beacon.data.model.record
+package com.bldover.beacon.data.model.album
 
-import com.bldover.beacon.data.dto.RecordDto
+import com.bldover.beacon.data.dto.AlbumDto
 import com.bldover.beacon.data.model.artist.Artist
 
-data class Record(
+data class Album(
     var id: String? = null,
     var name: String = "",
     var artist: Artist = Artist(),
     var year: Int = 0,
     var signed: Boolean = false
 ) {
-    constructor(dto: RecordDto) : this(
+    constructor(dto: AlbumDto) : this(
         id = dto.id.ifBlank { null },
         name = dto.name,
         artist = Artist(dto.artist),
@@ -27,8 +27,8 @@ data class Record(
             || artist.name.contains(searchTerm, ignoreCase = true)
     }
 
-    fun deepCopy(): Record {
-        return Record(
+    fun deepCopy(): Album {
+        return Album(
             id = id,
             name = name,
             artist = artist.deepCopy(),

@@ -22,10 +22,10 @@ type Database interface {
 	AddVenue(context.Context, domain.Venue) (domain.Venue, error)
 	UpdateVenue(context.Context, domain.Venue) (domain.Venue, error)
 	DeleteVenue(context.Context, string) error
-	ListRecords(context.Context) ([]domain.Record, error)
-	AddRecord(context.Context, domain.Record) (domain.Record, error)
-	UpdateRecord(context.Context, domain.Record) (domain.Record, error)
-	DeleteRecord(context.Context, string) error
+	ListAlbums(context.Context) ([]domain.Album, error)
+	AddAlbum(context.Context, domain.Album) (domain.Album, error)
+	UpdateAlbum(context.Context, domain.Album) (domain.Album, error)
+	DeleteAlbum(context.Context, string) error
 }
 
 type Cache struct {
@@ -33,7 +33,7 @@ type Cache struct {
 	savedEvents []domain.Event
 	artists     []domain.Artist
 	venues      []domain.Venue
-	records     []domain.Record
+	albums      []domain.Album
 }
 
 func (c *Cache) LoadCaches() {
@@ -59,12 +59,12 @@ func (c *Cache) LoadCaches() {
 	c.venues = venues
 	log.Info("Successfully initialized venues")
 
-	records, err := c.Database.ListRecords(context.Background())
+	albums, err := c.Database.ListAlbums(context.Background())
 	if err != nil {
-		log.Fatal("Failed to initialize records:", err)
+		log.Fatal("Failed to initialize albums:", err)
 	}
-	c.records = records
-	log.Info("Successfully initialized records")
+	c.albums = albums
+	log.Info("Successfully initialized albums")
 
 	log.Info("Finished initializing saved event cache")
 }
@@ -348,72 +348,72 @@ func (c *Cache) DeleteVenue(id string) error {
 	return nil
 }
 
-func (c *Cache) RefreshRecords() error {
-	log.Info("Refreshing records cache")
-	records, err := c.Database.ListRecords(context.Background())
+func (c *Cache) RefreshAlbums() error {
+	log.Info("Refreshing albums cache")
+	albums, err := c.Database.ListAlbums(context.Background())
 	if err != nil {
 		return err
 	}
-	c.records = records
-	log.Info("Successfully refreshed records")
+	c.albums = albums
+	log.Info("Successfully refreshed albums")
 	return nil
 }
 
-func (c Cache) GetRecords() []domain.Record {
-	if c.records == nil {
-		return []domain.Record{}
+func (c Cache) GetAlbums() []domain.Album {
+	if c.albums == nil {
+		return []domain.Album{}
 	}
-	return slices.Clone(c.records)
+	return slices.Clone(c.albums)
 }
 
-func (c *Cache) AddRecord(record domain.Record) (*domain.Record, error) {
-	log.Debug("Adding record to cache", record)
-	newRecord, err := c.Database.AddRecord(context.Background(), record)
+func (c *Cache) AddAlbum(album domain.Album) (*domain.Album, error) {
+	log.Debug("Adding album to cache", album)
+	newAlbum, err := c.Database.AddAlbum(context.Background(), album)
 	if err != nil {
 		return nil, err
 	}
-	c.records = append(c.records, newRecord)
-	log.Debug("Added record to cache", newRecord)
-	return &newRecord, nil
+	c.albums = append(c.albums, newAlbum)
+	log.Debug("Added album to cache", newAlbum)
+	return &newAlbum, nil
 }
 
-func (c *Cache) UpdateRecord(id string, record domain.Record) error {
-	log.Debugf("Updating record in cache, id=%v, %v", id, record)
-	recordIdx := slices.IndexFunc(c.records, func(r domain.Record) bool {
+func (c *Cache) UpdateAlbum(id string, album domain.Album) error {
+	log.Debugf("Updating album in cache, id=%v, %v", id, album)
+	albumIdx := slices.IndexFunc(c.albums, func(r domain.Album) bool {
 		return r.ID == id
 	})
-	if recordIdx == -1 {
-		log.Errorf("Unable to find record %v when updating cache", id)
-		return errors.New("record is not cached")
+	if albumIdx == -1 {
+		log.Errorf("Unable to find album %v when updating cache", id)
+		return errors.New("album is not cached")
 	}
 
-	record.ID = id
-	updatedRecord, err := c.Database.UpdateRecord(context.Background(), record)
+	album.ID = id
+	updatedAlbum, err := c.Database.UpdateAlbum(context.Background(), album)
 	if err != nil {
 		return err
 	}
 
-	c.records = slices.Replace(c.records, recordIdx, recordIdx+1, updatedRecord)
-	log.Debug("Updated record in cache", updatedRecord)
+	c.albums = slices.Replace(c.albums, albumIdx, albumIdx+1, updatedAlbum)
+	log.Debug("Updated album in cache", updatedAlbum)
 	return nil
 }
 
-func (c *Cache) DeleteRecord(id string) error {
-	log.Debug("Deleting record from cache", id)
-	recordIdx := slices.IndexFunc(c.records, func(r domain.Record) bool {
+func (c *Cache) DeleteAlbum(id string) error {
+	log.Debug("Deleting album from cache", id)
+	albumIdx := slices.IndexFunc(c.albums, func(r domain.Album) bool {
 		return r.ID == id
 	})
-	if recordIdx == -1 {
-		log.Errorf("Unable to find record %v when deleting from cache", id)
-		return errors.New("record is not cached")
+	if albumIdx == -1 {
+		log.Errorf("Unable to find album %v when deleting from cache", id)
+		return errors.New("album is not cached")
 	}
 
-	if err := c.Database.DeleteRecord(context.Background(), id); err != nil {
+	if err := c.Database.DeleteAlbum(context.Background(), id); err != nil {
 		return err
 	}
 
-	c.records = slices.Delete(c.records, recordIdx, recordIdx+1)
-	log.Debug("Deleted record from cache", id)
+	c.albums = slices.Delete(c.albums, albumIdx, albumIdx+1)
+	log.Debug("Deleted album from cache", id)
 	return nil
 }
 

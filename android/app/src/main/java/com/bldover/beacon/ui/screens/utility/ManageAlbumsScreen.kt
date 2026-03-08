@@ -10,61 +10,61 @@ import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.BackButton
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
-import com.bldover.beacon.ui.screens.editor.record.RecordEditorViewModel
-import com.bldover.beacon.ui.screens.editor.record.RecordsViewModel
-import com.bldover.beacon.ui.screens.editor.record.SearchableRecordsList
+import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
+import com.bldover.beacon.ui.screens.editor.album.AlbumsViewModel
+import com.bldover.beacon.ui.screens.editor.album.SearchableAlbumsList
 import timber.log.Timber
 
 @Composable
-fun ManageRecordsScreen(
+fun ManageAlbumsScreen(
     navController: NavController,
     snackbarState: SnackbarState,
-    recordEditorViewModel: RecordEditorViewModel,
-    recordsViewModel: RecordsViewModel = hiltViewModel()
+    albumEditorViewModel: AlbumEditorViewModel,
+    albumsViewModel: AlbumsViewModel = hiltViewModel()
 ) {
-    Timber.d("composing ManageRecordsScreen")
+    Timber.d("composing ManageAlbumsScreen")
     LaunchedEffect(Unit) {
-        recordsViewModel.resetFilter()
+        albumsViewModel.resetFilter()
     }
-    val recordState by recordsViewModel.uiState.collectAsState()
+    val albumState by albumsViewModel.uiState.collectAsState()
 
     ScreenFrame(
         topBar = {
             TitleTopBar(
-                title = "Manage Records",
+                title = "Manage Albums",
                 leadingIcon = { BackButton(navController = navController) }
             )
         }
     ) {
-        SearchableRecordsList(
-            recordState = recordState,
-            onSearchRecords = recordsViewModel::applyFilter,
-            onRecordSelected = { record ->
-                recordEditorViewModel.launchEditor(
+        SearchableAlbumsList(
+            albumState = albumState,
+            onSearchAlbums = albumsViewModel::applyFilter,
+            onAlbumSelected = { album ->
+                albumEditorViewModel.launchEditor(
                     navController = navController,
-                    record = record,
+                    album = album,
                     onSave = { updated ->
-                        recordsViewModel.updateRecord(
-                            record = updated,
+                        albumsViewModel.updateAlbum(
+                            album = updated,
                             onSuccess = { navController.popBackStack() },
                             onError = { msg -> snackbarState.showSnackbar(msg) }
                         )
                     },
                     onDelete = { toDelete ->
-                        recordsViewModel.deleteRecord(
-                            record = toDelete,
+                        albumsViewModel.deleteAlbum(
+                            album = toDelete,
                             onSuccess = { navController.popBackStack() },
                             onError = { msg -> snackbarState.showSnackbar(msg) }
                         )
                     }
                 )
             },
-            onNewRecord = {
-                recordEditorViewModel.launchEditor(
+            onNewAlbum = {
+                albumEditorViewModel.launchEditor(
                     navController = navController,
-                    onSave = { newRecord ->
-                        recordsViewModel.addRecord(
-                            record = newRecord,
+                    onSave = { newAlbum ->
+                        albumsViewModel.addAlbum(
+                            album = newAlbum,
                             onSuccess = { navController.popBackStack() },
                             onError = { msg -> snackbarState.showSnackbar(msg) }
                         )

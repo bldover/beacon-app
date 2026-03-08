@@ -15,8 +15,8 @@ enum class Screen(val title: String) {
     MANAGE_VENUES("Manage Venues"),
     MANAGE_ARTISTS("Manage Artists"),
     MANAGE_GENRES("Manage Genres"),
-    MANAGE_RECORDS("Manage Records"),
-    EDIT_RECORD("Edit Record");
+    MANAGE_ALBUMS("Manage Albums"),
+    EDIT_ALBUM("Edit Album");
 
     companion object {
         fun fromTitle(title: String): Screen {

@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.screens.editor.record
+package com.bldover.beacon.ui.screens.editor.album
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,20 +32,20 @@ import com.bldover.beacon.ui.components.editor.SummaryLine
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorViewModel
 
 @Composable
-fun RecordEditorScreen(
+fun AlbumEditorScreen(
     navController: NavController,
-    recordEditorViewModel: RecordEditorViewModel,
+    albumEditorViewModel: AlbumEditorViewModel,
     artistSelectorViewModel: ArtistSelectorViewModel
 ) {
     ScreenFrame(
         topBar = {
             TitleTopBar(
-                title = "Edit Record",
+                title = "Edit Album",
                 leadingIcon = { BackButton(navController = navController) }
             )
         }
     ) {
-        val record by recordEditorViewModel.recordState.collectAsState()
+        val album by albumEditorViewModel.albumState.collectAsState()
         var showNameDialog by remember { mutableStateOf(false) }
         var showYearPicker by remember { mutableStateOf(false) }
 
@@ -60,31 +60,31 @@ fun RecordEditorScreen(
                         .clickable { showNameDialog = true }
                 ) {
                     SummaryLine(label = "Name") {
-                        Text(text = record.name)
+                        Text(text = album.name)
                     }
                 }
                 TextEntryDialog(
                     isVisible = showNameDialog,
                     title = "Edit Name",
-                    label = "Record Name",
-                    initialValue = record.name,
+                    label = "Album Name",
+                    initialValue = album.name,
                     onDismiss = { showNameDialog = false },
                     onSave = {
-                        recordEditorViewModel.updateName(it)
+                        albumEditorViewModel.updateName(it)
                         showNameDialog = false
                     }
                 )
             }
 
             item {
-                if (record.artist.isPopulated()) {
+                if (album.artist.isPopulated()) {
                     BasicCard(modifier = Modifier.clickable {
                         artistSelectorViewModel.launchSelector(navController) {
-                            recordEditorViewModel.updateArtist(it)
+                            albumEditorViewModel.updateArtist(it)
                         }
                     }) {
                         SummaryLine(label = "Artist") {
-                            Text(text = record.artist.name)
+                            Text(text = album.artist.name)
                         }
                     }
                 } else {
@@ -92,7 +92,7 @@ fun RecordEditorScreen(
                         label = "Select Artist",
                         onClick = {
                             artistSelectorViewModel.launchSelector(navController) {
-                                recordEditorViewModel.updateArtist(it)
+                                albumEditorViewModel.updateArtist(it)
                             }
                         }
                     )
@@ -106,15 +106,15 @@ fun RecordEditorScreen(
                         .clickable { showYearPicker = true }
                 ) {
                     SummaryLine(label = "Year") {
-                        Text(text = if (record.year == 0) "" else record.year.toString())
+                        Text(text = if (album.year == 0) "" else album.year.toString())
                     }
                 }
                 YearPickerDialog(
                     isVisible = showYearPicker,
-                    selectedYear = record.year,
+                    selectedYear = album.year,
                     onDismiss = { showYearPicker = false },
                     onYearSelected = {
-                        recordEditorViewModel.updateYear(it)
+                        albumEditorViewModel.updateYear(it)
                         showYearPicker = false
                     }
                 )
@@ -124,8 +124,8 @@ fun RecordEditorScreen(
                 BasicCard {
                     SummaryLine(label = "Signed") {
                         Switch(
-                            checked = record.signed,
-                            onCheckedChange = recordEditorViewModel::updateSigned
+                            checked = album.signed,
+                            onCheckedChange = albumEditorViewModel::updateSigned
                         )
                     }
                 }
@@ -138,13 +138,13 @@ fun RecordEditorScreen(
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (recordEditorViewModel.showDelete) {
-                        DeleteButton(onDelete = { recordEditorViewModel.onDelete() })
+                    if (albumEditorViewModel.showDelete) {
+                        DeleteButton(onDelete = { albumEditorViewModel.onDelete() })
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     SaveCancelButtons(
                         onCancel = { navController.popBackStack() },
-                        onSave = { recordEditorViewModel.onSave() }
+                        onSave = { albumEditorViewModel.onSave() }
                     )
                 }
             }

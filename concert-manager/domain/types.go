@@ -56,7 +56,7 @@ type (
 		LastFm       []string `json:"lastFm"`
 		Ticketmaster []string `json:"ticketmaster"`
 	}
-	Record struct {
+	Album struct {
 		Name   string `json:"name"`
 		Artist Artist `json:"artist"`
 		Year   int    `json:"year"`

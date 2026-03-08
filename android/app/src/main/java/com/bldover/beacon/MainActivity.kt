@@ -42,11 +42,11 @@ import com.bldover.beacon.ui.screens.saved.PlannerScreen
 import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingEventsViewModel
 import com.bldover.beacon.ui.screens.upcoming.UpcomingScreen
-import com.bldover.beacon.ui.screens.editor.record.RecordEditorScreen
-import com.bldover.beacon.ui.screens.editor.record.RecordEditorViewModel
+import com.bldover.beacon.ui.screens.editor.album.AlbumEditorScreen
+import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
+import com.bldover.beacon.ui.screens.utility.ManageAlbumsScreen
 import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
 import com.bldover.beacon.ui.screens.utility.ManageGenresScreen
-import com.bldover.beacon.ui.screens.utility.ManageRecordsScreen
 import com.bldover.beacon.ui.screens.utility.ManageVenuesScreen
 import com.bldover.beacon.ui.screens.utility.SettingsState
 import com.bldover.beacon.ui.screens.utility.UserSettingsScreen
@@ -80,7 +80,7 @@ fun BeaconApp(
     eventEditorViewModel: EventEditorViewModel = hiltViewModel(),
     artistEditorViewModel: ArtistEditorViewModel = hiltViewModel(),
     venueEditorViewModel: VenueEditorViewModel = hiltViewModel(),
-    recordEditorViewModel: RecordEditorViewModel = hiltViewModel()
+    albumEditorViewModel: AlbumEditorViewModel = hiltViewModel()
 ) {
     Timber.d("composing BeaconApp")
     val navController = rememberNavController()
@@ -206,17 +206,17 @@ fun BeaconApp(
                             navController = navController
                         )
                     }
-                    composable(Screen.MANAGE_RECORDS.name) {
-                        ManageRecordsScreen(
+                    composable(Screen.MANAGE_ALBUMS.name) {
+                        ManageAlbumsScreen(
                             navController = navController,
                             snackbarState = snackbarState,
-                            recordEditorViewModel = recordEditorViewModel
+                            albumEditorViewModel = albumEditorViewModel
                         )
                     }
-                    composable(Screen.EDIT_RECORD.name) {
-                        RecordEditorScreen(
+                    composable(Screen.EDIT_ALBUM.name) {
+                        AlbumEditorScreen(
                             navController = navController,
-                            recordEditorViewModel = recordEditorViewModel,
+                            albumEditorViewModel = albumEditorViewModel,
                             artistSelectorViewModel = artistSelectorViewModel
                         )
                     }

@@ -26,17 +26,17 @@ type (
 		Delete(context.Context, string) error
 		FindAll(context.Context) ([]domain.Event, error)
 	}
-	RecordDatabase interface {
-		Add(context.Context, domain.Record) (string, error)
-		Update(context.Context, domain.Record) error
+	AlbumDatabase interface {
+		Add(context.Context, domain.Album) (string, error)
+		Update(context.Context, domain.Album) error
 		Delete(context.Context, string) error
-		FindAll(context.Context) ([]domain.Record, error)
+		FindAll(context.Context) ([]domain.Album, error)
 	}
 	EventRepository struct {
 		VenueRepo  VenueDatabase
 		ArtistRepo ArtistDatabase
 		EventRepo  EventDatabase
-		RecordRepo RecordDatabase
+		AlbumRepo  AlbumDatabase
 	}
 )
 
@@ -192,48 +192,48 @@ func (r *EventRepository) ListEvents(ctx context.Context) ([]domain.Event, error
 	return events, nil
 }
 
-func (r *EventRepository) AddRecord(ctx context.Context, record domain.Record) (domain.Record, error) {
-	log.Debug("Request to add record", record)
-	newRecord := domain.CloneRecord(record)
-	id, err := r.RecordRepo.Add(ctx, newRecord)
+func (r *EventRepository) AddAlbum(ctx context.Context, album domain.Album) (domain.Album, error) {
+	log.Debug("Request to add album", album)
+	newAlbum := domain.CloneAlbum(album)
+	id, err := r.AlbumRepo.Add(ctx, newAlbum)
 	if err != nil {
-		log.Errorf("Error while adding record %v, %v\n", record, err)
-		return record, err
+		log.Errorf("Error while adding album %v, %v\n", album, err)
+		return album, err
 	}
-	newRecord.ID = id
-	log.Debug("Added record to database", newRecord)
-	return newRecord, nil
+	newAlbum.ID = id
+	log.Debug("Added album to database", newAlbum)
+	return newAlbum, nil
 }
 
-func (r *EventRepository) UpdateRecord(ctx context.Context, record domain.Record) (domain.Record, error) {
-	log.Debug("Request to update record", record)
-	updateRecord := domain.CloneRecord(record)
-	err := r.RecordRepo.Update(ctx, updateRecord)
+func (r *EventRepository) UpdateAlbum(ctx context.Context, album domain.Album) (domain.Album, error) {
+	log.Debug("Request to update album", album)
+	updateAlbum := domain.CloneAlbum(album)
+	err := r.AlbumRepo.Update(ctx, updateAlbum)
 	if err != nil {
-		log.Errorf("Error while updating record %v, %v\n", record, err)
-		return record, err
+		log.Errorf("Error while updating album %v, %v\n", album, err)
+		return album, err
 	}
-	log.Debug("Updated record in database", updateRecord)
-	return updateRecord, nil
+	log.Debug("Updated album in database", updateAlbum)
+	return updateAlbum, nil
 }
 
-func (r *EventRepository) DeleteRecord(ctx context.Context, id string) error {
-	log.Debug("Request to delete record", id)
-	err := r.RecordRepo.Delete(ctx, id)
+func (r *EventRepository) DeleteAlbum(ctx context.Context, id string) error {
+	log.Debug("Request to delete album", id)
+	err := r.AlbumRepo.Delete(ctx, id)
 	if err != nil {
-		log.Errorf("Error while deleting record %v, %v\n", id, err)
+		log.Errorf("Error while deleting album %v, %v\n", id, err)
 		return err
 	}
-	log.Debug("Deleted record from database", id)
+	log.Debug("Deleted album from database", id)
 	return nil
 }
 
-func (r *EventRepository) ListRecords(ctx context.Context) ([]domain.Record, error) {
-	log.Debug("Request to list all records")
-	records, err := r.RecordRepo.FindAll(ctx)
+func (r *EventRepository) ListAlbums(ctx context.Context) ([]domain.Album, error) {
+	log.Debug("Request to list all albums")
+	albums, err := r.AlbumRepo.FindAll(ctx)
 	if err != nil {
-		log.Error("Error while listing all records", err)
+		log.Error("Error while listing all albums", err)
 		return nil, err
 	}
-	return records, nil
+	return albums, nil
 }
