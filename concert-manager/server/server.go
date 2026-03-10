@@ -22,6 +22,7 @@ type Server struct {
 	UpcomingEventsCache upcomingEventsStore
 	RanksCache          ranksRefresher
 	SyncService         dataSyncService
+	ImageUploader       imageUploader
 }
 
 type eventLoader interface {
@@ -89,6 +90,10 @@ type ranksRefresher interface {
 	DoRefresh()
 }
 
+type imageUploader interface {
+	UploadImage(context.Context, io.Reader, string) (string, error)
+}
+
 const port = ":3001"
 
 func (s *Server) StartServer() {
@@ -105,6 +110,7 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/albums", s.handleRequest(s.handleAlbums))
 	http.HandleFunc("/v1/albums/", s.handleRequest(s.handleAlbums))
 	http.HandleFunc("/v1/albums/refresh", s.handleRequest(s.refreshAlbums))
+	http.HandleFunc("/v1/albums/images", s.handleRequest(s.handleAlbumImages))
 	http.HandleFunc("/v1/artists", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/", s.handleRequest(s.handleArtists))
 	http.HandleFunc("/v1/artists/refresh", s.handleRequest(s.refreshArtists))

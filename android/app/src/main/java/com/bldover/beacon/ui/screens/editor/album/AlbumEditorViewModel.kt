@@ -1,19 +1,28 @@
 package com.bldover.beacon.ui.screens.editor.album
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.album.Album
 import com.bldover.beacon.data.model.album.AlbumFormat
+import com.bldover.beacon.data.repository.AlbumRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.time.LocalDate
 import javax.inject.Inject
 
 @HiltViewModel
-class AlbumEditorViewModel @Inject constructor() : ViewModel() {
+class AlbumEditorViewModel @Inject constructor(
+    application: Application,
+    private val albumRepository: AlbumRepository
+) : AndroidViewModel(application) {
 
     private val _albumState = MutableStateFlow(Album())
     val albumState = _albumState.asStateFlow()
@@ -87,8 +96,26 @@ class AlbumEditorViewModel @Inject constructor() : ViewModel() {
         _albumState.value = _albumState.value.copy(notes = notes)
     }
 
-    fun updateCoverImageUri(uri: String) {
-        _albumState.value = _albumState.value.copy(coverImageUri = uri)
+    fun clearCoverImage() {
+        _albumState.value = _albumState.value.copy(coverImageUri = null)
+    }
+
+    fun uploadCoverImage(uriString: String, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val uri = Uri.parse(uriString)
+                val contentResolver = getApplication<Application>().contentResolver
+                val contentType = contentResolver.getType(uri) ?: "image/jpeg"
+                val inputStream = contentResolver.openInputStream(uri) ?: return@launch
+                val bytes = inputStream.readBytes()
+                inputStream.close()
+                val url = albumRepository.uploadCoverImage(bytes, contentType)
+                _albumState.value = _albumState.value.copy(coverImageUri = url)
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to upload cover image")
+                onError("Error uploading cover image, try again later")
+            }
+        }
     }
 
     fun onSave() {

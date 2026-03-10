@@ -25,7 +25,7 @@ data class Album(
         variant = dto.variant,
         format = AlbumFormat.fromString(dto.format),
         notes = dto.notes,
-        coverImageUri = dto.coverImageUri
+        coverImageUri = dto.coverImageUrl.ifBlank { null }
     )
 
     fun isPopulated(): Boolean {

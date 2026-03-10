@@ -3,6 +3,7 @@ package main
 import (
 	"concert-manager/db"
 	"concert-manager/db/firestore"
+	"concert-manager/external/gcs"
 	"concert-manager/external/lastfm"
 	"concert-manager/external/spotify"
 	"concert-manager/external/ticketmaster"
@@ -23,6 +24,11 @@ func main() {
 	dbConnection, err := firestore.Setup()
 	if err != nil {
 		log.Fatal("Failed to set up database:", err)
+	}
+
+	gcsClient, err := gcs.Setup()
+	if err != nil {
+		log.Fatal("Failed to set up GCS client:", err)
 	}
 
 	if slices.Contains(os.Args, "--test") {
@@ -97,6 +103,7 @@ func main() {
 	server.UpcomingEventsCache = upcomingCache
 	server.RanksCache = artistRanksCache
 	server.SyncService = upcomingCache
+	server.ImageUploader = gcsClient
 
 	server.StartServer()
 }

@@ -10,6 +10,7 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -86,7 +87,7 @@ fun AlbumEditorScreen(
             contract = ActivityResultContracts.TakePicture()
         ) { success ->
             if (success) {
-                cameraImageUri.value?.let { albumEditorViewModel.updateCoverImageUri(it.toString()) }
+                cameraImageUri.value?.let { albumEditorViewModel.uploadCoverImage(it.toString()) }
             }
         }
 
@@ -99,7 +100,7 @@ fun AlbumEditorScreen(
                         it, Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
                 }
-                albumEditorViewModel.updateCoverImageUri(it.toString())
+                albumEditorViewModel.uploadCoverImage(it.toString())
             }
         }
 
@@ -117,28 +118,44 @@ fun AlbumEditorScreen(
             AlertDialog(
                 onDismissRequest = { showImageSourceDialog = false },
                 title = { Text("Cover Image") },
-                text = null,
-                confirmButton = {
-                    Button(onClick = {
-                        showImageSourceDialog = false
-                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                            == PackageManager.PERMISSION_GRANTED
-                        ) {
-                            val uri = createCameraUri(context)
-                            cameraImageUri.value = uri
-                            cameraLauncher.launch(uri)
-                        } else {
-                            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                        }
-                    }) { Text("Take Photo") }
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showImageSourceDialog = false
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                                    == PackageManager.PERMISSION_GRANTED
+                                ) {
+                                    val uri = createCameraUri(context)
+                                    cameraImageUri.value = uri
+                                    cameraLauncher.launch(uri)
+                                } else {
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            }
+                        ) { Text("Take Photo") }
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showImageSourceDialog = false
+                                galleryLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            }
+                        ) { Text("Choose from Gallery") }
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                showImageSourceDialog = false
+                                albumEditorViewModel.clearCoverImage()
+                            }
+                        ) { Text("Clear Image") }
+                    }
                 },
+                confirmButton = {},
                 dismissButton = {
-                    Button(onClick = {
-                        showImageSourceDialog = false
-                        galleryLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    }) { Text("Choose from Gallery") }
+                    Button(onClick = { showImageSourceDialog = false }) { Text("Cancel") }
                 }
             )
         }

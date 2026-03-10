@@ -371,6 +371,34 @@ func (s *Server) handleAlbums(w http.ResponseWriter, r *http.Request) (any, int,
 	return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
 }
 
+func (s *Server) handleAlbumImages(w http.ResponseWriter, r *http.Request) (any, int, error) {
+	if r.Method != http.MethodPost {
+		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		return nil, http.StatusBadRequest, errors.New("failed to parse multipart form")
+	}
+
+	file, header, err := r.FormFile("image")
+	if err != nil {
+		return nil, http.StatusBadRequest, errors.New("missing image in form")
+	}
+	defer file.Close()
+
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/jpeg"
+	}
+
+	url, err := s.ImageUploader.UploadImage(r.Context(), file, contentType)
+	if err != nil {
+		errMsg := fmt.Sprintf("failed to upload image: %v", err)
+		return nil, http.StatusInternalServerError, errors.New(errMsg)
+	}
+	return map[string]string{"url": url}, 0, nil
+}
+
 func (s *Server) refreshAlbums(w http.ResponseWriter, r *http.Request) (any, int, error) {
 	if r.Method != http.MethodPost {
 		return nil, http.StatusMethodNotAllowed, errors.New("unsupported method")

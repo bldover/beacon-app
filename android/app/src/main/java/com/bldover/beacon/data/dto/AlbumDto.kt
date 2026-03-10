@@ -12,7 +12,7 @@ data class AlbumDto(
     val variant: String,
     val format: String,
     val notes: String,
-    val coverImageUri: String?
+    val coverImageUrl: String
 ) {
     constructor(album: Album) : this(
         id = album.id ?: "",
@@ -24,6 +24,6 @@ data class AlbumDto(
         variant = album.variant,
         format = album.format.displayName,
         notes = album.notes,
-        coverImageUri = album.coverImageUri
+        coverImageUrl = album.coverImageUri ?: ""
     )
 }
