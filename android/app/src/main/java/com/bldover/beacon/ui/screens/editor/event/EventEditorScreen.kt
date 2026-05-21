@@ -1,19 +1,10 @@
 package com.bldover.beacon.ui.screens.editor.event
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
@@ -24,9 +15,8 @@ import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.components.editor.DateEditCard
-import com.bldover.beacon.ui.components.editor.DeleteButton
-import com.bldover.beacon.ui.components.editor.PurchasedSwitch
-import com.bldover.beacon.ui.components.editor.SaveCancelButtons
+import com.bldover.beacon.ui.components.editor.SaveableEditFieldsColumn
+import com.bldover.beacon.ui.components.editor.ReducedMinSizeSwitch
 import com.bldover.beacon.ui.components.editor.SwipeableArtistEditCard
 import com.bldover.beacon.ui.components.editor.VenueEditCard
 import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
@@ -60,7 +50,12 @@ fun EventEditorScreen(
         when (eventState) {
             is EventEditorState.Success -> {
                 val event = (eventState as EventEditorState.Success).event
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                SaveableEditFieldsColumn(
+                    onSave = { eventEditorViewModel.onSave() },
+                    onCancel = { navController.popBackStack() },
+                    showDelete = eventEditorViewModel.showDelete,
+                    onDelete = { eventEditorViewModel.onDelete() }
+                ) {
                     val headliner = event.artists.find { it.headliner }
                     item {
                         if (headliner != null) {
@@ -154,26 +149,10 @@ fun EventEditorScreen(
                     }
                     if (!event.date.isBefore(LocalDate.now())) {
                         item {
-                            PurchasedSwitch(
+                            ReducedMinSizeSwitch(
+                                label = "Purchased",
                                 checked = event.purchased,
                                 onChange = { eventEditorViewModel.updatePurchased(it) }
-                            )
-                        }
-                    }
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            if (eventEditorViewModel.showDelete) {
-                                DeleteButton(onDelete = { eventEditorViewModel.onDelete() })
-                            }
-                            Spacer(modifier = Modifier.weight(1f))
-                            SaveCancelButtons(
-                                onCancel = { navController.popBackStack() },
-                                onSave = { eventEditorViewModel.onSave() }
                             )
                         }
                     }

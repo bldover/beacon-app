@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.screens.saved
+package com.bldover.beacon.ui.screens.events
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row

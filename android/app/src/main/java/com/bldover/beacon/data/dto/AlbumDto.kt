@@ -9,8 +9,10 @@ data class AlbumDto(
     val year: Int,
     val signed: Boolean,
     val wishlisted: Boolean,
+    val limitedEdition: Boolean,
     val variant: String,
     val format: String,
+    val genre: String,
     val notes: String,
     val coverImageUrl: String
 ) {
@@ -21,8 +23,10 @@ data class AlbumDto(
         year = album.year,
         signed = album.signed,
         wishlisted = album.wishlisted,
+        limitedEdition = album.limitedEdition,
         variant = album.variant,
         format = album.format.displayName,
+        genre = album.genre,
         notes = album.notes,
         coverImageUrl = album.coverImageUri ?: ""
     )

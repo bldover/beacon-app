@@ -84,12 +84,20 @@ class AlbumEditorViewModel @Inject constructor(
         _albumState.value = _albumState.value.copy(wishlisted = wishlisted)
     }
 
+    fun updateLimitedEdition(limitedEdition: Boolean) {
+        _albumState.value = _albumState.value.copy(limitedEdition = limitedEdition)
+    }
+
     fun updateVariant(variant: String) {
         _albumState.value = _albumState.value.copy(variant = variant)
     }
 
     fun updateFormat(format: AlbumFormat) {
         _albumState.value = _albumState.value.copy(format = format)
+    }
+
+    fun updateGenre(genre: String) {
+        _albumState.value = _albumState.value.copy(genre = genre)
     }
 
     fun updateNotes(notes: String) {

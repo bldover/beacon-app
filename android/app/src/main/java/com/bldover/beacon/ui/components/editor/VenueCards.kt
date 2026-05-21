@@ -39,18 +39,18 @@ fun VenueEditCard(
     onClick: () -> Unit = {}
 ) {
     Timber.d("composing VenueEditCard : $venue")
-    BasicCard(
-        modifier = Modifier.clickable { onClick() },
-        border = if (venue.id.primary != null) BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary) else null
+    SummaryCard(
+        label = "Venue",
+        onClick = onClick,
+        showBorder = venue.id.primary != null,
+        borderStroke = BorderStroke(width = 1.dp, color = MaterialTheme.colorScheme.primary)
     ) {
-        SummaryLine(label = "Venue") {
-            Text(
-                text = venue.name
-            )
-            Text(
-                text = "${venue.city}, ${venue.state}",
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+        Text(
+            text = venue.name
+        )
+        Text(
+            text = "${venue.city}, ${venue.state}",
+            style = MaterialTheme.typography.bodySmall
+        )
     }
 }

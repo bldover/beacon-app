@@ -7,17 +7,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.ui.components.common.BasicCard
 import com.bldover.beacon.ui.components.common.DismissableCard
-import com.bldover.beacon.ui.components.common.TextEntryDialog
 
 @Composable
 fun ArtistDetailsCard(
@@ -40,35 +35,6 @@ fun ArtistDetailsCard(
             color = if (artist.genres.hasUserGenre()) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onErrorContainer
         )
     }
-}
-
-@Composable
-fun ArtistNameDialogEditCard(
-    artist: Artist,
-    onValueChange: (String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    BasicCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = { showDialog = true })
-    ) {
-        SummaryLine(label = "Name") {
-            Text(text = artist.name)
-        }
-    }
-
-    TextEntryDialog(
-        isVisible = showDialog,
-        title = "Edit Name",
-        label = "Artist Name",
-        initialValue = artist.name,
-        onDismiss = { showDialog = false },
-        onSave = {
-            onValueChange(it)
-            showDialog = false
-        }
-    )
 }
 
 @Composable

@@ -1,13 +1,11 @@
-package com.bldover.beacon.ui.screens.upcoming
+package com.bldover.beacon.ui.screens.events
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -33,7 +31,6 @@ import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.components.common.UpcomingEventCard
 import com.bldover.beacon.ui.screens.editor.event.EventEditorViewModel
-import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
 import timber.log.Timber
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

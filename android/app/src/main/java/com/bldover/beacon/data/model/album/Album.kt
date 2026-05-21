@@ -10,8 +10,10 @@ data class Album(
     var year: Int = 9999,
     var signed: Boolean = false,
     var wishlisted: Boolean = false,
+    var limitedEdition: Boolean = false,
     var variant: String = "",
     var format: AlbumFormat = AlbumFormat.LP,
+    var genre: String = "",
     var notes: String = "",
     var coverImageUri: String? = null
 ) {
@@ -22,8 +24,10 @@ data class Album(
         year = dto.year,
         signed = dto.signed,
         wishlisted = dto.wishlisted,
+        limitedEdition = dto.limitedEdition,
         variant = dto.variant,
         format = AlbumFormat.fromString(dto.format),
+        genre = dto.genre,
         notes = dto.notes,
         coverImageUri = dto.coverImageUrl.ifBlank { null }
     )
@@ -49,8 +53,10 @@ data class Album(
             year = year,
             signed = signed,
             wishlisted = wishlisted,
+            limitedEdition = limitedEdition,
             variant = variant,
             format = format,
+            genre = genre,
             notes = notes,
             coverImageUri = coverImageUri
         )

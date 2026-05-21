@@ -10,6 +10,7 @@ import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.BackButton
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
+import com.bldover.beacon.ui.screens.albums.AlbumDetailsViewModel
 import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
 import com.bldover.beacon.ui.screens.editor.album.AlbumsViewModel
 import com.bldover.beacon.ui.screens.editor.album.SearchableAlbumsList
@@ -20,6 +21,7 @@ fun ManageAlbumsScreen(
     navController: NavController,
     snackbarState: SnackbarState,
     albumEditorViewModel: AlbumEditorViewModel,
+    albumDetailsViewModel: AlbumDetailsViewModel,
     albumsViewModel: AlbumsViewModel = hiltViewModel()
 ) {
     Timber.d("composing ManageAlbumsScreen")
@@ -40,24 +42,7 @@ fun ManageAlbumsScreen(
             albumState = albumState,
             onSearchAlbums = albumsViewModel::applyFilter,
             onAlbumSelected = { album ->
-                albumEditorViewModel.launchEditor(
-                    navController = navController,
-                    album = album,
-                    onSave = { updated ->
-                        albumsViewModel.updateAlbum(
-                            album = updated,
-                            onSuccess = { navController.popBackStack() },
-                            onError = { msg -> snackbarState.showSnackbar(msg) }
-                        )
-                    },
-                    onDelete = { toDelete ->
-                        albumsViewModel.deleteAlbum(
-                            album = toDelete,
-                            onSuccess = { navController.popBackStack() },
-                            onError = { msg -> snackbarState.showSnackbar(msg) }
-                        )
-                    }
-                )
+                albumDetailsViewModel.launchDetails(navController, album)
             },
             onNewAlbum = {
                 albumEditorViewModel.launchEditor(

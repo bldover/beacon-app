@@ -57,16 +57,18 @@ type (
 		Ticketmaster []string `json:"ticketmaster"`
 	}
 	Album struct {
-		Name          string      `json:"name"`
-		Artists       []Artist    `json:"artists"`
-		Year          int         `json:"year"`
-		Signed        bool        `json:"signed"`
-		Wishlisted    bool        `json:"wishlisted"`
-		Variant       string      `json:"variant"`
-		Format        string      `json:"format"`
-		Notes         string      `json:"notes"`
-		CoverImageUrl string      `json:"coverImageUrl"`
-		ID            string      `json:"id"`
+		Name           string   `json:"name"`
+		Artists        []Artist `json:"artists"`
+		Year           int      `json:"year"`
+		Signed         bool     `json:"signed"`
+		Wishlisted     bool     `json:"wishlisted"`
+		LimitedEdition bool     `json:"limitedEdition"`
+		Variant        string   `json:"variant"`
+		Format         string   `json:"format"`
+		Genre          string   `json:"genre"`
+		Notes          string   `json:"notes"`
+		CoverImageUrl  string   `json:"coverImageUrl"`
+		ID             string   `json:"id"`
 	}
 )
 

@@ -5,9 +5,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import com.bldover.beacon.ui.components.common.ExpandableCard
 import timber.log.Timber
 import java.time.LocalDate
+
+@Preview
+@Composable
+fun DateEditCardPreview() {
+    DateEditCard(
+        date = LocalDate.now(),
+        onChange = {}
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -13,7 +13,7 @@ import (
 
 const albumCollection = "albums"
 
-var albumFields = []string{"Name", "ArtistRefs", "Year", "Signed", "Wishlisted", "Variant", "Format", "Notes", "CoverImageUrl", "ID"}
+var albumFields = []string{"Name", "ArtistRefs", "Year", "Signed", "Wishlisted", "LimitedEdition", "Variant", "Format", "Genre", "Notes", "CoverImageUrl", "ID"}
 
 type (
 	AlbumClient struct {
@@ -22,16 +22,18 @@ type (
 	}
 
 	AlbumEntity struct {
-		Name          string
-		ArtistRefs    []*firestore.DocumentRef
-		Year          int
-		Signed        bool
-		Wishlisted    bool
-		Variant       string
-		Format        string
-		Notes         string
-		CoverImageUrl string
-		ID            string
+		Name           string
+		ArtistRefs     []*firestore.DocumentRef
+		Year           int
+		Signed         bool
+		Wishlisted     bool
+		LimitedEdition bool
+		Variant        string
+		Format         string
+		Genre          string
+		Notes          string
+		CoverImageUrl  string
+		ID             string
 	}
 )
 
@@ -62,15 +64,17 @@ func (c *AlbumClient) Add(ctx context.Context, album domain.Album) (string, erro
 	}
 
 	albumEntity := AlbumEntity{
-		Name:          album.Name,
-		ArtistRefs:    artistRefs,
-		Year:          album.Year,
-		Signed:        album.Signed,
-		Wishlisted:    album.Wishlisted,
-		Variant:       album.Variant,
-		Format:        album.Format,
-		Notes:         album.Notes,
-		CoverImageUrl: album.CoverImageUrl,
+		Name:           album.Name,
+		ArtistRefs:     artistRefs,
+		Year:           album.Year,
+		Signed:         album.Signed,
+		Wishlisted:     album.Wishlisted,
+		LimitedEdition: album.LimitedEdition,
+		Variant:        album.Variant,
+		Format:         album.Format,
+		Genre:          album.Genre,
+		Notes:          album.Notes,
+		CoverImageUrl:  album.CoverImageUrl,
 	}
 
 	albums := c.Connection.Client.Collection(albumCollection)
@@ -110,16 +114,18 @@ func (c *AlbumClient) Update(ctx context.Context, album domain.Album) error {
 	}
 
 	albumEntity := AlbumEntity{
-		Name:          album.Name,
-		ArtistRefs:    artistRefs,
-		Year:          album.Year,
-		Signed:        album.Signed,
-		Wishlisted:    album.Wishlisted,
-		Variant:       album.Variant,
-		Format:        album.Format,
-		Notes:         album.Notes,
-		CoverImageUrl: album.CoverImageUrl,
-		ID:            album.ID,
+		Name:           album.Name,
+		ArtistRefs:     artistRefs,
+		Year:           album.Year,
+		Signed:         album.Signed,
+		Wishlisted:     album.Wishlisted,
+		LimitedEdition: album.LimitedEdition,
+		Variant:        album.Variant,
+		Format:         album.Format,
+		Genre:          album.Genre,
+		Notes:          album.Notes,
+		CoverImageUrl:  album.CoverImageUrl,
+		ID:             album.ID,
 	}
 
 	_, err = albumDoc.Ref.Set(ctx, albumEntity)
@@ -180,11 +186,17 @@ func (c *AlbumClient) FindAll(ctx context.Context) ([]domain.Album, error) {
 		if wishlisted, ok := data["Wishlisted"].(bool); ok {
 			album.Wishlisted = wishlisted
 		}
+		if limitedEdition, ok := data["LimitedEdition"].(bool); ok {
+			album.LimitedEdition = limitedEdition
+		}
 		if variant, ok := data["Variant"].(string); ok {
 			album.Variant = variant
 		}
 		if format, ok := data["Format"].(string); ok {
 			album.Format = format
+		}
+		if genre, ok := data["Genre"].(string); ok {
+			album.Genre = genre
 		}
 		if notes, ok := data["Notes"].(string); ok {
 			album.Notes = notes

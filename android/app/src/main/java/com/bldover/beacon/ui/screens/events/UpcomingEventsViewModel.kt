@@ -1,4 +1,4 @@
-package com.bldover.beacon.ui.screens.upcoming
+package com.bldover.beacon.ui.screens.events
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -37,13 +36,16 @@ import com.bldover.beacon.ui.screens.editor.venue.VenueEditorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueEditorViewModel
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorScreen
 import com.bldover.beacon.ui.screens.editor.venue.VenueSelectorViewModel
-import com.bldover.beacon.ui.screens.saved.HistoryScreen
-import com.bldover.beacon.ui.screens.saved.PlannerScreen
-import com.bldover.beacon.ui.screens.saved.SavedEventsViewModel
-import com.bldover.beacon.ui.screens.upcoming.UpcomingEventsViewModel
-import com.bldover.beacon.ui.screens.upcoming.UpcomingScreen
+import com.bldover.beacon.ui.screens.events.HistoryScreen
+import com.bldover.beacon.ui.screens.events.PlannerScreen
+import com.bldover.beacon.ui.screens.events.SavedEventsViewModel
+import com.bldover.beacon.ui.screens.events.UpcomingEventsViewModel
+import com.bldover.beacon.ui.screens.events.UpcomingScreen
+import com.bldover.beacon.ui.screens.albums.AlbumDetailsScreen
+import com.bldover.beacon.ui.screens.albums.AlbumDetailsViewModel
 import com.bldover.beacon.ui.screens.editor.album.AlbumEditorScreen
 import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
+import com.bldover.beacon.ui.screens.editor.album.AlbumsViewModel
 import com.bldover.beacon.ui.screens.utility.ManageAlbumsScreen
 import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
 import com.bldover.beacon.ui.screens.utility.ManageGenresScreen
@@ -80,7 +82,9 @@ fun BeaconApp(
     eventEditorViewModel: EventEditorViewModel = hiltViewModel(),
     artistEditorViewModel: ArtistEditorViewModel = hiltViewModel(),
     venueEditorViewModel: VenueEditorViewModel = hiltViewModel(),
-    albumEditorViewModel: AlbumEditorViewModel = hiltViewModel()
+    albumEditorViewModel: AlbumEditorViewModel = hiltViewModel(),
+    albumsViewModel: AlbumsViewModel = hiltViewModel(),
+    albumDetailsViewModel: AlbumDetailsViewModel = hiltViewModel()
 ) {
     Timber.d("composing BeaconApp")
     val navController = rememberNavController()
@@ -210,14 +214,48 @@ fun BeaconApp(
                         ManageAlbumsScreen(
                             navController = navController,
                             snackbarState = snackbarState,
-                            albumEditorViewModel = albumEditorViewModel
+                            albumEditorViewModel = albumEditorViewModel,
+                            albumDetailsViewModel = albumDetailsViewModel,
+                            albumsViewModel = albumsViewModel
+                        )
+                    }
+                    composable(Screen.ALBUM_DETAILS.name) {
+                        AlbumDetailsScreen(
+                            navController = navController,
+                            albumDetailsViewModel = albumDetailsViewModel,
+                            onEdit = { album ->
+                                albumEditorViewModel.launchEditor(
+                                    navController = navController,
+                                    album = album,
+                                    onSave = { updated ->
+                                        albumsViewModel.updateAlbum(
+                                            album = updated,
+                                            onSuccess = {
+                                                albumDetailsViewModel.updateAlbum(updated)
+                                                navController.popBackStack()
+                                            },
+                                            onError = { msg -> snackbarState.showSnackbar(msg) }
+                                        )
+                                    },
+                                    onDelete = { toDelete ->
+                                        albumsViewModel.deleteAlbum(
+                                            album = toDelete,
+                                            onSuccess = {
+                                                navController.popBackStack(Screen.MANAGE_ALBUMS.name, false)
+                                            },
+                                            onError = { msg -> snackbarState.showSnackbar(msg) }
+                                        )
+                                    }
+                                )
+                            }
                         )
                     }
                     composable(Screen.EDIT_ALBUM.name) {
                         AlbumEditorScreen(
                             navController = navController,
                             albumEditorViewModel = albumEditorViewModel,
-                            artistSelectorViewModel = artistSelectorViewModel
+                            artistSelectorViewModel = artistSelectorViewModel,
+                            genreSelectorViewModel = genreSelectorViewModel
                         )
                     }
                 }

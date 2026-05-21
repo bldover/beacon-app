@@ -1,23 +1,17 @@
 package com.bldover.beacon.ui.screens.editor.artist
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bldover.beacon.ui.components.common.AddNewCard
 import com.bldover.beacon.ui.components.common.BackButton
 import com.bldover.beacon.ui.components.common.ScreenFrame
+import com.bldover.beacon.ui.components.common.TextEntryCard
 import com.bldover.beacon.ui.components.common.TitleTopBar
-import com.bldover.beacon.ui.components.editor.ArtistNameDialogEditCard
-import com.bldover.beacon.ui.components.editor.SaveCancelButtons
+import com.bldover.beacon.ui.components.editor.SaveableEditFieldsColumn
 import com.bldover.beacon.ui.components.editor.SwipeableGenreCard
 import com.bldover.beacon.ui.screens.editor.genre.GenreSelectorViewModel
 
@@ -36,14 +30,18 @@ fun ArtistEditorScreen(
         }
     ) {
         val artist by artistEditorViewModel.artistState.collectAsState()
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+
+        SaveableEditFieldsColumn(
+            onSave = { artistEditorViewModel.onSave() },
+            onCancel = { navController.popBackStack() }
         ) {
             item {
-                ArtistNameDialogEditCard(
-                    artist = artist,
-                    onValueChange = artistEditorViewModel::updateName,
+                TextEntryCard(
+                    label = "Name",
+                    value = artist.name,
+                    dialogTitle = "Edit Name",
+                    dialogLabel = "Artist Name",
+                    onValueChange = artistEditorViewModel::updateName
                 )
             }
             
@@ -64,20 +62,6 @@ fun ArtistEditorScreen(
                         }
                     }
                 )
-            }
-            
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    SaveCancelButtons(
-                        onSave = {
-                            artistEditorViewModel.onSave()
-                        },
-                        onCancel = { navController.popBackStack() }
-                    )
-                }
             }
         }
     }
