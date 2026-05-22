@@ -6,9 +6,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.bldover.beacon.data.model.Screen
-import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.model.album.Album
 import com.bldover.beacon.data.model.album.AlbumFormat
+import com.bldover.beacon.data.model.artist.Artist
 import com.bldover.beacon.data.repository.AlbumRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

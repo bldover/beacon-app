@@ -9,9 +9,7 @@ import com.bldover.beacon.data.model.event.Event
 import com.bldover.beacon.data.model.event.EventId
 import com.bldover.beacon.data.model.venue.Venue
 import com.bldover.beacon.data.model.venue.VenueId
-import com.bldover.beacon.data.repository.ArtistRepository
 import com.bldover.beacon.data.repository.EventRepository
-import com.bldover.beacon.data.repository.VenueRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -24,6 +24,11 @@ import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
 import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.NavigationBottomBar
+import com.bldover.beacon.ui.screens.albums.AlbumDetailsScreen
+import com.bldover.beacon.ui.screens.albums.AlbumDetailsViewModel
+import com.bldover.beacon.ui.screens.editor.album.AlbumEditorScreen
+import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
+import com.bldover.beacon.ui.screens.editor.album.AlbumsViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorScreen
 import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
 import com.bldover.beacon.ui.screens.editor.artist.ArtistSelectorScreen
@@ -41,11 +46,6 @@ import com.bldover.beacon.ui.screens.events.PlannerScreen
 import com.bldover.beacon.ui.screens.events.SavedEventsViewModel
 import com.bldover.beacon.ui.screens.events.UpcomingEventsViewModel
 import com.bldover.beacon.ui.screens.events.UpcomingScreen
-import com.bldover.beacon.ui.screens.albums.AlbumDetailsScreen
-import com.bldover.beacon.ui.screens.albums.AlbumDetailsViewModel
-import com.bldover.beacon.ui.screens.editor.album.AlbumEditorScreen
-import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
-import com.bldover.beacon.ui.screens.editor.album.AlbumsViewModel
 import com.bldover.beacon.ui.screens.utility.ManageAlbumsScreen
 import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
 import com.bldover.beacon.ui.screens.utility.ManageGenresScreen

@@ -15,8 +15,8 @@ import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.ScreenFrame
 import com.bldover.beacon.ui.components.common.TitleTopBar
 import com.bldover.beacon.ui.components.editor.DateEditCard
-import com.bldover.beacon.ui.components.editor.SaveableEditFieldsColumn
 import com.bldover.beacon.ui.components.editor.ReducedMinSizeSwitch
+import com.bldover.beacon.ui.components.editor.SaveableEditFieldsColumn
 import com.bldover.beacon.ui.components.editor.SwipeableArtistEditCard
 import com.bldover.beacon.ui.components.editor.VenueEditCard
 import com.bldover.beacon.ui.screens.editor.artist.ArtistEditorViewModel
