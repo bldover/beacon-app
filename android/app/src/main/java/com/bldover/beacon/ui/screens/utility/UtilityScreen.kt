@@ -54,6 +54,11 @@ fun UtilityScreen(navController: NavController) {
                     navController.navigate(Screen.MANAGE_ALBUMS.name)
                 }
             }
+            item {
+                UtilityItem(text = "Analytics") {
+                    navController.navigate(Screen.ANALYTICS.name)
+                }
+            }
         }
     }
 }

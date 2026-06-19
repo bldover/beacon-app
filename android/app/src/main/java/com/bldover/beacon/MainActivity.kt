@@ -26,6 +26,16 @@ import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.NavigationBottomBar
 import com.bldover.beacon.ui.screens.albums.AlbumDetailsScreen
 import com.bldover.beacon.ui.screens.albums.AlbumDetailsViewModel
+import com.bldover.beacon.ui.screens.analytics.AnalyticsArtistsScreen
+import com.bldover.beacon.ui.screens.analytics.AnalyticsEventsScreen
+import com.bldover.beacon.ui.screens.analytics.AnalyticsEventsViewModel
+import com.bldover.beacon.ui.screens.analytics.AnalyticsGenresScreen
+import com.bldover.beacon.ui.screens.analytics.AnalyticsListViewModel
+import com.bldover.beacon.ui.screens.analytics.AnalyticsMonthsScreen
+import com.bldover.beacon.ui.screens.analytics.AnalyticsOverviewScreen
+import com.bldover.beacon.ui.screens.analytics.AnalyticsOverviewViewModel
+import com.bldover.beacon.ui.screens.analytics.AnalyticsVenuesScreen
+import com.bldover.beacon.ui.screens.analytics.AnalyticsYearsScreen
 import com.bldover.beacon.ui.screens.editor.album.AlbumEditorScreen
 import com.bldover.beacon.ui.screens.editor.album.AlbumEditorViewModel
 import com.bldover.beacon.ui.screens.editor.album.AlbumsViewModel
@@ -84,7 +94,10 @@ fun BeaconApp(
     venueEditorViewModel: VenueEditorViewModel = hiltViewModel(),
     albumEditorViewModel: AlbumEditorViewModel = hiltViewModel(),
     albumsViewModel: AlbumsViewModel = hiltViewModel(),
-    albumDetailsViewModel: AlbumDetailsViewModel = hiltViewModel()
+    albumDetailsViewModel: AlbumDetailsViewModel = hiltViewModel(),
+    analyticsOverviewViewModel: AnalyticsOverviewViewModel = hiltViewModel(),
+    analyticsListViewModel: AnalyticsListViewModel = hiltViewModel(),
+    analyticsEventsViewModel: AnalyticsEventsViewModel = hiltViewModel()
 ) {
     Timber.d("composing BeaconApp")
     val navController = rememberNavController()
@@ -256,6 +269,56 @@ fun BeaconApp(
                             albumEditorViewModel = albumEditorViewModel,
                             artistSelectorViewModel = artistSelectorViewModel,
                             genreSelectorViewModel = genreSelectorViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS.name) {
+                        AnalyticsOverviewScreen(
+                            navController = navController,
+                            overviewViewModel = analyticsOverviewViewModel,
+                            eventsViewModel = analyticsEventsViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS_YEARS.name) {
+                        AnalyticsYearsScreen(
+                            navController = navController,
+                            listViewModel = analyticsListViewModel,
+                            eventsViewModel = analyticsEventsViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS_MONTHS.name) {
+                        AnalyticsMonthsScreen(
+                            navController = navController,
+                            listViewModel = analyticsListViewModel,
+                            eventsViewModel = analyticsEventsViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS_ARTISTS.name) {
+                        AnalyticsArtistsScreen(
+                            navController = navController,
+                            listViewModel = analyticsListViewModel,
+                            eventsViewModel = analyticsEventsViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS_VENUES.name) {
+                        AnalyticsVenuesScreen(
+                            navController = navController,
+                            listViewModel = analyticsListViewModel,
+                            eventsViewModel = analyticsEventsViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS_GENRES.name) {
+                        AnalyticsGenresScreen(
+                            navController = navController,
+                            listViewModel = analyticsListViewModel,
+                            eventsViewModel = analyticsEventsViewModel
+                        )
+                    }
+                    composable(Screen.ANALYTICS_EVENTS.name) {
+                        AnalyticsEventsScreen(
+                            navController = navController,
+                            snackbarState = snackbarState,
+                            eventsViewModel = analyticsEventsViewModel,
+                            eventEditorViewModel = eventEditorViewModel
                         )
                     }
                 }

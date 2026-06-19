@@ -5,5 +5,6 @@ enum class OrderField(val label: String) {
     DATE("Date"),
     GENRE("Genre"),
     VENUE("Venue"),
-    CITY("City");
+    CITY("City"),
+    COUNT("Count");
 }

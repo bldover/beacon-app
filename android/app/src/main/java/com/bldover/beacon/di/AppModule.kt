@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.bldover.beacon.data.api.AlbumApi
+import com.bldover.beacon.data.api.AnalyticsApi
 import com.bldover.beacon.data.api.ArtistApi
 import com.bldover.beacon.data.api.EventApi
 import com.bldover.beacon.data.api.GenreApi
@@ -13,6 +14,8 @@ import com.bldover.beacon.data.api.RetrofitInstance
 import com.bldover.beacon.data.api.VenueApi
 import com.bldover.beacon.data.repository.AlbumRepository
 import com.bldover.beacon.data.repository.AlbumRepositoryImpl
+import com.bldover.beacon.data.repository.AnalyticsRepository
+import com.bldover.beacon.data.repository.AnalyticsRepositoryImpl
 import com.bldover.beacon.data.repository.ArtistRepository
 import com.bldover.beacon.data.repository.ArtistRepositoryImpl
 import com.bldover.beacon.data.repository.EventRepository
@@ -92,6 +95,18 @@ object AppModule {
     @Singleton
     fun providesAlbumRepository(albumApi: AlbumApi): AlbumRepository {
         return AlbumRepositoryImpl(albumApi)
+    }
+
+    @Provides
+    @Singleton
+    fun providesAnalyticsApi(): AnalyticsApi {
+        return RetrofitInstance.retrofit.create<AnalyticsApi>()
+    }
+
+    @Provides
+    @Singleton
+    fun providesAnalyticsRepository(analyticsApi: AnalyticsApi): AnalyticsRepository {
+        return AnalyticsRepositoryImpl(analyticsApi)
     }
 
     @Provides
