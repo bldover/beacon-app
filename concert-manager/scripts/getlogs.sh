@@ -116,7 +116,7 @@ get_logs() {
     if [[ -n "$num_lines" ]]; then
         echo "Retrieving last $num_lines lines..."
 
-        gcloud compute ssh "${SSH_USER}@${INSTANCE_NAME}" --zone "${INSTANCE_ZONE}" -- \
+        gcloud compute ssh "${SSH_USER}@${INSTANCE_NAME}" --zone "${INSTANCE_ZONE}" --ssh-flag="-oLogLevel=ERROR" -- \
             "sudo tail -n ${num_lines} ${REMOTE_LOG_FILE}" > "${LOCAL_LOG_FILE}" 2>&1
 
         if [[ $? -eq 0 ]]; then
@@ -128,7 +128,7 @@ get_logs() {
     else
         echo "Retrieving entire log file..."
 
-        gcloud compute scp "${SSH_USER}@${INSTANCE_NAME}:${REMOTE_LOG_FILE}" "${LOCAL_LOG_FILE}" --zone "${INSTANCE_ZONE}"
+        gcloud compute scp "${SSH_USER}@${INSTANCE_NAME}:${REMOTE_LOG_FILE}" "${LOCAL_LOG_FILE}" --zone "${INSTANCE_ZONE}" --ssh-flag="-oLogLevel=ERROR"
 
         echo "Logs downloaded to: ${LOCAL_LOG_FILE}"
     fi

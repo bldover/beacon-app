@@ -1,6 +1,6 @@
 package com.bldover.beacon.data.api
 
-import com.bldover.beacon.Config
+import com.bldover.beacon.BuildConfig
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -8,9 +8,10 @@ import java.util.concurrent.TimeUnit
 
 object RetrofitInstance {
 
-    private const val BASE_URL = Config.API_URL
+    private val BASE_URL = BuildConfig.API_URL
 
     private val client = OkHttpClient.Builder()
+        .addInterceptor(AuthInterceptor(BuildConfig.API_KEY))
         .addInterceptor(RetryInterceptor())
         .readTimeout(2, TimeUnit.MINUTES)
         .build()

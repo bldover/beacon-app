@@ -1,9 +1,14 @@
 # Gradle files
 .gradle/
 build/
+.kotlin/
 
 # Local configuration file (sdk path, etc)
 local.properties
+
+# Build variant variables
+flavor.dev.properties
+flavor.prod.properties
 
 # Log/OS Files
 *.log

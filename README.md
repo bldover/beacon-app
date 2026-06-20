@@ -3,6 +3,7 @@
 Beacon is a personal-use app utility to manage concerts.
 - Keep track of attended concert history and upcoming shows
 - Recommend local shows based on listening history
+- Aggregate concert analytics grouped by time, venue, artists, and genres
 
 The concert-manager module contains the backend, written in Go.
 - GCP Firestore for persistence, with an in-memory cache layer to reduce DB operations so I don't exceed the GCP free tier limits

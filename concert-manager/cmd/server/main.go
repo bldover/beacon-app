@@ -21,6 +21,11 @@ func main() {
 		log.Fatal("Failed to set up logger:", err)
 	}
 
+	apiKey := os.Getenv("CM_API_KEY")
+	if apiKey == "" {
+		log.Fatal("CM_API_KEY env var must be set")
+	}
+
 	dbConnection, err := firestore.Setup()
 	if err != nil {
 		log.Fatal("Failed to set up database:", err)
@@ -104,6 +109,7 @@ func main() {
 	server.RanksCache = artistRanksCache
 	server.SyncService = upcomingCache
 	server.ImageUploader = gcsClient
+	server.ApiKey = apiKey
 
 	server.StartServer()
 }

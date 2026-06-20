@@ -1,9 +1,17 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.kapt)
     alias(libs.plugins.dagger.hilt.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+fun flavorProps(name: String): Properties = Properties().apply {
+    val f = rootProject.file("flavor.$name.properties")
+    if (f.exists()) FileInputStream(f).use { load(it) }
 }
 
 android {
@@ -41,6 +49,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -57,9 +66,15 @@ android {
             dimension = "environment"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
+            val p = flavorProps("dev")
+            buildConfigField("String", "API_URL", "\"${p.getProperty("API_URL", "")}\"")
+            buildConfigField("String", "API_KEY", "\"${p.getProperty("API_KEY", "")}\"")
         }
         create("prod") {
             dimension = "environment"
+            val p = flavorProps("prod")
+            buildConfigField("String", "API_URL", "\"${p.getProperty("API_URL", "")}\"")
+            buildConfigField("String", "API_KEY", "\"${p.getProperty("API_KEY", "")}\"")
         }
     }
 }

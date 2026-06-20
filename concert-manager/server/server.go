@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 )
 
@@ -23,6 +25,7 @@ type Server struct {
 	RanksCache          ranksRefresher
 	SyncService         dataSyncService
 	ImageUploader       imageUploader
+	ApiKey              string
 }
 
 type eventLoader interface {
@@ -132,7 +135,36 @@ func (s *Server) StartServer() {
 	http.Handle("/spotify/callback", &authHandler{})
 
 	log.Info("Starting server on port", port)
-	log.Fatal(http.ListenAndServe(port, nil))
+	log.Fatal(http.ListenAndServe(port, s.authMiddleware(http.DefaultServeMux)))
+}
+
+// unauthenticated paths needed by external OAuth callbacks
+var publicPaths = map[string]bool{
+	"/auth/callback":    true,
+	"/spotify/callback": true,
+}
+
+func (s *Server) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if publicPaths[r.URL.Path] {
+			next.ServeHTTP(w, r)
+			return
+		}
+		const prefix = "Bearer "
+		header := r.Header.Get("Authorization")
+		if !strings.HasPrefix(header, prefix) {
+			log.Infof("Unauthorized request to %s from %s: missing bearer token", r.URL.Path, r.RemoteAddr)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		got := strings.TrimPrefix(header, prefix)
+		if slices.Compare([]byte(got), []byte(s.ApiKey)) != 0 {
+			log.Infof("Unauthorized request to %s from %s: invalid bearer token", r.URL.Path, r.RemoteAddr)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 type handlerFunc func(http.ResponseWriter, *http.Request) (any, int, error)
