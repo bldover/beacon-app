@@ -1,5 +1,6 @@
 package com.bldover.beacon
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bldover.beacon.data.model.Screen
 import com.bldover.beacon.data.model.SnackbarState
+import com.bldover.beacon.data.spotify.SpotifyAuthResult
+import com.bldover.beacon.data.spotify.SpotifyAuthResultBus
+
 import com.bldover.beacon.ui.components.common.LoadingSpinner
 import com.bldover.beacon.ui.components.common.NavigationBottomBar
 import com.bldover.beacon.ui.screens.albums.AlbumDetailsScreen
@@ -61,6 +65,9 @@ import com.bldover.beacon.ui.screens.utility.ManageArtistsScreen
 import com.bldover.beacon.ui.screens.utility.ManageGenresScreen
 import com.bldover.beacon.ui.screens.utility.ManageVenuesScreen
 import com.bldover.beacon.ui.screens.utility.SettingsState
+import com.bldover.beacon.ui.screens.utility.SpotifyAuthNotification
+import com.bldover.beacon.ui.screens.utility.SpotifyAuthScreen
+import com.bldover.beacon.ui.screens.utility.SpotifyAuthViewModel
 import com.bldover.beacon.ui.screens.utility.UserSettingsScreen
 import com.bldover.beacon.ui.screens.utility.UserSettingsViewModel
 import com.bldover.beacon.ui.screens.utility.UtilityScreen
@@ -73,11 +80,32 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleSpotifyAuthIntent(intent)
         setContent {
             BeaconTheme {
                 BeaconApp()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleSpotifyAuthIntent(intent)
+    }
+
+    private fun handleSpotifyAuthIntent(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme != "beacon" || data.host != "spotify-auth-complete") return
+        val status = data.getQueryParameter("status")
+        val reason = data.getQueryParameter("reason")
+        Timber.d("Spotify auth deep link: status=$status reason=$reason")
+        val result = if (status == "ok") {
+            SpotifyAuthResult.Success
+        } else {
+            SpotifyAuthResult.Failure(reason)
+        }
+        SpotifyAuthResultBus.post(result)
     }
 }
 
@@ -97,13 +125,16 @@ fun BeaconApp(
     albumDetailsViewModel: AlbumDetailsViewModel = hiltViewModel(),
     analyticsOverviewViewModel: AnalyticsOverviewViewModel = hiltViewModel(),
     analyticsListViewModel: AnalyticsListViewModel = hiltViewModel(),
-    analyticsEventsViewModel: AnalyticsEventsViewModel = hiltViewModel()
+    analyticsEventsViewModel: AnalyticsEventsViewModel = hiltViewModel(),
+    spotifyAuthViewModel: SpotifyAuthViewModel = hiltViewModel()
 ) {
     Timber.d("composing BeaconApp")
     val navController = rememberNavController()
     val settings by userSettingsViewModel.userSettings.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    SpotifyAuthNotification(spotifyAuthViewModel = spotifyAuthViewModel)
 
     Scaffold(
         bottomBar = { NavigationBottomBar(navController = navController) },
@@ -153,7 +184,16 @@ fun BeaconApp(
                         )
                     }
                     composable(Screen.UTILITIES.name) {
-                        UtilityScreen(navController = navController)
+                        UtilityScreen(
+                            navController = navController
+                        )
+                    }
+                    composable(Screen.SPOTIFY_AUTH.name) {
+                        SpotifyAuthScreen(
+                            navController = navController,
+                            snackbarState = snackbarState,
+                            spotifyAuthViewModel = spotifyAuthViewModel
+                        )
                     }
                     composable(Screen.USER_SETTINGS.name) {
                         UserSettingsScreen(

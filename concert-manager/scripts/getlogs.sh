@@ -128,7 +128,7 @@ get_logs() {
     else
         echo "Retrieving entire log file..."
 
-        gcloud compute scp "${SSH_USER}@${INSTANCE_NAME}:${REMOTE_LOG_FILE}" "${LOCAL_LOG_FILE}" --zone "${INSTANCE_ZONE}" --ssh-flag="-oLogLevel=ERROR"
+        gcloud compute scp "${SSH_USER}@${INSTANCE_NAME}:${REMOTE_LOG_FILE}" "${LOCAL_LOG_FILE}" --zone "${INSTANCE_ZONE}"
 
         echo "Logs downloaded to: ${LOCAL_LOG_FILE}"
     fi

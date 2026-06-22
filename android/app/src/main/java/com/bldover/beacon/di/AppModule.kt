@@ -11,6 +11,7 @@ import com.bldover.beacon.data.api.ArtistApi
 import com.bldover.beacon.data.api.EventApi
 import com.bldover.beacon.data.api.GenreApi
 import com.bldover.beacon.data.api.RetrofitInstance
+import com.bldover.beacon.data.api.SpotifyApi
 import com.bldover.beacon.data.api.VenueApi
 import com.bldover.beacon.data.repository.AlbumRepository
 import com.bldover.beacon.data.repository.AlbumRepositoryImpl
@@ -22,6 +23,8 @@ import com.bldover.beacon.data.repository.EventRepository
 import com.bldover.beacon.data.repository.EventRepositoryImpl
 import com.bldover.beacon.data.repository.GenreRepository
 import com.bldover.beacon.data.repository.GenreRepositoryImpl
+import com.bldover.beacon.data.repository.SpotifyRepository
+import com.bldover.beacon.data.repository.SpotifyRepositoryImpl
 import com.bldover.beacon.data.repository.UserSettingsRepository
 import com.bldover.beacon.data.repository.VenueRepository
 import com.bldover.beacon.data.repository.VenueRepositoryImpl
@@ -107,6 +110,18 @@ object AppModule {
     @Singleton
     fun providesAnalyticsRepository(analyticsApi: AnalyticsApi): AnalyticsRepository {
         return AnalyticsRepositoryImpl(analyticsApi)
+    }
+
+    @Provides
+    @Singleton
+    fun providesSpotifyApi(): SpotifyApi {
+        return RetrofitInstance.retrofit.create<SpotifyApi>()
+    }
+
+    @Provides
+    @Singleton
+    fun providesSpotifyRepository(spotifyApi: SpotifyApi): SpotifyRepository {
+        return SpotifyRepositoryImpl(spotifyApi)
     }
 
     @Provides

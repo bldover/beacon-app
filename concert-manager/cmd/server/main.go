@@ -64,7 +64,8 @@ func main() {
 	eventFinder := finder.NewEventFinder()
 	eventFinder.Ticketmaster = ticketmaster
 
-	spotifyClient := spotify.NewClient()
+	spotifyAuth := spotify.NewAuthentication()
+	spotifyClient := spotify.NewClient(spotifyAuth)
 	lastFmClient := lastfm.NewClient()
 
 	artistRanksCache := &ranker.ArtistRankCache{
@@ -109,6 +110,7 @@ func main() {
 	server.RanksCache = artistRanksCache
 	server.SyncService = upcomingCache
 	server.ImageUploader = gcsClient
+	server.SpotifyAuthHandler = spotifyAuth
 	server.ApiKey = apiKey
 
 	server.StartServer()

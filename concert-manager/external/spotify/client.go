@@ -31,10 +31,10 @@ type RetryStrategy struct {
 	lock      *sync.Mutex
 }
 
-func NewClient() *Client {
+func NewClient(auth *authentication) *Client {
 	log.Info("Initializing Spotify client")
 	retryStrategy := RetryStrategy{0, 0, defaultBackoffIncrement, &sync.Mutex{}}
-	client := &Client{newAuthentication(), defaultThreadInitDelay, retryStrategy}
+	client := &Client{auth, defaultThreadInitDelay, retryStrategy}
 	log.Info("Successfully initialized Spotify client")
 	return client
 }
@@ -48,7 +48,7 @@ type RequestEntity struct {
 	queryParams map[string]any
 }
 
-func (c *Client) call(httpMethod string, reqEntity RequestEntity, response any) error {
+func (c *Client) call(httpMethod string, reqEntity RequestEntity, respBody any) error {
 	req, err := http.NewRequest(httpMethod, reqEntity.requestUrl, nil)
 	if err != nil {
 		return err
@@ -66,9 +66,11 @@ func (c *Client) call(httpMethod string, reqEntity RequestEntity, response any) 
 	}
 	defer resp.Body.Close()
 
-	if err := json.NewDecoder(resp.Body).Decode(response); err != nil {
-		errMsg := fmt.Sprintf("failed to parse response: %v", err)
-		return errors.New(errMsg)
+	if respBody != nil {
+		if err := json.NewDecoder(resp.Body).Decode(respBody); err != nil {
+			errMsg := fmt.Sprintf("failed to parse response body: %v", err)
+			return errors.New(errMsg)
+		}
 	}
 
 	return nil
@@ -85,12 +87,14 @@ func (e errorResponse) Error() string {
 	return fmt.Sprintf("error from Spotify with code: %d, message: %s", e.ErrorDetails.Status, e.ErrorDetails.Message)
 }
 
+const maxRetries = 3
+
 func (c *Client) execute(req *http.Request) (*http.Response, error) {
 	retries := 0
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	log.Debugf("Calling Spotify URL: %s", req.URL)
 
-	for retries < 3 {
+	for retries < maxRetries {
 		c.retryStrategy.lock.Lock()
 		delay := c.retryStrategy.delay + c.retryStrategy.backoff
 		c.retryStrategy.backoff += c.retryStrategy.increment
@@ -100,14 +104,15 @@ func (c *Client) execute(req *http.Request) (*http.Response, error) {
 			time.Sleep(delay)
 		}
 
-		authToken, err := c.auth.getAuthToken()
+		accessToken, err := c.auth.getAccessToken()
 		if err != nil {
-			log.Errorf("unable to retrieve auth token: %v", err)
-			retries++
-			continue
+			log.Errorf("Unable to retrieve auth token: %v", err)
+			c.clearBackoff(retries, true)
+			errMsg := fmt.Sprintf("access token not available: %v", err)
+			return nil, errors.New(errMsg)
 		}
 
-		req.Header.Set("Authorization", authToken)
+		req.Header.Set("Authorization", accessToken)
 		startTs := time.Now()
 		resp, err := http.DefaultClient.Do(req)
 		log.Debugf("Request response time: %v ms\n", time.Since(startTs).Milliseconds())
@@ -131,7 +136,7 @@ func (c *Client) execute(req *http.Request) (*http.Response, error) {
 
 		switch resp.StatusCode {
 		case http.StatusUnauthorized:
-			c.auth.markAuthExpired(authToken)
+			c.auth.markAccessTokenExpired(accessToken)
 		case http.StatusTooManyRequests:
 			delay := getDelay(resp)
 			if delay > (30 * time.Second) {

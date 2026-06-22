@@ -12,10 +12,10 @@ enum class Screen(val title: String) {
     SELECT_VENUE("Select Venue"),
     SELECT_ARTIST("Select Artist"),
     SELECT_GENRE("Select Genre"),
-    MANAGE_VENUES("Manage Venues"),
-    MANAGE_ARTISTS("Manage Artists"),
-    MANAGE_GENRES("Manage Genres"),
-    MANAGE_ALBUMS("Manage Albums"),
+    MANAGE_VENUES("Venues"),
+    MANAGE_ARTISTS("Artists"),
+    MANAGE_GENRES("Genres"),
+    MANAGE_ALBUMS("Albums"),
     ALBUM_DETAILS("Album Details"),
     EDIT_ALBUM("Edit Album"),
     ANALYTICS("Analytics"),
@@ -24,7 +24,8 @@ enum class Screen(val title: String) {
     ANALYTICS_ARTISTS("Artists"),
     ANALYTICS_VENUES("Venues"),
     ANALYTICS_GENRES("Genres"),
-    ANALYTICS_EVENTS("Events");
+    ANALYTICS_EVENTS("Events"),
+    SPOTIFY_AUTH("Spotify Auth");
 
     companion object {
         fun fromTitle(title: String): Screen {

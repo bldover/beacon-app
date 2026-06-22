@@ -25,6 +25,7 @@ type Server struct {
 	RanksCache          ranksRefresher
 	SyncService         dataSyncService
 	ImageUploader       imageUploader
+	SpotifyAuthHandler  spotifyOAuthHandler
 	ApiKey              string
 }
 
@@ -131,17 +132,18 @@ func (s *Server) StartServer() {
 	http.HandleFunc("/v1/analytics/venues/", s.handleRequest(s.handleAnalyticsVenues))
 	http.HandleFunc("/v1/analytics/genres", s.handleRequest(s.handleAnalyticsGenres))
 	http.HandleFunc("/v1/analytics/genres/", s.handleRequest(s.handleAnalyticsGenres))
-	http.Handle("/auth/callback", &authHandler{})
-	http.Handle("/spotify/callback", &authHandler{})
+	http.HandleFunc("/v1/spotify/auth/start", s.handleRequest(s.startSpotifyAuth))
+	http.HandleFunc("/v1/spotify/auth/status", s.handleRequest(s.getSpotifyAuthStatus))
+	// doesn't use handleRequest for custom deep-link response
+	http.HandleFunc("/v1/spotify/auth/callback", s.handleSpotifyAuthCallback)
 
 	log.Info("Starting server on port", port)
 	log.Fatal(http.ListenAndServe(port, s.authMiddleware(http.DefaultServeMux)))
 }
 
-// unauthenticated paths needed by external OAuth callbacks
+// unauthenticated for OAuth callback
 var publicPaths = map[string]bool{
-	"/auth/callback":    true,
-	"/spotify/callback": true,
+	"/v1/spotify/auth/callback": true,
 }
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
@@ -184,13 +186,4 @@ func (s *Server) handleRequest(f handlerFunc) func(http.ResponseWriter, *http.Re
 		}
 		log.Infof("Finished processing request ID %d in %v ms", id, time.Since(startTs).Milliseconds())
 	}
-}
-
-// callback URL for retrieving OAUTH access tokens
-type authHandler struct{}
-
-func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Received authorization callback")
-	out := "Request URI: " + r.RequestURI
-	w.Write([]byte(out))
 }

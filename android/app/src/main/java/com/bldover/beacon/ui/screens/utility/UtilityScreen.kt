@@ -20,8 +20,11 @@ import com.bldover.beacon.ui.components.common.TitleTopBar
 import timber.log.Timber
 
 @Composable
-fun UtilityScreen(navController: NavController) {
+fun UtilityScreen(
+    navController: NavController
+) {
     Timber.d("composing UtilityScreen")
+
     ScreenFrame(
         topBar = { TitleTopBar(title = "Utilities") }
     ) {
@@ -57,6 +60,11 @@ fun UtilityScreen(navController: NavController) {
             item {
                 UtilityItem(text = "Analytics") {
                     navController.navigate(Screen.ANALYTICS.name)
+                }
+            }
+            item {
+                UtilityItem(text = "Spotify Auth") {
+                    navController.navigate(Screen.SPOTIFY_AUTH.name)
                 }
             }
         }
